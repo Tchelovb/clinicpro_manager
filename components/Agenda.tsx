@@ -1,0 +1,458 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import { useData } from '../contexts/DataContext';
+import { 
+  ChevronLeft, ChevronRight, Plus, CheckCircle, Activity, 
+  UserX, Filter, Calendar as CalendarIcon, Clock, AlertTriangle, AlertCircle,
+  BriefcaseMedical, Zap, Repeat
+} from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Appointment } from '../types';
+
+const Agenda: React.FC = () => {
+  const navigate = useNavigate();
+  const { appointments, professionals, agendaConfig } = useData();
+  const professionalNames = useMemo(() => professionals.filter(p => p.active).map(p => p.name), [professionals]);
+
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [view, setView] = useState<'day' | 'week' | 'month'>('week');
+  
+  // Filters
+  const [selectedProfessionals, setSelectedProfessionals] = useState<string[]>([]);
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>(['Confirmado', 'Pendente', 'Concluído', 'Cancelado', 'Faltou']);
+  const [selectedTypes, setSelectedTypes] = useState<string[]>(['Avaliação', 'Procedimento', 'Retorno', 'Urgência']);
+
+  useEffect(() => {
+    setSelectedProfessionals(professionals.filter(p => p.active).map(p => p.name));
+  }, [professionals]);
+
+  // --- DATE HELPERS ---
+  const formatDate = (date: Date) => date.toISOString().split('T')[0];
+
+  const getWeekDates = (baseDate: Date) => {
+      const dates = [];
+      const start = new Date(baseDate);
+      const day = start.getDay(); // 0 (Sun) to 6 (Sat)
+      
+      // Calculate start of week (Monday)
+      const diff = start.getDate() - day + (day === 0 ? -6 : 1); 
+      const monday = new Date(start.setDate(diff));
+      
+      for (let i = 0; i < 7; i++) {
+          const d = new Date(monday);
+          d.setDate(monday.getDate() + i);
+          dates.push(d);
+      }
+      return dates;
+  };
+
+  const getMonthDays = (baseDate: Date) => {
+      const year = baseDate.getFullYear();
+      const month = baseDate.getMonth();
+      const firstDay = new Date(year, month, 1);
+      const lastDay = new Date(year, month + 1, 0);
+      
+      const days = [];
+      const startPad = firstDay.getDay(); 
+      for(let i=0; i<startPad; i++) days.push(null);
+      for(let i=1; i<=lastDay.getDate(); i++) days.push(new Date(year, month, i));
+      return days;
+  };
+
+  // --- TIME SLOTS GENERATOR ---
+  const timeSlots = useMemo(() => {
+      const slots = [];
+      const [startHour] = agendaConfig.startHour.split(':').map(Number);
+      const [endHour] = agendaConfig.endHour.split(':').map(Number);
+      const duration = agendaConfig.slotDuration; // minutes
+
+      let currentMinutes = startHour * 60;
+      const endMinutes = endHour * 60;
+
+      while (currentMinutes < endMinutes) {
+          const h = Math.floor(currentMinutes / 60);
+          const m = currentMinutes % 60;
+          slots.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
+          currentMinutes += duration;
+      }
+      return slots;
+  }, [agendaConfig]);
+
+  // --- FILTER LOGIC ---
+  const filteredAppointments = useMemo(() => {
+      return appointments.filter(apt => 
+          selectedProfessionals.includes(apt.doctorName) &&
+          selectedStatuses.includes(apt.status) &&
+          selectedTypes.includes(apt.type)
+      );
+  }, [appointments, selectedProfessionals, selectedStatuses, selectedTypes]);
+
+  // --- KPI LOGIC ---
+  const rangeKPIs = useMemo(() => {
+      let rangeApts: Appointment[] = [];
+      const todayStr = formatDate(currentDate);
+
+      if (view === 'day') {
+          rangeApts = filteredAppointments.filter(a => a.date === todayStr);
+      } else if (view === 'week') {
+          const weekDates = getWeekDates(currentDate).map(d => formatDate(d));
+          rangeApts = filteredAppointments.filter(a => weekDates.includes(a.date));
+      } else {
+          const monthStr = currentDate.toISOString().slice(0, 7);
+          rangeApts = filteredAppointments.filter(a => a.date.startsWith(monthStr));
+      }
+
+      const total = rangeApts.length;
+      const confirmed = rangeApts.filter(a => a.status === 'Confirmado').length;
+      const noShows = rangeApts.filter(a => a.status === 'Faltou').length;
+      const noShowRate = total > 0 ? (noShows / total) * 100 : 0;
+      const occupancy = total > 0 ? ((confirmed + rangeApts.filter(a => a.status === 'Concluído').length) / total) * 100 : 0;
+
+      return { total, confirmed, noShows, noShowRate, occupancy };
+  }, [filteredAppointments, currentDate, view]);
+
+  // --- NAVIGATION HANDLERS ---
+  const handlePrev = () => {
+      const newDate = new Date(currentDate);
+      if (view === 'day') newDate.setDate(currentDate.getDate() - 1);
+      if (view === 'week') newDate.setDate(currentDate.getDate() - 7);
+      if (view === 'month') newDate.setMonth(currentDate.getMonth() - 1);
+      setCurrentDate(newDate);
+  };
+
+  const handleNext = () => {
+      const newDate = new Date(currentDate);
+      if (view === 'day') newDate.setDate(currentDate.getDate() + 1);
+      if (view === 'week') newDate.setDate(currentDate.getDate() + 7);
+      if (view === 'month') newDate.setMonth(currentDate.getMonth() + 1);
+      setCurrentDate(newDate);
+  };
+
+  const handleNewAppointment = (date?: string, time?: string) => {
+      navigate('/agenda/new'); 
+  };
+
+  // --- COMPONENTS ---
+
+  const KpiCard = ({ label, value, sub, color, icon: Icon }: any) => (
+      <div className="bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm flex items-center gap-3 min-w-[140px] flex-1 md:flex-none">
+          <div className={`p-2 rounded-lg ${color} bg-opacity-10 dark:bg-opacity-20`}>
+             <Icon size={18} className={color.replace('bg-', 'text-')} />
+          </div>
+          <div>
+              <p className="text-[10px] uppercase font-bold text-gray-400">{label}</p>
+              <p className="text-lg font-bold text-gray-800 dark:text-gray-100 leading-tight">{value}</p>
+              {sub && <p className="text-[10px] text-gray-400">{sub}</p>}
+          </div>
+      </div>
+  );
+
+  const getTypeStyle = (type: string) => {
+      switch (type) {
+          case 'Avaliação': return { bg: 'bg-blue-100 dark:bg-blue-900/40', border: 'border-blue-500 dark:border-blue-400', text: 'text-blue-800 dark:text-blue-200', icon: CalendarIcon };
+          case 'Procedimento': return { bg: 'bg-green-100 dark:bg-green-900/40', border: 'border-green-500 dark:border-green-400', text: 'text-green-800 dark:text-green-200', icon: BriefcaseMedical };
+          case 'Retorno': return { bg: 'bg-purple-100 dark:bg-purple-900/40', border: 'border-purple-500 dark:border-purple-400', text: 'text-purple-800 dark:text-purple-200', icon: Repeat };
+          case 'Urgência': return { bg: 'bg-red-100 dark:bg-red-900/40', border: 'border-red-500 dark:border-red-400', text: 'text-red-800 dark:text-red-200', icon: Zap };
+          default: return { bg: 'bg-gray-100 dark:bg-gray-700', border: 'border-gray-400 dark:border-gray-500', text: 'text-gray-700 dark:text-gray-200', icon: Clock };
+      }
+  };
+
+  const AppointmentItem: React.FC<{ apt: Appointment }> = ({ apt }) => {
+      const style = getTypeStyle(apt.type);
+      const isCanceled = apt.status === 'Cancelado';
+      const isNoShow = apt.status === 'Faltou';
+      const isCompleted = apt.status === 'Concluído';
+
+      let opacityClass = '';
+      if (isCanceled) opacityClass = 'opacity-50 grayscale';
+      if (isCompleted) opacityClass = 'opacity-80';
+
+      return (
+          <div 
+            onClick={(e) => { e.stopPropagation(); navigate(`/agenda/${apt.id}`); }}
+            className={`
+                rounded px-2 py-1 mb-1 border-l-4 text-xs shadow-sm cursor-pointer hover:brightness-95 dark:hover:brightness-110 transition-all
+                ${style.bg} ${style.border} ${style.text} ${opacityClass}
+                ${isNoShow ? 'bg-red-50 dark:bg-red-900/20 border-red-600 text-red-900 dark:text-red-300 ring-1 ring-red-200 dark:ring-red-900' : ''}
+                relative group h-full flex flex-col justify-center overflow-hidden
+            `}
+            title={`${apt.time} - ${apt.patientName} (${apt.type}) - ${apt.doctorName} - ${apt.status}`}
+          >
+              <div className="flex justify-between items-center gap-1">
+                  <span className="font-bold truncate">{apt.patientName}</span>
+                  {isNoShow && <AlertTriangle size={10} className="text-red-600 dark:text-red-400 shrink-0"/>}
+                  {isCompleted && <CheckCircle size={10} className="text-green-600 dark:text-green-400 shrink-0"/>}
+                  {apt.status === 'Confirmado' && <CheckCircle size={10} className="text-blue-600 dark:text-blue-400 shrink-0"/>}
+              </div>
+              <div className="flex items-center gap-1 text-[10px] opacity-80 truncate">
+                  <style.icon size={8} /> <span>{apt.type}</span>
+              </div>
+              {selectedProfessionals.length > 1 && (
+                  <div className="text-[9px] opacity-70 truncate mt-0.5">{apt.doctorName.split(' ')[0]}</div>
+              )}
+          </div>
+      );
+  };
+
+  return (
+    <div className="h-[calc(100vh-6rem)] flex flex-col bg-gray-50/50 dark:bg-gray-900 pb-20 md:pb-0 relative overflow-hidden transition-colors">
+      {/* --- HEADER --- */}
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4 flex flex-col md:flex-row justify-between items-center gap-4 z-10 transition-colors">
+          <div className="flex items-center gap-4 w-full md:w-auto">
+              <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+                  <button onClick={handlePrev} className="p-1 hover:bg-white dark:hover:bg-gray-600 rounded shadow-sm transition text-gray-600 dark:text-gray-300"><ChevronLeft size={18} /></button>
+                  <button onClick={() => setCurrentDate(new Date())} className="px-3 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400">Hoje</button>
+                  <button onClick={handleNext} className="p-1 hover:bg-white dark:hover:bg-gray-600 rounded shadow-sm transition text-gray-600 dark:text-gray-300"><ChevronRight size={18} /></button>
+              </div>
+              <h2 className="text-lg font-bold text-gray-800 dark:text-white capitalize w-48 text-center md:text-left">
+                  {currentDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric', day: view === 'day' ? 'numeric' : undefined })}
+              </h2>
+          </div>
+
+          <div className="flex overflow-x-auto gap-2 w-full md:w-auto pb-2 md:pb-0 scrollbar-hide">
+             <KpiCard label="Faltas / No-Show" value={rangeKPIs.noShows} sub={`${rangeKPIs.noShowRate.toFixed(1)}%`} color="bg-red-500" icon={UserX} />
+             <KpiCard label="Confirmados" value={rangeKPIs.confirmed} sub={`de ${rangeKPIs.total}`} color="bg-green-500" icon={CheckCircle} />
+             <KpiCard label="Ocupação" value={`${rangeKPIs.occupancy.toFixed(0)}%`} color="bg-blue-500" icon={Activity} />
+          </div>
+
+          <div className="flex items-center gap-2 w-full md:w-auto">
+               <div className="bg-gray-100 dark:bg-gray-700 p-1 rounded-lg flex text-xs font-medium">
+                   <button onClick={() => setView('day')} className={`px-3 py-1.5 rounded transition-colors ${view === 'day' ? 'bg-white dark:bg-gray-600 shadow text-blue-600 dark:text-white' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>Dia</button>
+                   <button onClick={() => setView('week')} className={`px-3 py-1.5 rounded transition-colors ${view === 'week' ? 'bg-white dark:bg-gray-600 shadow text-blue-600 dark:text-white' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>Semana</button>
+                   <button onClick={() => setView('month')} className={`px-3 py-1.5 rounded transition-colors ${view === 'month' ? 'bg-white dark:bg-gray-600 shadow text-blue-600 dark:text-white' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>Mês</button>
+               </div>
+               <button 
+                  onClick={() => navigate('/agenda/new')}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 shadow-sm transition-colors whitespace-nowrap ml-auto"
+               >
+                   <Plus size={16} /> <span className="hidden sm:inline">Agendar</span>
+               </button>
+          </div>
+      </div>
+
+      <div className="flex flex-1 overflow-hidden">
+          {/* --- SIDEBAR FILTER --- */}
+          <div className="w-60 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 p-4 hidden lg:flex flex-col gap-6 overflow-y-auto transition-colors">
+              <div>
+                  <h3 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2"><Filter size={12}/> Profissionais</h3>
+                  <div className="space-y-2">
+                      {professionalNames.map(prof => (
+                          <label key={prof} className="flex items-center gap-2 cursor-pointer group">
+                              <input 
+                                  type="checkbox" 
+                                  className="rounded text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 dark:bg-gray-700" 
+                                  checked={selectedProfessionals.includes(prof)}
+                                  onChange={() => {
+                                      if (selectedProfessionals.includes(prof)) {
+                                          setSelectedProfessionals(selectedProfessionals.filter(p => p !== prof));
+                                      } else {
+                                          setSelectedProfessionals([...selectedProfessionals, prof]);
+                                      }
+                                  }}
+                              />
+                              <span className="text-sm text-gray-700 dark:text-gray-300">{prof}</span>
+                          </label>
+                      ))}
+                  </div>
+              </div>
+
+              <div>
+                  <h3 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Status</h3>
+                  <div className="space-y-2">
+                      {['Confirmado', 'Pendente', 'Concluído', 'Faltou', 'Cancelado'].map(status => (
+                          <label key={status} className="flex items-center gap-2 cursor-pointer">
+                              <input 
+                                  type="checkbox" 
+                                  className="rounded text-blue-600 border-gray-300 dark:border-gray-600 dark:bg-gray-700" 
+                                  checked={selectedStatuses.includes(status)}
+                                  onChange={() => {
+                                      if (selectedStatuses.includes(status)) {
+                                          setSelectedStatuses(selectedStatuses.filter(s => s !== status));
+                                      } else {
+                                          setSelectedStatuses([...selectedStatuses, status]);
+                                      }
+                                  }}
+                              />
+                              <span className={`text-sm ${status === 'Faltou' ? 'text-red-600 dark:text-red-400 font-medium' : 'text-gray-700 dark:text-gray-300'}`}>{status}</span>
+                          </label>
+                      ))}
+                  </div>
+              </div>
+
+              <div>
+                  <h3 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Tipo</h3>
+                  <div className="space-y-2">
+                      {['Avaliação', 'Procedimento', 'Retorno', 'Urgência'].map(type => (
+                          <div key={type} className="flex items-center gap-2">
+                              <label className="flex items-center gap-2 cursor-pointer flex-1">
+                                  <input 
+                                      type="checkbox" 
+                                      className="rounded text-blue-600 border-gray-300 dark:border-gray-600 dark:bg-gray-700" 
+                                      checked={selectedTypes.includes(type)}
+                                      onChange={() => {
+                                          if (selectedTypes.includes(type)) {
+                                              setSelectedTypes(selectedTypes.filter(t => t !== type));
+                                          } else {
+                                              setSelectedTypes([...selectedTypes, type]);
+                                          }
+                                      }}
+                                  />
+                                  <span className="text-sm text-gray-700 dark:text-gray-300">{type}</span>
+                              </label>
+                              <div className={`w-3 h-3 rounded-full ${getTypeStyle(type).bg} ${getTypeStyle(type).border} border`}></div>
+                          </div>
+                      ))}
+                  </div>
+              </div>
+          </div>
+
+          {/* --- MAIN CALENDAR AREA --- */}
+          <div className="flex-1 overflow-auto bg-white dark:bg-gray-800 relative transition-colors">
+              
+              {/* === DAY VIEW === */}
+              {view === 'day' && (
+                  <div className="min-w-[600px] h-full flex flex-col">
+                      <div className="flex border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-20 shadow-sm ml-14">
+                          {selectedProfessionals.map(prof => (
+                              <div key={prof} className="flex-1 py-3 px-2 text-center border-r border-gray-100 dark:border-gray-700 font-bold text-gray-700 dark:text-gray-300 text-sm truncate">{prof}</div>
+                          ))}
+                      </div>
+                      <div className="flex-1 relative">
+                          {timeSlots.map(time => (
+                              <div key={time} className="flex min-h-[80px] border-b border-gray-50 dark:border-gray-700 group">
+                                  <div className="w-14 border-r border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex items-start justify-center pt-2 text-xs text-gray-500 dark:text-gray-400 font-bold shrink-0 sticky left-0 z-10">{time}</div>
+                                  {selectedProfessionals.map(prof => {
+                                      const apt = filteredAppointments.find(a => a.doctorName === prof && a.date === formatDate(currentDate) && a.time === time);
+                                      return (
+                                          <div 
+                                            key={`${prof}-${time}`} 
+                                            className="flex-1 border-r border-gray-50 dark:border-gray-700 relative p-1 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                                            onClick={() => !apt && handleNewAppointment(formatDate(currentDate), time)}
+                                          >
+                                              {apt ? (
+                                                  <AppointmentItem apt={apt} />
+                                              ) : (
+                                                  <div className="w-full h-full opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer text-gray-300 dark:text-gray-600 hover:text-blue-400">
+                                                      <Plus size={20} />
+                                                  </div>
+                                              )}
+                                          </div>
+                                      );
+                                  })}
+                              </div>
+                          ))}
+                      </div>
+                  </div>
+              )}
+
+              {/* === WEEK VIEW (PROFESSIONAL GRID) === */}
+              {view === 'week' && (
+                  <div className="min-w-[900px] h-full flex flex-col">
+                      {/* Grid Header (Days) */}
+                      <div className="grid grid-cols-7 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-20 shadow-sm ml-14">
+                          {getWeekDates(currentDate).map((date, idx) => {
+                              const isToday = date.toDateString() === new Date().toDateString();
+                              return (
+                                  <div key={idx} className={`py-3 px-2 text-center border-r border-gray-100 dark:border-gray-700 ${isToday ? 'bg-blue-50/50 dark:bg-blue-900/20' : ''}`}>
+                                      <p className={`text-xs uppercase font-semibold ${isToday ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500'}`}>
+                                          {['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'][date.getDay()]}
+                                      </p>
+                                      <div className={`text-lg font-bold inline-block w-8 h-8 leading-8 rounded-full ${isToday ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-800 dark:text-gray-200'}`}>
+                                          {date.getDate()}
+                                      </div>
+                                  </div>
+                              );
+                          })}
+                      </div>
+
+                      {/* Grid Body */}
+                      <div className="flex-1 relative">
+                          {timeSlots.map(time => (
+                              <div key={time} className="flex min-h-[60px] border-b border-gray-50 dark:border-gray-700 group">
+                                  {/* Time Column (Sticky Left) */}
+                                  <div className="w-14 border-r border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex items-start justify-center pt-2 text-xs text-gray-500 dark:text-gray-400 font-bold shrink-0 sticky left-0 z-10 shadow-[2px_0_5px_rgba(0,0,0,0.02)]">
+                                      {time}
+                                  </div>
+                                  
+                                  {/* Days Columns */}
+                                  <div className="flex-1 grid grid-cols-7">
+                                      {getWeekDates(currentDate).map((date, idx) => {
+                                          const dateStr = formatDate(date);
+                                          const slotApts = filteredAppointments.filter(a => a.date === dateStr && a.time === time);
+                                          
+                                          return (
+                                              <div 
+                                                key={`${dateStr}-${time}`} 
+                                                className="border-r border-gray-50 dark:border-gray-700 p-1 relative hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                                                onClick={() => slotApts.length === 0 && handleNewAppointment(dateStr, time)}
+                                              >
+                                                  {slotApts.map(apt => (
+                                                      <AppointmentItem key={apt.id} apt={apt} />
+                                                  ))}
+                                                  
+                                                  {slotApts.length === 0 && (
+                                                      <div className="w-full h-full opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer text-gray-300 dark:text-gray-600 hover:text-blue-400">
+                                                          <Plus size={14} />
+                                                      </div>
+                                                  )}
+                                              </div>
+                                          );
+                                      })}
+                                  </div>
+                              </div>
+                          ))}
+                      </div>
+                  </div>
+              )}
+
+              {/* === MONTH VIEW === */}
+              {view === 'month' && (
+                  <div className="h-full flex flex-col p-4">
+                      <div className="grid grid-cols-7 gap-2 mb-2">
+                          {['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'].map(day => (
+                              <div key={day} className="text-center text-xs font-bold text-gray-400 dark:text-gray-500 uppercase">{day}</div>
+                          ))}
+                      </div>
+                      <div className="flex-1 grid grid-cols-7 grid-rows-5 gap-2">
+                          {getMonthDays(currentDate).map((date, idx) => {
+                              if (!date) return <div key={idx} className="bg-transparent"></div>;
+                              
+                              const dayStr = formatDate(date);
+                              const dayApts = filteredAppointments.filter(a => a.date === dayStr);
+                              const isToday = date.toDateString() === new Date().toDateString();
+
+                              return (
+                                  <div key={idx} className={`bg-white dark:bg-gray-800 border rounded-lg p-2 flex flex-col overflow-hidden relative transition-all hover:shadow-md hover:border-blue-300 ${isToday ? 'border-blue-300 dark:border-blue-500 ring-1 ring-blue-100 dark:ring-blue-900' : 'border-gray-200 dark:border-gray-700'}`}>
+                                      <div className="flex justify-between items-start mb-1">
+                                          <span className={`text-xs font-bold ${isToday ? 'bg-blue-600 text-white w-6 h-6 flex items-center justify-center rounded-full' : 'text-gray-700 dark:text-gray-300'}`}>
+                                              {date.getDate()}
+                                          </span>
+                                          {dayApts.length > 0 && <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">{dayApts.length}</span>}
+                                      </div>
+                                      <div className="flex-1 space-y-1 overflow-y-auto scrollbar-hide">
+                                          {dayApts.slice(0, 3).map(apt => {
+                                              const style = getTypeStyle(apt.type);
+                                              return (
+                                                  <div key={apt.id} onClick={() => navigate(`/agenda/${apt.id}`)} className={`text-[9px] px-1 py-0.5 rounded border-l-2 truncate cursor-pointer ${style.bg} ${style.border} ${style.text}`}>
+                                                      <span className="font-bold">{apt.time}</span> {apt.patientName}
+                                                  </div>
+                                              );
+                                          })}
+                                          {dayApts.length > 3 && (
+                                              <div className="text-[10px] text-center text-blue-600 dark:text-blue-400 font-bold bg-blue-50 dark:bg-blue-900/30 rounded py-0.5 cursor-pointer">
+                                                  +{dayApts.length - 3} mais
+                                              </div>
+                                          )}
+                                      </div>
+                                  </div>
+                              );
+                          })}
+                      </div>
+                  </div>
+              )}
+          </div>
+      </div>
+    </div>
+  );
+};
+
+export default Agenda;

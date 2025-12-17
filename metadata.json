@@ -1,0 +1,5 @@
+{
+  "name": "ClinicPro Manager",
+  "description": "A comprehensive clinic management system inspired by Clinicorp, featuring CRM Kanban, Scheduling, Patient Records, and Financial Dashboards.",
+  "requestFramePermissions": []
+}

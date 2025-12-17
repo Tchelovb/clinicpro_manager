@@ -1,0 +1,273 @@
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "../lib/supabase";
+import { useAuth } from "../contexts/AuthContext";
+
+export interface DashboardAppointment {
+  id: string;
+  date: string;
+  time: string;
+  patientName: string;
+  doctorName: string;
+  type: string;
+  status: string;
+  duration: number;
+  notes: string;
+}
+
+export interface DashboardLead {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+  source: string;
+  status: string;
+  interest: string;
+  value: number;
+  createdAt: string;
+  lastInteraction: string;
+  leadInteractions: any[];
+  leadTasks: any[];
+}
+
+export const useDashboardData = () => {
+  const { profile } = useAuth();
+  const clinicId = profile?.clinic_id;
+
+  // Query para agendamentos de hoje
+  const appointmentsQuery = useQuery({
+    queryKey: ["dashboard-appointments", clinicId],
+    queryFn: async (): Promise<DashboardAppointment[]> => {
+      if (!clinicId) return [];
+
+      const today = new Date().toISOString().split("T")[0];
+
+      const { data: appointmentsData, error: appointmentsError } =
+        await supabase
+          .from("appointments")
+          .select(
+            `
+          id,
+          date,
+
+          duration,
+          type,
+          status,
+          notes,
+          patient_id,
+          doctor_id
+        `
+          )
+          .eq("clinic_id", clinicId)
+          .gte("date", `${today}T00:00:00`)
+          .lte("date", `${today}T23:59:59`)
+          .order("date");
+
+      if (appointmentsError) throw appointmentsError;
+      if (!appointmentsData || appointmentsData.length === 0) return [];
+
+      // Buscar nomes de pacientes e doutores
+      const patientIds = appointmentsData
+        .map((apt) => apt.patient_id)
+        .filter(Boolean);
+      const doctorIds = appointmentsData
+        .map((apt) => apt.doctor_id)
+        .filter(Boolean);
+
+      const [patientsData, doctorsData] = await Promise.all([
+        patientIds.length > 0
+          ? supabase.from("patients").select("id, name").in("id", patientIds)
+          : Promise.resolve({ data: [] }),
+        doctorIds.length > 0
+          ? supabase.from("users").select("id, name").in("id", doctorIds)
+          : Promise.resolve({ data: [] }),
+      ]);
+
+      const patientsMap = (patientsData.data || []).reduce(
+        (acc: any, p: any) => {
+          acc[p.id] = p.name;
+          return acc;
+        },
+        {}
+      );
+
+      const doctorsMap = (doctorsData.data || []).reduce((acc: any, d: any) => {
+        acc[d.id] = d.name;
+        return acc;
+      }, {});
+
+      return appointmentsData.map((apt: any) => ({
+        id: apt.id,
+        date: apt.date,
+        time: new Date(apt.date).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
+        patientName: patientsMap[apt.patient_id] || "Paciente não encontrado",
+        doctorName: doctorsMap[apt.doctor_id] || "Dr. não encontrado",
+        type: apt.type,
+        status:
+          apt.status === "PENDING"
+            ? "Pendente"
+            : apt.status === "CONFIRMED"
+              ? "Confirmado"
+              : apt.status === "COMPLETED"
+                ? "Concluído"
+                : apt.status === "MISSED"
+                  ? "Faltou"
+                  : "Cancelado",
+        duration: apt.duration,
+        notes: apt.notes,
+      }));
+    },
+    enabled: !!clinicId,
+    staleTime: 5 * 60 * 1000, // 5 minutos
+    retry: 2,
+  });
+
+  // Query para leads/oportunidades
+  const leadsQuery = useQuery({
+    queryKey: ["dashboard-leads", clinicId],
+    queryFn: async (): Promise<DashboardLead[]> => {
+      if (!clinicId) return [];
+
+      const { data, error } = await supabase
+        .from("leads")
+        .select(
+          `
+          *,
+          lead_interactions (*),
+          lead_tasks (*)
+        `
+        )
+        .eq("clinic_id", clinicId)
+        .order("last_interaction", { ascending: false })
+        .limit(10);
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!clinicId,
+    staleTime: 5 * 60 * 1000,
+    retry: 2,
+  });
+
+  // Query para pacientes (para orçamentos pendentes)
+  const patientsQuery = useQuery({
+    queryKey: ["dashboard-patients", clinicId],
+    queryFn: async () => {
+      if (!clinicId) return [];
+
+      const { data, error } = await supabase
+        .from("patients")
+        .select(
+          `
+          id,
+          name,
+          budgets (
+            id,
+            status,
+            total_value,
+            final_value
+          )
+        `
+        )
+        .eq("clinic_id", clinicId)
+        .order("name");
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!clinicId,
+    staleTime: 5 * 60 * 1000,
+    retry: 2,
+  });
+
+  // Calcular KPIs
+  const appointments = appointmentsQuery.data || [];
+  const leads = leadsQuery.data || [];
+  const patients = patientsQuery.data || [];
+
+  const kpis = {
+    appointments: appointments.length,
+    confirmed: appointments.filter(
+      (a) => a.status === "Confirmado" || a.status === "Concluído"
+    ).length,
+    pendingLeads: leads.filter(
+      (l) =>
+        l.status === "NEW" ||
+        l.status === "CONTACT" ||
+        l.status === "NEGOTIATION"
+    ).length,
+  };
+
+  // Calcular lembretes baseados nos dados
+  const reminders = [];
+  const pendingConf = appointments.filter((a) => a.status === "Pendente");
+  if (pendingConf.length > 0) {
+    reminders.push({
+      id: "task-confirm",
+      type: "urgent",
+      title: "Confirmar Agendamentos",
+      desc: `${pendingConf.length} pacientes pendentes para hoje.`,
+      actionLabel: "Iniciar Confirmações",
+      iconName: "Phone",
+      color: "orange",
+      actionPath: "/agenda",
+    });
+  }
+
+  // Orçamentos em análise
+  const pendingBudgets = patients.flatMap((p) =>
+    (p.budgets || []).filter((b) => b.status === "DRAFT")
+  );
+  if (pendingBudgets.length > 0) {
+    const totalValue = pendingBudgets.reduce(
+      (acc, b) => acc + (b.final_value || b.total_value || 0),
+      0
+    );
+    reminders.push({
+      id: "task-budget",
+      type: "medium",
+      title: "Follow-up de Orçamentos",
+      desc: `R$ ${totalValue.toLocaleString(
+        "pt-BR"
+      )} em aberto aguardando aprovação.`,
+      actionLabel: "Ver Orçamentos",
+      iconName: "DollarSign",
+      color: "purple",
+      actionPath: "/crm",
+    });
+  }
+
+  return {
+    // Dados
+    appointments,
+    leads: leads.slice(0, 5), // Limitar a 5 para o dashboard
+    patients,
+    kpis,
+    reminders,
+
+    // Estados de loading
+    isLoadingAppointments: appointmentsQuery.isLoading,
+    isLoadingLeads: leadsQuery.isLoading,
+    isLoadingPatients: patientsQuery.isLoading,
+    isLoading:
+      appointmentsQuery.isLoading ||
+      leadsQuery.isLoading ||
+      patientsQuery.isLoading,
+
+    // Estados de erro
+    appointmentsError: appointmentsQuery.error,
+    leadsError: leadsQuery.error,
+    patientsError: patientsQuery.error,
+    hasError: !!(
+      appointmentsQuery.error ||
+      leadsQuery.error ||
+      patientsQuery.error
+    ),
+
+    // Utilitários
+    refetch: () => {
+      appointmentsQuery.refetch();
+      leadsQuery.refetch();
+      patientsQuery.refetch();
+    },
+  };
+};
