@@ -1,6 +1,9 @@
 import React, { useState, ReactNode } from "react";
 import Sidebar from "./Sidebar";
 import BottomNav from "./BottomNav";
+import CashOpeningModal from "./CashOpeningModal";
+import { useData } from "../contexts/DataContext";
+import { useAuth } from "../contexts/AuthContext";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -8,9 +11,29 @@ interface AppLayoutProps {
 
 const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
+  const { currentRegister, financialSettings } = useData();
+  const { profile } = useAuth(); // Assuming profile has needed info if accessed directly, but useData handles settings
+
+  // Logic to determine if blocking modal is needed
+  // Only blocking if setting is TRUE and no register is OPEN
+  // Also only if user is logged in (profile exists)
+  const shouldBlock =
+    profile &&
+    financialSettings?.force_cash_opening &&
+    !currentRegister;
 
   return (
     <div className="flex w-full h-full bg-gray-50 dark:bg-gray-900 transition-colors duration-300 overflow-hidden">
+
+      {/* GLOBAL BLOCKING MODAL FOR CASH OPENING */}
+      {shouldBlock && (
+        <CashOpeningModal
+          onClose={() => { }} // Empty function because it is blocking, cannot close without action
+          onSuccess={() => { window.location.reload(); }} // Simple reload to refresh context
+          isBlocking={true}
+        />
+      )}
+
       {/* SIDEBAR AREA (Desktop Only) - Static Flex Item */}
       <div
         className={`hidden md:flex flex-col h-full bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 shadow-sm z-30 transition-all duration-300 ease-in-out flex-shrink-0

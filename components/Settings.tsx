@@ -14,6 +14,8 @@ import PriceTablesSettings from "./settings/PriceTablesSettings";
 import InsurancePlansSettings from "./settings/InsurancePlansSettings";
 import FinancialCRMSettings from "./settings/FinancialCRMSettings";
 import ProfessionalsSettings from "./settings/ProfessionalsSettings";
+import CashRulesSettings from "./settings/CashRulesSettings";
+import { ShieldCheck } from "lucide-react";
 
 const Settings: React.FC = () => {
   const [activeSection, setActiveSection] = useState<
@@ -24,6 +26,7 @@ const Settings: React.FC = () => {
     | "price-tables"
     | "insurance-plans"
     | "financial-crm"
+    | "cash-rules"
   >("clinic");
 
   const sections = [
@@ -38,6 +41,12 @@ const Settings: React.FC = () => {
       label: "Usuários",
       icon: Users,
       component: UsersSettings,
+    },
+    {
+      key: "cash-rules" as const,
+      label: "Regras Financeiras",
+      icon: ShieldCheck,
+      component: CashRulesSettings,
     },
     {
       key: "professionals" as const,
@@ -92,11 +101,10 @@ const Settings: React.FC = () => {
               <button
                 key={section.key}
                 onClick={() => setActiveSection(section.key)}
-                className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                  activeSection === section.key
-                    ? "bg-blue-50 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 border-r-2 border-blue-500"
-                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-200"
-                }`}
+                className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeSection === section.key
+                  ? "bg-blue-50 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 border-r-2 border-blue-500"
+                  : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-200"
+                  }`}
               >
                 <Icon size={18} />
                 {section.label}

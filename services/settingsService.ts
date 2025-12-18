@@ -584,5 +584,80 @@ export class SettingsService {
     if (error) throw error;
     return data || 0;
   }
+
+  // ==========================================
+  // FINANCIAL SETTINGS (FORT KNOX)
+  // ==========================================
+
+  static async getFinancialSettings(): Promise<import("../types").ClinicFinancialSettings | null> {
+    const clinicId = await this.getCurrentClinicId();
+    if (!clinicId) return null;
+
+    const { data, error } = await supabase
+      .from("clinic_financial_settings")
+      .select("*")
+      .eq("clinic_id", clinicId)
+      .single();
+
+    if (error && error.code !== "PGRST116") {
+      // PGRST116 is "Results contain 0 rows"
+      throw error;
+    }
+
+    return data;
+  }
+
+  static async updateFinancialSettings(
+    updates: Partial<import("../types").ClinicFinancialSettings>
+  ): Promise<import("../types").ClinicFinancialSettings> {
+    const clinicId = await this.getCurrentClinicId();
+    if (!clinicId) throw new Error("Clínica não encontrada");
+
+    // First try to select to see if it exists
+    const existing = await this.getFinancialSettings();
+
+    let data, error;
+
+    if (existing) {
+      // Update
+      const response = await supabase
+        .from("clinic_financial_settings")
+        .update(updates)
+        .eq("clinic_id", clinicId)
+        .select()
+        .single();
+      data = response.data;
+      error = response.error;
+    } else {
+      // Create
+      const response = await supabase
+        .from("clinic_financial_settings")
+        .insert({
+          clinic_id: clinicId,
+          ...updates,
+        })
+        .select()
+        .single();
+      data = response.data;
+      error = response.error;
+    }
+
+    if (error) throw error;
+    return data;
+  }
+
+  // Helper to get clinic ID centrally
+  private static async getCurrentClinicId(): Promise<string | null> {
+    const { data: user } = await supabase.auth.getUser();
+    if (!user.user) return null;
+
+    const { data } = await supabase
+      .from("users")
+      .select("clinic_id")
+      .eq("id", user.user.id)
+      .single();
+
+    return data?.clinic_id || null;
+  }
 }
 

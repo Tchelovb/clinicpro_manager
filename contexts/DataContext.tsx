@@ -41,6 +41,7 @@ import {
   ClinicalDocument,
   DocumentTemplate,
   LeadStatus,
+  ClinicFinancialSettings,
 } from "../types";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "./AuthContext";
@@ -69,6 +70,9 @@ interface DataContextType {
   // Documents State
   documents: ClinicalDocument[];
   templates: DocumentTemplate[];
+
+  // Financial Settings (Fort Knox)
+  financialSettings: ClinicFinancialSettings | null;
 
   // Actions
   addPatient: (patient: Patient) => void;
@@ -197,7 +201,12 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
   const [templates, setTemplates] =
     useState<DocumentTemplate[]>(INITIAL_TEMPLATES);
 
+  // Financial Settings State
+  const [financialSettings, setFinancialSettings] = useState<ClinicFinancialSettings | null>(null);
+
   // Derive active register
+  // WE MUST FETCH THIS FROM SERVER TO BE ACCURATE WITH MULTI-USER/FORT KNOX
+  // For now relying on local state which we will sync
   const currentRegister =
     cashRegisters.find((cr) => cr.status === "Aberto") || null;
 
@@ -322,6 +331,66 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
               email: ''
             };
           }));
+        }
+
+        // Fetch Financial Settings (Fort Knox)
+        const { data: settingsData, error: settingsError } = await supabase
+          .from("clinic_financial_settings")
+          .select("*")
+          .eq("clinic_id", profile.clinic_id)
+          .single();
+
+        if (settingsError && settingsError.code !== "PGRST116") {
+          console.error("Error fetching financial settings:", settingsError);
+        } else if (settingsData) {
+          setFinancialSettings(settingsData);
+        }
+
+        // Fetch Active Cash Register for current user
+        const { data: activeSessionData, error: activeSessionError } = await supabase
+          .from("cash_registers")
+          .select("*")
+          .eq("clinic_id", profile.clinic_id)
+          .eq("user_id", profile.id)
+          .eq("status", "OPEN") // Matches 'OPEN' from DB enum
+          .is("closed_at", null)
+          .maybeSingle();
+
+        if (activeSessionData) {
+          // Fetch transactions for this session
+          const { data: txData } = await supabase
+            .from("transactions")
+            .select("*")
+            .eq("cash_register_id", activeSessionData.id)
+            .order("created_at", { ascending: false });
+
+          const transactions: FinancialRecord[] = (txData || []).map((tx: any) => ({
+            id: tx.id,
+            description: tx.description,
+            amount: tx.amount,
+            type: tx.type === 'INCOME' ? 'income' : 'expense',
+            date: new Date(tx.created_at).toLocaleDateString("pt-BR"),
+            category: tx.category,
+            status: 'Pago',
+            paymentMethod: tx.payment_method,
+            cashRegisterId: tx.cash_register_id
+          }));
+
+          // Add a local CashRegister object representing the active session
+          setCashRegisters(prev => {
+            const existing = prev.find(p => p.id === activeSessionData.id);
+            if (existing) return prev;
+
+            return [{
+              id: activeSessionData.id,
+              openedAt: activeSessionData.opened_at,
+              responsibleName: profile.name || 'Usuário Atual',
+              openingBalance: activeSessionData.opening_balance,
+              calculatedBalance: activeSessionData.calculated_balance || activeSessionData.opening_balance, // Fallback
+              status: 'Aberto',
+              transactions: transactions
+            }, ...prev];
+          });
         }
 
         // Fetch budgets, treatments, and financials for all patients
@@ -1655,6 +1724,35 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
           )
         );
       }
+
+      // --- FORT KNOX INTEGRATION ---
+      // Insert into transactions table
+      try {
+        const { error: txError } = await supabase.from('transactions').insert({
+          clinic_id: profile?.clinic_id,
+          description: `Recebimento: ${patient.name} - ${installment.description}`,
+          amount: amount,
+          type: 'INCOME',
+          category: 'Tratamentos',
+          payment_method: method,
+          date: new Date().toISOString(), // Use ISO for DB
+          cash_register_id: currentRegister?.id || null // Trigger will validate this if enforced
+        });
+
+        if (txError) {
+          console.error("Error creating transaction record:", txError);
+          // If trigger blocked it, we should probably rollback or notify user
+          if (txError.message.includes("BLOQUEIO FINANCEIRO")) {
+            alert("ATENÇÃO: Este recebimento foi salvo no prontuário, mas NÃO entrou no fluxo de caixa pois o caixa está fechado.");
+          } else {
+            // Silent fail for other errors? Or alert?
+          }
+        }
+      } catch (txEx) {
+        console.error("Exception creating transaction:", txEx);
+      }
+      // -----------------------------
+
     } catch (error) {
       console.error("Error receiving payment:", error);
       alert("Erro ao registrar pagamento: " + error.message);
@@ -1671,38 +1769,83 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
 
   // --- FINANCIAL MODULE ACTIONS ---
 
-  const openRegister = (initialBalance: number, user: string) => {
-    if (currentRegister) return; // Already open
-    const newRegister: CashRegister = {
-      id: Math.random().toString(36).substr(2, 5),
-      openedAt: new Date().toISOString(),
-      responsibleName: user,
-      openingBalance: initialBalance,
-      calculatedBalance: initialBalance,
-      status: "Aberto",
-      transactions: [],
-    };
-    setCashRegisters([newRegister, ...cashRegisters]);
+  const openRegister = async (initialBalance: number, user: string) => {
+    if (currentRegister?.status === "Aberto") return;
+
+    try {
+      const { data, error } = await supabase
+        .from('cash_registers')
+        .insert({
+          clinic_id: profile?.clinic_id,
+          user_id: profile?.id,
+          opened_at: new Date().toISOString(),
+          opening_balance: initialBalance,
+          calculated_balance: initialBalance,
+          status: 'OPEN'
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const newRegister: CashRegister = {
+        id: data.id,
+        openedAt: data.opened_at,
+        responsibleName: user,
+        openingBalance: data.opening_balance,
+        calculatedBalance: data.calculated_balance,
+        status: "Aberto", // Map DB 'OPEN' to App 'Aberto'
+        transactions: [],
+      };
+      setCashRegisters([newRegister, ...cashRegisters]);
+    } catch (error) {
+      console.error("Error opening register:", error);
+      alert("Erro ao abrir caixa: " + error.message);
+    }
   };
 
-  const closeRegister = (
+  const closeRegister = async (
     id: string,
     closingBalance: number,
     observations?: string
   ) => {
-    setCashRegisters((prev) =>
-      prev.map((cr) =>
-        cr.id === id
-          ? {
-            ...cr,
-            status: "Fechado",
-            closedAt: new Date().toISOString(),
-            closingBalance,
-            observations,
-          }
-          : cr
-      )
-    );
+    try {
+      // Calculate current system balance
+      const reg = cashRegisters.find(c => c.id === id);
+      const calculated = reg ? reg.calculatedBalance : closingBalance; // Fallback
+      const diff = closingBalance - calculated;
+
+      const { error } = await supabase
+        .from('cash_registers')
+        .update({
+          status: 'CLOSED', // Or AUDIT_PENDING based on logic, simplified here
+          closed_at: new Date().toISOString(),
+          declared_balance: closingBalance,
+          difference_amount: diff,
+          difference_reason: observations,
+          observations: observations
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setCashRegisters((prev) =>
+        prev.map((cr) =>
+          cr.id === id
+            ? {
+              ...cr,
+              status: "Fechado",
+              closedAt: new Date().toISOString(),
+              closingBalance,
+              observations,
+            }
+            : cr
+        )
+      );
+    } catch (error) {
+      console.error("Error closing register:", error);
+      alert("Erro ao fechar caixa: " + error.message);
+    }
   };
 
   const addExpense = (expense: Omit<Expense, "id">) => {
@@ -1778,6 +1921,33 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         )
       );
     }
+
+    // --- FORT KNOX INTEGRATION ---
+    const createTransaction = async () => {
+      try {
+        const { error: txError } = await supabase.from('transactions').insert({
+          clinic_id: profile?.clinic_id,
+          description: expense.description,
+          amount: amount,
+          type: 'EXPENSE',
+          category: expense.category,
+          payment_method: method,
+          date: new Date().toISOString(),
+          cash_register_id: currentRegister?.id || null
+        });
+
+        if (txError) {
+          console.error("Error creating transaction record:", txError);
+          if (txError.message.includes("BLOQUEIO FINANCEIRO")) {
+            alert("ATENÇÃO: A despesa foi marcada como paga, mas NÃO saiu do fluxo de caixa pois o caixa está fechado.");
+          }
+        }
+      } catch (txEx) {
+        console.error("Exception creating transaction:", txEx);
+      }
+    };
+    createTransaction();
+    // -----------------------------
   };
 
   return (
@@ -1840,6 +2010,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         closeRegister,
         addExpense,
         payExpense,
+        financialSettings,
       }}
     >
       {children}
