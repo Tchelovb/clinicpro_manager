@@ -32,12 +32,12 @@ export interface Lead {
   phone: string;
   email?: string;
   source:
-    | "Instagram"
-    | "Google"
-    | "Indicação"
-    | "Facebook"
-    | "Tráfego Pago"
-    | "Orçamento";
+  | "Instagram"
+  | "Google"
+  | "Indicação"
+  | "Facebook"
+  | "Tráfego Pago"
+  | "Orçamento";
   status: LeadStatus;
   interest?: "Alto" | "Médio" | "Baixo"; // New field
   createdAt: string;
@@ -81,6 +81,7 @@ export interface Budget {
   id: string;
   createdAt: string;
   doctorName: string;
+  doctorId?: string; // UUID of the professional responsible
   status: "Em Análise" | "Enviado" | "Aprovado" | "Reprovado" | "Em Negociação";
   items: BudgetItem[];
   totalValue: number;
@@ -183,6 +184,49 @@ export interface Expense {
   paymentHistory?: PaymentHistoryItem[];
 }
 
+// --- FORT KNOX FINANCIAL TYPES ---
+
+export interface ClinicFinancialSettings {
+  clinic_id: string;
+  force_cash_opening: boolean;
+  force_daily_closing: boolean;
+  allow_negative_balance: boolean;
+  blind_closing: boolean;
+  default_change_fund: number;
+  max_difference_without_approval: number;
+}
+
+export type CashSessionStatus = "OPEN" | "CLOSED" | "AUDIT_PENDING";
+
+export interface CashSession {
+  id: string;
+  clinic_id: string;
+  user_id: string;
+  opened_at: string;
+  closed_at?: string;
+  opening_balance: number;
+  calculated_balance: number;
+  declared_balance?: number;
+  difference_amount?: number;
+  difference_reason?: string;
+  status: CashSessionStatus;
+  observations?: string;
+}
+
+export interface ActiveSession extends CashSession {
+  user_name: string;
+  user_email: string;
+  current_balance: number;
+  transaction_count: number;
+  hours_open: number;
+}
+
+export interface CashClosingData {
+  declared_balance: number;
+  difference_reason?: string;
+  card_totals?: Record<string, number>; // Ex: { "Visa": 800, "Master": 300 }
+}
+
 export interface CashRegister {
   id: string;
   openedAt: string; // ISO String
@@ -221,8 +265,11 @@ export interface PriceTableItem {
 export interface PriceTable {
   id: string;
   name: string;
-  items: PriceTableItem[]; // If procedure not here, use base price
+  type: "PARTICULAR" | "CONVENIO" | "PARCERIA" | "OUTROS";
+  external_code?: string;
   active: boolean;
+  items?: PriceTableItem[];
+  // notes e contact_phone são opcionais e usados apenas no UI de gestão
 }
 
 export interface InsurancePlan {

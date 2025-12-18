@@ -44,6 +44,8 @@ const PatientDetail: React.FC = () => {
   >("cadastro");
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showDeleteBudgetModal, setShowDeleteBudgetModal] = useState(false);
+  const [budgetToDelete, setBudgetToDelete] = useState<string | null>(null);
   const [openMenuBudgetId, setOpenMenuBudgetId] = useState<string | null>(null);
 
   // Close menu when clicking outside
@@ -203,9 +205,8 @@ const PatientDetail: React.FC = () => {
     };
     return (
       <span
-        className={`px-3 py-1 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-wide ${
-          colors[status] || "bg-gray-100 dark:bg-gray-700"
-        }`}
+        className={`px-3 py-1 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-wide ${colors[status] || "bg-gray-100 dark:bg-gray-700"
+          }`}
       >
         {status}
       </span>
@@ -290,10 +291,9 @@ const PatientDetail: React.FC = () => {
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
               className={`flex items-center gap-2 px-4 md:px-6 py-3 border-b-2 font-medium text-xs md:text-sm transition-colors whitespace-nowrap
-                ${
-                  activeTab === tab.id
-                    ? "border-blue-600 text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/20 rounded-t-lg"
-                    : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-t-lg"
+                ${activeTab === tab.id
+                  ? "border-blue-600 text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/20 rounded-t-lg"
+                  : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-t-lg"
                 }`}
             >
               <tab.icon size={16} />
@@ -879,6 +879,56 @@ const PatientDetail: React.FC = () => {
           </div>
         )}
 
+        {/* MODAL DE EXCLUSÃO DE ORÇAMENTO */}
+        {showDeleteBudgetModal && budgetToDelete && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                  <AlertCircle
+                    size={24}
+                    className="text-red-600 dark:text-red-400"
+                  />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                    Excluir Orçamento
+                  </h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Esta ação não pode ser desfeita
+                  </p>
+                </div>
+              </div>
+              <p className="text-gray-700 dark:text-gray-300 mb-6">
+                Tem certeza que deseja excluir este orçamento? Isso também excluirá os{" "}
+                <strong>tratamentos e parcelas relacionadas</strong>.
+              </p>
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => {
+                    setShowDeleteBudgetModal(false);
+                    setBudgetToDelete(null);
+                  }}
+                  className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => {
+                    deleteBudget(patient.id, budgetToDelete);
+                    setShowDeleteBudgetModal(false);
+                    setBudgetToDelete(null);
+                  }}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
+                >
+                  <Trash2 size={16} />
+                  Excluir Orçamento
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Restante das abas permanece igual */}
         {/* TAB: EVOLUÇÃO */}
         {activeTab === "prontuario" && (
@@ -958,11 +1008,10 @@ const PatientDetail: React.FC = () => {
                       #{budget.id.toUpperCase()}
                     </span>
                     <span
-                      className={`px-2 py-0.5 rounded text-[10px] md:text-xs font-bold uppercase ${
-                        budget.status === "Aprovado"
-                          ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300"
-                          : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300"
-                      }`}
+                      className={`px-2 py-0.5 rounded text-[10px] md:text-xs font-bold uppercase ${budget.status === "Aprovado"
+                        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300"
+                        : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300"
+                        }`}
                     >
                       {budget.status}
                     </span>
@@ -1003,13 +1052,8 @@ const PatientDetail: React.FC = () => {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (
-                                confirm(
-                                  "Tem certeza que deseja excluir este orçamento? Isso também excluirá os tratamentos e parcelas relacionadas."
-                                )
-                              ) {
-                                deleteBudget(patient.id, budget.id);
-                              }
+                              setBudgetToDelete(budget.id);
+                              setShowDeleteBudgetModal(true);
                               setOpenMenuBudgetId(null);
                             }}
                             className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
@@ -1075,7 +1119,7 @@ const PatientDetail: React.FC = () => {
                     ))}
                   </div>
                 </div>
-                {budget.status === "Em Análise" && (
+                {(budget.status === "Em Análise" || budget.status === "EM ANÁLISE") && (
                   <div className="p-3 bg-gray-50 dark:bg-gray-900/50 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2">
                     <button
                       onClick={() =>
@@ -1160,11 +1204,10 @@ const PatientDetail: React.FC = () => {
                       </td>
                       <td className="px-6 py-4">
                         <span
-                          className={`px-2 py-1 rounded-full text-xs font-bold uppercase ${
-                            doc.status === "Assinado"
-                              ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300"
-                              : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300"
-                          }`}
+                          className={`px-2 py-1 rounded-full text-xs font-bold uppercase ${doc.status === "Assinado"
+                            ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300"
+                            : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300"
+                            }`}
                         >
                           {doc.status}
                         </span>

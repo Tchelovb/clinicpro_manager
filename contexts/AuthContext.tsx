@@ -13,6 +13,7 @@ interface Profile {
     id: string;
     name: string;
     code: string;
+    status?: string;
   } | null;
 }
 
@@ -20,6 +21,8 @@ interface AuthContextType {
   user: User | null;
   profile: Profile | null;
   loading: boolean;
+  activeClinicId: string | null;
+  setActiveClinic: (clinicId: string | null) => void;
   signIn: (
     clinicCode: string,
     email: string,
@@ -38,6 +41,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activeClinicId, setActiveClinicId] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -76,11 +80,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       const { data: userData, error: userError } = await supabase
         .from("users")
         .select(
-          "id, clinic_id, email, name, role, active, clinics!clinic_id(id, name, code)"
+          "id, clinic_id, email, name, role, active, clinics!clinic_id(id, name, code, status)"
         )
         .eq("id", userId)
         .single();
-      // Correção final: Query users com nested clinics!clinic_id para resolver 500
 
       if (userError || !userData) {
         console.error("Erro Supabase:", userError);
@@ -89,15 +92,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
       const clinicData = (userData as any).clinics;
 
-      // Validação do código da clínica (se houver pending)
-      const pendingClinicCode = sessionStorage.getItem("pending_clinic_code");
+      // Verificar se clínica está suspensa (exceto para MASTER)
       if (
-        pendingClinicCode &&
+        userData.role !== 'MASTER' &&
         clinicData &&
-        clinicData.code !== pendingClinicCode
+        clinicData.status === 'SUSPENDED'
       ) {
         await supabase.auth.signOut();
-        throw new Error("Código da clínica inválido");
+        throw new Error('Acesso suspenso. Entre em contato com o suporte financeiro.');
+      }
+
+      // Validação do código da clínica (se houver pending)
+      const pendingClinicCode = sessionStorage.getItem("pending_clinic_code");
+
+      // MASTER pode usar código 'MASTER' para fazer login
+      if (userData.role === 'MASTER') {
+        // MASTER não precisa validar código de clínica específica
+        if (pendingClinicCode && pendingClinicCode !== 'MASTER') {
+          console.warn('MASTER tentou logar com código diferente de MASTER');
+        }
+      } else {
+        // Usuários normais precisam validar código da clínica
+        if (
+          pendingClinicCode &&
+          clinicData &&
+          clinicData.code !== pendingClinicCode
+        ) {
+          await supabase.auth.signOut();
+          throw new Error("Código da clínica inválido");
+        }
       }
 
       sessionStorage.removeItem("pending_clinic_code");
@@ -146,8 +169,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     await supabase.auth.signOut();
   };
 
+  const setActiveClinic = (clinicId: string | null) => {
+    setActiveClinicId(clinicId);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, profile, loading, activeClinicId, setActiveClinic, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );

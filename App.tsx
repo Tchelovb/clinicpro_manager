@@ -37,6 +37,8 @@ import Login from "./components/Login";
 import UserManagement from "./components/UserManagement";
 import ProfessionalsPage from "./components/ProfessionalsPage";
 import ProtectedRoute from "./components/ProtectedRoute";
+import MasterDashboard from "./components/master/MasterDashboard";
+import NewClinicForm from "./components/master/NewClinicForm";
 import AppLayout from "./components/AppLayout";
 import { DataProvider } from "./contexts/DataContext";
 import { AuthProvider } from "./contexts/AuthContext";
@@ -87,6 +89,19 @@ const App: React.FC = () => {
             <Routes>
               {/* Rotas Públicas - Sem Layout */}
               <Route path="/" element={<Login />} />
+
+              {/* Rotas Master - Sem Layout Padrão */}
+              <Route
+                path="/master/*"
+                element={
+                  <ProtectedRoute requiredRole="MASTER">
+                    <Routes>
+                      <Route path="/" element={<MasterDashboard />} />
+                      <Route path="/clinics/new" element={<NewClinicForm />} />
+                    </Routes>
+                  </ProtectedRoute>
+                }
+              />
 
               {/* Rotas Protegidas - Com Layout */}
               <Route

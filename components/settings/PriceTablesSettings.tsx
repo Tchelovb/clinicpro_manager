@@ -6,6 +6,9 @@ interface PriceTable {
   id: string;
   name: string;
   active: boolean;
+  type: "PARTICULAR" | "CONVENIO" | "PARCERIA" | "OUTROS";
+  external_code?: string;
+  notes?: string;
 }
 
 interface PriceTableItem {
@@ -87,6 +90,9 @@ const PriceTablesSettings: React.FC = () => {
           .from("price_tables")
           .update({
             name: tableData.name,
+            type: tableData.type,
+            external_code: tableData.external_code,
+            notes: tableData.notes,
             active: tableData.active,
           })
           .eq("id", editingTable.id);
@@ -97,6 +103,9 @@ const PriceTablesSettings: React.FC = () => {
         const { error } = await supabase.from("price_tables").insert({
           clinic_id: clinicId,
           name: tableData.name,
+          type: tableData.type || "PARTICULAR",
+          external_code: tableData.external_code,
+          notes: tableData.notes,
           active: tableData.active ?? true,
         });
 
@@ -250,6 +259,9 @@ const PriceTablesSettings: React.FC = () => {
                   Nome
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  Tipo
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Status
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
@@ -270,14 +282,26 @@ const PriceTablesSettings: React.FC = () => {
                     <span className="text-sm font-medium text-gray-900 dark:text-white">
                       {table.name}
                     </span>
+                    {table.external_code && <span className="ml-2 text-xs text-gray-500">({table.external_code})</span>}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
-                      className={`px-2 py-1 text-xs font-medium rounded-full ${
-                        table.active
-                          ? "bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300"
-                          : "bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300"
-                      }`}
+                      className={`px-2 py-1 text-xs font-medium rounded-full ${table.type === "CONVENIO"
+                        ? "bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300"
+                        : table.type === "PARTICULAR"
+                          ? "bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300"
+                          : "bg-gray-100 text-gray-800 dark:bg-gray-900/50 dark:text-gray-300"
+                        }`}
+                    >
+                      {table.type || 'PARTICULAR'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span
+                      className={`px-2 py-1 text-xs font-medium rounded-full ${table.active
+                        ? "bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300"
+                        : "bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300"
+                        }`}
                     >
                       {table.active ? "Ativa" : "Inativa"}
                     </span>
@@ -375,6 +399,9 @@ const TableModal: React.FC<TableModalProps> = ({
   const [formData, setFormData] = useState({
     name: table?.name || "",
     active: table?.active ?? true,
+    type: table?.type || "PARTICULAR",
+    external_code: table?.external_code || "",
+    notes: table?.notes || ""
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -410,6 +437,52 @@ const TableModal: React.FC<TableModalProps> = ({
               }
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
               required
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Tipo
+              </label>
+              <select
+                value={formData.type}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, type: e.target.value as any }))
+                }
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+              >
+                <option value="PARTICULAR">Particular</option>
+                <option value="CONVENIO">Convênio</option>
+                <option value="PARCERIA">Parceria</option>
+                <option value="OUTROS">Outros</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Código Externo
+              </label>
+              <input
+                type="text"
+                value={formData.external_code}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, external_code: e.target.value }))
+                }
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Observações
+            </label>
+            <textarea
+              value={formData.notes}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, notes: e.target.value }))
+              }
+              rows={3}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
             />
           </div>
 

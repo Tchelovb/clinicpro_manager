@@ -31,8 +31,9 @@ export const useProfessionals = () => {
 
       const { data, error } = await supabase
         .from("professionals")
-        .select("*")
+        .select("*, users!inner(active)")
         .eq("clinic_id", profile.clinic_id)
+        .eq("users.active", true)
         .order("name");
 
       if (error) throw error;

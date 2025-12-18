@@ -22,6 +22,11 @@
 ### Propósito
 Otimizar a gestão de clínicas através de um sistema integrado que abrange desde o primeiro contato com o lead até o pós-tratamento, incluindo controle financeiro completo e inteligência de negócios.
 
+### Status Atual
+> **Última Atualização**: 18 de Dezembro de 2025  
+> **Status**: ✅ **TOTALMENTE FUNCIONAL**  
+> **Versão**: 1.0.0
+
 ### Público-Alvo
 - Clínicas odontológicas e de harmonização facial
 - Dentistas e profissionais de saúde
@@ -34,6 +39,7 @@ Otimizar a gestão de clínicas através de um sistema integrado que abrange des
 - ✅ **Responsivo**: Interface adaptável para desktop e mobile
 - ✅ **Seguro**: Row Level Security (RLS) para isolamento de dados
 - ✅ **Escalável**: Arquitetura serverless com Supabase
+- ✅ **Completo**: 31 tabelas, 8 módulos principais, 100% funcional
 
 ---
 
@@ -783,6 +789,63 @@ Senha: admin123
 **Status**: ✅ Já corrigido no código atual
 
 **Verificar**: Garantir que todas as queries usam `supabase.from('procedure')`
+
+---
+
+## 🔧 Correções Recentes (Dezembro 2025)
+
+### 18/12/2025 - Sessão de Correções Críticas
+
+#### 1. ✅ Seletor de Profissional em Orçamentos
+**Problema**: Orçamentos sempre usavam o usuário logado como profissional responsável  
+**Solução**:
+- Adicionado dropdown de seleção de profissional no formulário de orçamento
+- Auto-seleção do profissional logado (se tiver `professional_id`)
+- Auto-seleção da tabela "Particular" por padrão
+- Validação obrigatória de profissional e tabela de preços
+
+#### 2. ✅ Nome do Profissional em Orçamentos e Tratamentos
+**Problema**: Exibindo nome do usuário em vez do profissional responsável  
+**Solução**:
+- Corrigido join com tabelas `users` e `professionals`
+- Nome completo do profissional agora aparece corretamente
+- Prefixo "Dr." adicionado automaticamente
+- Eliminada duplicação de prefixos
+
+#### 3. ✅ Exclusão de Orçamentos
+**Problema**: Botão excluir não funcionava (diálogo `confirm()` não aparecia)  
+**Solução**:
+- Substituído `window.confirm()` por modal customizado
+- Modal estilizado com confirmação visual clara
+- Exclusão agora funciona perfeitamente
+
+#### 4. ✅ Recálculo Financeiro ao Excluir Orçamento
+**Problema**: Saldo do paciente ficava incorreto após excluir orçamento aprovado  
+**Solução**:
+- Corrigido filtro de parcelas financeiras (estava mantendo em vez de remover)
+- Recálculo correto de `total_approved`, `total_paid` e `balance_due`
+- Script SQL criado para corrigir dados legados
+
+#### 5. ✅ Data de Execução em Tratamentos
+**Problema**: Data de conclusão não aparecia nos tratamentos concluídos  
+**Solução**:
+- Adicionado campo `executionDate` ao mapeamento de tratamentos
+- Join com profissionais ao recarregar após conclusão
+- Data formatada em português (DD/MM/AAAA)
+
+#### 6. ✅ Cards de Estatísticas em Tratamentos
+**Problema**: Faltava card "Não Iniciado"  
+**Solução**:
+- Adicionado 4º card com contador de tratamentos não iniciados
+- Grid responsivo (1/2/4 colunas)
+- Ícones e cores diferenciadas por status
+
+#### 7. ✅ Tratamentos Não Apareciam Após Aprovar Orçamento
+**Problema**: Erro `PGRST201` - ambiguidade no relacionamento `treatment_items` → `users`  
+**Solução**:
+- Especificado relacionamento `doctor:users!doctor_id` na query
+- Join correto com tabela de profissionais
+- Tratamentos agora carregam automaticamente após aprovação
 
 ---
 

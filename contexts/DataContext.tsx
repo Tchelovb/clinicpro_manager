@@ -1,4 +1,4 @@
-import React, {
+﻿import React, {
   createContext,
   useContext,
   useState,
@@ -249,6 +249,81 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
           return;
         }
 
+
+        // Fetch Price Tables & Items
+        const { data: ptData, error: ptError } = await supabase
+          .from("price_tables")
+          .select("*, items:price_table_items(*)")
+          .eq("clinic_id", profile.clinic_id)
+          .eq("active", true);
+
+        if (ptError) console.error("Error fetching price tables:", ptError);
+        else if (ptData) {
+          setPriceTables(ptData.map(pt => ({
+            id: pt.id,
+            name: pt.name,
+            type: pt.type as any,
+            external_code: pt.external_code,
+            active: pt.active,
+            items: pt.items.map((i: any) => ({
+              procedureId: i.procedure_id,
+              price: i.price
+            }))
+          })));
+        }
+
+        // Fetch Procedures
+        const { data: proceduresData, error: proceduresError } = await supabase
+          .from("procedure")
+          .select("*")
+          .eq("clinic_id", profile.clinic_id)
+          .order("name");
+
+        if (proceduresError) console.error("Error fetching procedures:", proceduresError);
+        else if (proceduresData) {
+          setProcedures(proceduresData.map((proc: any) => ({
+            id: proc.id,
+            name: proc.name,
+            category: proc.category,
+            price: proc.base_price,
+            duration: proc.duration_min || proc.duration || 30
+          })));
+        }
+
+        // Fetch Professionals (from professionals table, joined with users)
+        const { data: professionalsData, error: professionalsError } = await supabase
+          .from("professionals")
+          .select(`
+            id,
+            name,
+            specialty,
+            color,
+            users!inner (
+              id,
+              active,
+              clinic_id
+            )
+          `)
+          .eq("users.clinic_id", profile.clinic_id)
+          .eq("users.active", true)
+          .order("name");
+
+        if (professionalsError) console.error("Error fetching professionals:", professionalsError);
+        else if (professionalsData) {
+          setProfessionals(professionalsData.map((prof: any) => {
+            // users is an array when using !inner join, get the first element
+            const user = Array.isArray(prof.users) ? prof.users[0] : prof.users;
+            return {
+              id: user?.id || prof.id, // Use user ID for budget.doctor_id
+              name: prof.name, // Professional name from professionals table
+              role: prof.specialty || 'Dentista',
+              color: prof.color || 'blue',
+              active: true,
+              email: ''
+            };
+          }));
+        }
+
         // Fetch budgets, treatments, and financials for all patients
         const patientIds = patientsData?.map((p) => p.id) || [];
         if (patientIds.length > 0) {
@@ -267,6 +342,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
               final_value,
               payment_config,
               price_table_id,
+              users!inner (
+                id,
+                professional_id,
+                professionals (
+                  name
+                )
+              ),
               budget_items (
                 id,
                 procedure_name,
@@ -288,7 +370,16 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
           const { data: treatmentsData, error: treatmentsError } =
             await supabase
               .from("treatment_items")
-              .select("*")
+              .select(`
+                *,
+                doctor:users!doctor_id (
+                  id,
+                  professional_id,
+                  professionals (
+                    name
+                  )
+                )
+              `)
               .in("patient_id", patientIds);
 
           if (treatmentsError) {
@@ -313,50 +404,65 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
               budgets:
                 budgetsData
                   ?.filter((b) => b.patient_id === patient.id)
-                  .map((b) => ({
-                    id: b.id,
-                    createdAt: new Date(b.created_at).toLocaleDateString(
-                      "pt-BR"
-                    ),
-                    doctorName: "Dr. ${profile?.name || 'N�o informado'}",
-                    status:
-                      b.status === "DRAFT"
-                        ? "Em Análise"
-                        : b.status === "APPROVED"
-                        ? "Aprovado"
-                        : b.status,
-                    items: b.budget_items.map((item) => ({
-                      id: item.id,
-                      procedure: item.procedure_name,
-                      region: item.region,
-                      quantity: item.quantity,
-                      unitValue: item.unit_value,
-                      total: item.total_value,
-                    })),
-                    totalValue: b.total_value,
-                    discount: b.discount,
-                    finalValue: b.final_value,
-                    paymentConfig: b.payment_config,
-                    priceTableId: b.price_table_id,
-                  })) || [],
+                  .map((b) => {
+                    // Get professional name from the joined data
+                    // users is an array when using !inner join
+                    const user = Array.isArray(b.users) ? b.users[0] : b.users;
+                    const professional = Array.isArray(user?.professionals) ? user.professionals[0] : user?.professionals;
+                    const professionalName = professional?.name || 'Profissional não informado';
+                    return {
+                      id: b.id,
+                      createdAt: new Date(b.created_at).toLocaleDateString(
+                        "pt-BR"
+                      ),
+                      doctorName: `Dr. ${professionalName}`,
+                      doctorId: b.doctor_id,
+                      status:
+                        b.status === "DRAFT"
+                          ? "Em Análise"
+                          : b.status === "APPROVED"
+                            ? "Aprovado"
+                            : b.status,
+                      items: b.budget_items.map((item) => ({
+                        id: item.id,
+                        procedure: item.procedure_name,
+                        region: item.region,
+                        quantity: item.quantity,
+                        unitValue: item.unit_value,
+                        total: item.total_value,
+                      })),
+                      totalValue: b.total_value,
+                      discount: b.discount,
+                      finalValue: b.final_value,
+                      paymentConfig: b.payment_config,
+                      priceTableId: b.price_table_id,
+                    };
+                  }) || [],
               treatments:
                 treatmentsData
                   ?.filter((t) => t.patient_id === patient.id)
-                  .map((t: any) => ({
-                    id: t.id,
-                    procedure: t.procedure_name,
-                    region: t.region,
-                    status:
-                      t.status === "NOT_STARTED"
-                        ? "Não Iniciado"
-                        : t.status === "IN_PROGRESS"
-                        ? "Em Andamento"
-                        : t.status === "COMPLETED"
-                        ? "Concluído"
-                        : t.status,
-                    budgetId: t.budget_id,
-                    doctorName: "Dr. ${profile?.name || 'N�o informado'}",
-                  })) || [],
+                  .map((t: any) => {
+                    // Get professional name from the joined data
+                    const user = Array.isArray(t.doctor) ? t.doctor[0] : t.doctor;
+                    const professional = Array.isArray(user?.professionals) ? user.professionals[0] : user?.professionals;
+                    const professionalName = professional?.name || 'Profissional não informado';
+                    return {
+                      id: t.id,
+                      procedure: t.procedure_name,
+                      region: t.region,
+                      status:
+                        t.status === "NOT_STARTED"
+                          ? "Não Iniciado"
+                          : t.status === "IN_PROGRESS"
+                            ? "Em Andamento"
+                            : t.status === "COMPLETED"
+                              ? "Concluído"
+                              : t.status,
+                      budgetId: t.budget_id,
+                      doctorName: `Dr. ${professionalName}`,
+                      executionDate: t.execution_date ? new Date(t.execution_date).toLocaleDateString("pt-BR") : undefined,
+                    };
+                  }) || [],
               financials:
                 financialsData
                   ?.filter((f) => f.patient_id === patient.id)
@@ -370,12 +476,12 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
                       f.status === "PENDING"
                         ? "Pendente"
                         : f.status === "PAID"
-                        ? "Pago"
-                        : f.status === "OVERDUE"
-                        ? "Atrasado"
-                        : f.status === "PARTIAL"
-                        ? "Pago Parcial"
-                        : f.status,
+                          ? "Pago"
+                          : f.status === "OVERDUE"
+                            ? "Atrasado"
+                            : f.status === "PARTIAL"
+                              ? "Pago Parcial"
+                              : f.status,
                     paymentMethod: f.payment_method,
                     paymentHistory: [],
                   })) || [],
@@ -436,18 +542,79 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
   };
 
   // --- SETTINGS ACTIONS ---
-  const addProcedure = (procedure: Procedure) => {
-    setProcedures((prev) => [...prev, procedure]);
+  const addProcedure = async (procedure: Procedure) => {
+    try {
+      const { data, error } = await supabase
+        .from("procedure")
+        .insert({
+          clinic_id: profile.clinic_id,
+          name: procedure.name,
+          category: procedure.category,
+          base_price: procedure.price,
+          duration: procedure.duration,
+          duration_min: procedure.duration,
+          total_sessions: 1,
+          sessions: 1
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setProcedures((prev) => [...prev, {
+        id: data.id,
+        name: data.name,
+        category: data.category,
+        price: data.base_price,
+        duration: data.duration_min || data.duration
+      }]);
+    } catch (error) {
+      console.error("Error adding procedure:", error);
+      alert("Erro ao adicionar procedimento: " + error.message);
+    }
   };
 
-  const updateProcedure = (id: string, data: Partial<Procedure>) => {
-    setProcedures((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, ...data } : p))
-    );
+  const updateProcedure = async (id: string, data: Partial<Procedure>) => {
+    try {
+      const updateData: any = {};
+      if (data.name) updateData.name = data.name;
+      if (data.category) updateData.category = data.category;
+      if (data.price !== undefined) updateData.base_price = data.price;
+      if (data.duration) {
+        updateData.duration = data.duration;
+        updateData.duration_min = data.duration;
+      }
+
+      const { error } = await supabase
+        .from("procedure")
+        .update(updateData)
+        .eq("id", id);
+
+      if (error) throw error;
+
+      setProcedures((prev) =>
+        prev.map((p) => (p.id === id ? { ...p, ...data } : p))
+      );
+    } catch (error) {
+      console.error("Error updating procedure:", error);
+      alert("Erro ao atualizar procedimento: " + error.message);
+    }
   };
 
-  const deleteProcedure = (id: string) => {
-    setProcedures((prev) => prev.filter((p) => p.id !== id));
+  const deleteProcedure = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from("procedure")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      setProcedures((prev) => prev.filter((p) => p.id !== id));
+    } catch (error) {
+      console.error("Error deleting procedure:", error);
+      alert("Erro ao excluir procedimento: " + error.message);
+    }
   };
 
   const addProfessional = (professional: Professional) => {
@@ -529,20 +696,20 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         error: authError,
       } = await supabase.auth.getUser();
       if (authError || !user) {
-        throw new Error("Usuário não autenticado");
+        throw new Error("UsuÃ¡rio nÃ£o autenticado");
       }
 
       // Calculate totals
       let totalValue = 0;
       for (const item of budgetData.items) {
         if (item.quantity <= 0 || item.unitValue <= 0) {
-          throw new Error("Quantidade e valor unitário devem ser positivos");
+          throw new Error("Quantidade e valor unitÃ¡rio devem ser positivos");
         }
         totalValue += item.total;
       }
       const discount = budgetData.discount || 0;
       if (discount < 0 || discount > totalValue) {
-        throw new Error("Desconto inválido");
+        throw new Error("Desconto invÃ¡lido");
       }
       const finalValue = totalValue - discount;
 
@@ -551,7 +718,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         .from("budgets")
         .insert({
           patient_id: patientId,
-          doctor_id: user.id,
+          doctor_id: budgetData.doctorId || user.id, // Use provided doctorId or fallback to current user
           price_table_id: budgetData.priceTableId,
           status: "DRAFT",
           total_value: totalValue,
@@ -588,8 +755,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
       const newBudget: Budget = {
         id: budget.id,
         createdAt: new Date().toLocaleDateString("pt-BR"),
-        status: "Em Análise",
-        doctorName: "Dr. ${profile?.name || 'N�o informado'}",
+        status: "Em AnÃ¡lise",
+        doctorName: `Dr. ${profile?.name || 'Não informado'}`,
         ...budgetData,
         totalValue: totalValue,
         finalValue: finalValue,
@@ -603,7 +770,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
       });
     } catch (error) {
       console.error("Error creating budget:", error);
-      alert("Erro ao criar orçamento: " + error.message);
+      alert("Erro ao criar orÃ§amento: " + error.message);
     }
   };
 
@@ -622,7 +789,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
 
       if (checkError) throw checkError;
       if (existing.status === "APPROVED") {
-        throw new Error("Não é possível editar orçamento aprovado");
+        throw new Error("NÃ£o Ã© possÃ­vel editar orÃ§amento aprovado");
       }
 
       // Calculate new totals if items provided
@@ -631,13 +798,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
       if (budgetData.items) {
         for (const item of budgetData.items) {
           if (item.quantity <= 0 || item.unitValue <= 0) {
-            throw new Error("Quantidade e valor unitário devem ser positivos");
+            throw new Error("Quantidade e valor unitÃ¡rio devem ser positivos");
           }
           totalValue += item.total;
         }
         const discount = budgetData.discount || 0;
         if (discount < 0 || discount > totalValue) {
-          throw new Error("Desconto inválido");
+          throw new Error("Desconto invÃ¡lido");
         }
         finalValue = totalValue - discount;
       }
@@ -648,6 +815,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         updateData.discount = budgetData.discount;
       if (budgetData.paymentConfig)
         updateData.payment_config = budgetData.paymentConfig;
+      if (budgetData.doctorId)
+        updateData.doctor_id = budgetData.doctorId;
       if (budgetData.items) {
         updateData.total_value = totalValue;
         updateData.final_value = finalValue;
@@ -694,18 +863,18 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
       const updatedBudgets = patient.budgets.map((b) =>
         b.id === budgetId
           ? {
-              ...b,
-              ...budgetData,
-              totalValue: totalValue || b.totalValue,
-              finalValue: finalValue || b.finalValue,
-            }
+            ...b,
+            ...budgetData,
+            totalValue: totalValue || b.totalValue,
+            finalValue: finalValue || b.finalValue,
+          }
           : b
       );
 
       updatePatient(patientId, { budgets: updatedBudgets });
     } catch (error) {
       console.error("Error updating budget:", error);
-      alert("Erro ao atualizar orçamento: " + error.message);
+      alert("Erro ao atualizar orÃ§amento: " + error.message);
     }
   };
 
@@ -800,7 +969,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         (t) => t.budgetId !== budgetId
       );
       const updatedFinancials = (patient.financials || []).filter((f) =>
-        f.description?.includes(`#${budgetId}`)
+        !f.description?.includes(`#${budgetId}`)
       );
 
       // Revert totals locally if approved
@@ -826,7 +995,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
       });
     } catch (error) {
       console.error("Error deleting budget:", error);
-      alert("Erro ao excluir orçamento: " + error.message);
+      alert("Erro ao excluir orÃ§amento: " + error.message);
     }
   };
 
@@ -838,7 +1007,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         data: { user },
         error: authError,
       } = await supabase.auth.getUser();
-      if (authError || !user) throw new Error("Usuário não autenticado");
+      if (authError || !user) throw new Error("UsuÃ¡rio nÃ£o autenticado");
 
       const patient = patients.find((p) => p.id === patientId);
       if (!patient || !patient.budgets) return;
@@ -861,7 +1030,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         procedure_name: item.procedure,
         region: item.region,
         status: "NOT_STARTED",
-        doctor_id: user.id,
+        doctor_id: budget.doctorId || user.id, // Use budget's doctor or fallback to current user
       }));
 
       const { error: treatmentsError } = await supabase
@@ -883,9 +1052,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         installmentsData.push({
           patient_id: patientId,
           clinic_id: profile.clinic_id,
-          description: `Orçamento #${budgetId} - Parc. ${
-            i + 1
-          }/${installmentsCount}`,
+          description: `OrÃ§amento #${budgetId} - Parc. ${i + 1
+            }/${installmentsCount}`,
           due_date: dueDate.toISOString().split("T")[0],
           amount: installmentValue,
           amount_paid: 0,
@@ -919,7 +1087,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         id: Math.random().toString(36).substr(2, 5),
         procedure: item.procedure,
         region: item.region,
-        status: "Não Iniciado",
+        status: "NÃ£o Iniciado",
         budgetId: budget.id,
         doctorName: budget.doctorName,
       }));
@@ -931,9 +1099,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
 
         newFinancials.push({
           id: Math.random().toString(36).substr(2, 5),
-          description: `Orçamento #${budgetId} - Parc. ${
-            i + 1
-          }/${installmentsCount}`,
+          description: `OrÃ§amento #${budgetId} - Parc. ${i + 1
+            }/${installmentsCount}`,
           dueDate: dueDate.toLocaleDateString("pt-BR"),
           amount: installmentValue,
           amountPaid: 0,
@@ -966,7 +1133,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
             {
               id: Math.random().toString(36).substr(2, 5),
               type: "System",
-              content: `Orçamento #${budgetId} aprovado. Oportunidade ganha!`,
+              content: `OrÃ§amento #${budgetId} aprovado. Oportunidade ganha!`,
               date: new Date().toISOString(),
               user: "System",
             },
@@ -993,14 +1160,14 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
             region: t.region,
             status:
               t.status === "NOT_STARTED"
-                ? "Não Iniciado"
+                ? "NÃ£o Iniciado"
                 : t.status === "IN_PROGRESS"
-                ? "Em Andamento"
-                : t.status === "COMPLETED"
-                ? "Concluído"
-                : t.status,
+                  ? "Em Andamento"
+                  : t.status === "COMPLETED"
+                    ? "ConcluÃ­do"
+                    : t.status,
             budgetId: t.budget_id,
-            doctorName: "Dr. ${profile?.name || 'N�o informado'}",
+            doctorName: `Dr. ${profile?.name || 'Não informado'}`,
           })) || [],
         financials:
           financialsData?.map((f: any) => ({
@@ -1013,19 +1180,19 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
               f.status === "PENDING"
                 ? "Pendente"
                 : f.status === "PAID"
-                ? "Pago"
-                : f.status === "OVERDUE"
-                ? "Atrasado"
-                : f.status === "PARTIAL"
-                ? "Pago Parcial"
-                : f.status,
+                  ? "Pago"
+                  : f.status === "OVERDUE"
+                    ? "Atrasado"
+                    : f.status === "PARTIAL"
+                      ? "Pago Parcial"
+                      : f.status,
             paymentMethod: f.payment_method,
             paymentHistory: [], // TODO: fetch payment_history if needed
           })) || [],
       });
     } catch (error) {
       console.error("Error approving budget:", error);
-      alert("Erro ao aprovar orçamento: " + error.message);
+      alert("Erro ao aprovar orÃ§amento: " + error.message);
     }
   };
 
@@ -1048,8 +1215,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
       id: Math.random().toString(36).substr(2, 5),
       date: new Date().toLocaleDateString("pt-BR"),
       doctorName: "System",
-      type: "Evolução",
-      content: `Orçamento #${budgetId} reprovado. Motivo: ${reason}`,
+      type: "EvoluÃ§Ã£o",
+      content: `OrÃ§amento #${budgetId} reprovado. Motivo: ${reason}`,
     };
 
     updatePatient(patientId, {
@@ -1067,7 +1234,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
           {
             id: Math.random().toString(36).substr(2, 5),
             type: "System",
-            content: `Orçamento #${budgetId} reprovado. Motivo: ${reason}`,
+            content: `OrÃ§amento #${budgetId} reprovado. Motivo: ${reason}`,
             date: new Date().toISOString(),
             user: "System",
           },
@@ -1108,14 +1275,14 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
           region: t.region,
           status:
             t.status === "NOT_STARTED"
-              ? "Não Iniciado"
+              ? "NÃ£o Iniciado"
               : t.status === "IN_PROGRESS"
-              ? "Em Andamento"
-              : t.status === "COMPLETED"
-              ? "Concluído"
-              : t.status,
+                ? "Em Andamento"
+                : t.status === "COMPLETED"
+                  ? "ConcluÃ­do"
+                  : t.status,
           budgetId: t.budget_id,
-          doctorName: "Dr. ${profile?.name || 'N�o informado'}",
+          doctorName: `Dr. ${profile?.name || 'Não informado'}`,
           executionDate: t.execution_date
             ? new Date(t.execution_date).toLocaleDateString("pt-BR")
             : undefined,
@@ -1132,12 +1299,12 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
             f.status === "PENDING"
               ? "Pendente"
               : f.status === "PAID"
-              ? "Pago"
-              : f.status === "OVERDUE"
-              ? "Atrasado"
-              : f.status === "PARTIAL"
-              ? "Pago Parcial"
-              : f.status,
+                ? "Pago"
+                : f.status === "OVERDUE"
+                  ? "Atrasado"
+                  : f.status === "PARTIAL"
+                    ? "Pago Parcial"
+                    : f.status,
           paymentMethod: f.payment_method,
           paymentHistory: [], // TODO: fetch payment_history if needed
         })) || [];
@@ -1169,7 +1336,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
 
     // Update Budget Status (Marks as in negotiation, but stays in list until Lost)
     const updatedBudgets = patient.budgets.map((b) =>
-      b.id === budgetId ? { ...b, status: "Em Negociação" as const } : b
+      b.id === budgetId ? { ...b, status: "Em NegociaÃ§Ã£o" as const } : b
     );
     updatePatient(patientId, { budgets: updatedBudgets });
 
@@ -1179,7 +1346,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
       name: patient.name,
       phone: patient.phone,
       email: patient.email,
-      source: "Orçamento", // Explicit source
+      source: "OrÃ§amento", // Explicit source
       budgetId: budget.id, // Explicit Link
       status: LeadStatus.NEGOTIATION,
       interest: "Alto",
@@ -1190,7 +1357,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         {
           id: Math.random().toString(36).substr(2, 5),
           type: "System",
-          content: `Oportunidade gerada a partir do Orçamento #${budgetId}.`,
+          content: `Oportunidade gerada a partir do OrÃ§amento #${budgetId}.`,
           date: new Date().toISOString(),
           user: "System",
         },
@@ -1198,7 +1365,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
       tasks: [
         {
           id: Math.random().toString(36).substr(2, 5),
-          title: `Negociar Orçamento #${budgetId}`,
+          title: `Negociar OrÃ§amento #${budgetId}`,
           dueDate: new Date().toISOString().split("T")[0], // Today
           completed: false,
         },
@@ -1236,14 +1403,14 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
           region: t.region,
           status:
             t.status === "NOT_STARTED"
-              ? "Não Iniciado"
+              ? "NÃ£o Iniciado"
               : t.status === "IN_PROGRESS"
-              ? "Em Andamento"
-              : t.status === "COMPLETED"
-              ? "Concluído"
-              : t.status,
+                ? "Em Andamento"
+                : t.status === "COMPLETED"
+                  ? "ConcluÃ­do"
+                  : t.status,
           budgetId: t.budget_id,
-          doctorName: "Dr. ${profile?.name || 'N�o informado'}",
+          doctorName: `Dr. ${profile?.name || 'Não informado'}`,
         })) || [];
 
       updatePatient(patientId, { treatments: mappedTreatments });
@@ -1264,7 +1431,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         data: { user },
         error: authError,
       } = await supabase.auth.getUser();
-      if (authError || !user) throw new Error("Usuário não autenticado");
+      if (authError || !user) throw new Error("UsuÃ¡rio nÃ£o autenticado");
 
       // Update treatment status in DB
       const { error: updateError } = await supabase
@@ -1282,30 +1449,45 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
       // Reload treatments from DB to ensure consistency
       const { data: treatmentsData } = await supabase
         .from("treatment_items")
-        .select("*")
+        .select(`
+          *,
+          doctor:users!doctor_id (
+            id,
+            professional_id,
+            professionals (
+              name
+            )
+          )
+        `)
         .eq("patient_id", patientId);
 
       const mappedTreatments =
-        treatmentsData?.map((t: any) => ({
-          id: t.id,
-          procedure: t.procedure_name,
-          region: t.region,
-          status:
-            t.status === "NOT_STARTED"
-              ? "Não Iniciado"
-              : t.status === "IN_PROGRESS"
-              ? "Em Andamento"
-              : t.status === "COMPLETED"
-              ? "Concluído"
-              : t.status,
-          budgetId: t.budget_id,
-          doctorName: "Dr. ${profile?.name || 'N�o informado'}",
-          executionDate: t.execution_date
-            ? new Date(t.execution_date).toLocaleDateString("pt-BR")
-            : undefined,
-        })) || [];
+        treatmentsData?.map((t: any) => {
+          // Get professional name from the joined data
+          const user = Array.isArray(t.doctor) ? t.doctor[0] : t.doctor;
+          const professional = Array.isArray(user?.professionals) ? user.professionals[0] : user?.professionals;
+          const professionalName = professional?.name || 'Profissional não informado';
+          return {
+            id: t.id,
+            procedure: t.procedure_name,
+            region: t.region,
+            status:
+              t.status === "NOT_STARTED"
+                ? "Não Iniciado"
+                : t.status === "IN_PROGRESS"
+                  ? "Em Andamento"
+                  : t.status === "COMPLETED"
+                    ? "Concluído"
+                    : t.status,
+            budgetId: t.budget_id,
+            doctorName: `Dr. ${professionalName}`,
+            executionDate: t.execution_date
+              ? new Date(t.execution_date).toLocaleDateString("pt-BR")
+              : undefined,
+          };
+        }) || [];
 
-      const defaultContent = `Procedimento realizado: ${treatmentId}. Paciente liberado sem intercorrências.`;
+      const defaultContent = `Procedimento realizado: ${treatmentId}. Paciente liberado sem intercorrÃªncias.`;
       const finalContent = noteContent
         ? `${noteContent} \n\n(Ref: ${treatmentId})`
         : defaultContent;
@@ -1314,7 +1496,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         id: Math.random().toString(36).substr(2, 5),
         date: new Date().toLocaleDateString("pt-BR"),
         doctorName: "Dr. Marcelo Vilas Boas",
-        type: "Evolução",
+        type: "EvoluÃ§Ã£o",
         content: finalContent,
       };
 
@@ -1324,7 +1506,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         .insert({
           patient_id: patientId,
           doctor_id: user.id,
-          type: "Evolução",
+          type: "EvoluÃ§Ã£o",
           content: finalContent,
           date: new Date().toISOString().split("T")[0],
         });
@@ -1429,13 +1611,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
       const updatedFinancials = patient.financials.map((f) =>
         f.id === installmentId
           ? {
-              ...f,
-              status: isFullyPaid
-                ? ("Pago" as const)
-                : ("Pago Parcial" as const),
-              amountPaid: newPaidTotal,
-              paymentHistory: newHistory,
-            }
+            ...f,
+            status: isFullyPaid
+              ? ("Pago" as const)
+              : ("Pago Parcial" as const),
+            amountPaid: newPaidTotal,
+            paymentHistory: newHistory,
+          }
           : f
       );
 
@@ -1465,10 +1647,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
           prev.map((cr) =>
             cr.id === currentRegister.id
               ? {
-                  ...cr,
-                  calculatedBalance: cr.calculatedBalance + amount,
-                  transactions: [newRecord, ...cr.transactions],
-                }
+                ...cr,
+                calculatedBalance: cr.calculatedBalance + amount,
+                transactions: [newRecord, ...cr.transactions],
+              }
               : cr
           )
         );
@@ -1512,12 +1694,12 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
       prev.map((cr) =>
         cr.id === id
           ? {
-              ...cr,
-              status: "Fechado",
-              closedAt: new Date().toISOString(),
-              closingBalance,
-              observations,
-            }
+            ...cr,
+            status: "Fechado",
+            closedAt: new Date().toISOString(),
+            closingBalance,
+            observations,
+          }
           : cr
       )
     );
@@ -1573,12 +1755,12 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
       prev.map((e) =>
         e.id === id
           ? {
-              ...e,
-              status: isFullyPaid ? "Pago" : "Pago Parcial",
-              amountPaid: newPaidTotal,
-              paymentMethod: method,
-              paymentHistory: newHistory,
-            }
+            ...e,
+            status: isFullyPaid ? "Pago" : "Pago Parcial",
+            amountPaid: newPaidTotal,
+            paymentMethod: method,
+            paymentHistory: newHistory,
+          }
           : e
       )
     );
@@ -1588,10 +1770,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         prev.map((cr) =>
           cr.id === currentRegister.id
             ? {
-                ...cr,
-                calculatedBalance: cr.calculatedBalance - amount,
-                transactions: [newRecord, ...cr.transactions],
-              }
+              ...cr,
+              calculatedBalance: cr.calculatedBalance - amount,
+              transactions: [newRecord, ...cr.transactions],
+            }
             : cr
         )
       );
@@ -1670,3 +1852,4 @@ export const useData = () => {
   if (!context) throw new Error("useData must be used within a DataProvider");
   return context;
 };
+

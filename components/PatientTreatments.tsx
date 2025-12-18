@@ -27,8 +27,11 @@ const PatientTreatments: React.FC<PatientTreatmentsProps> = ({ patient }) => {
   } | null>(null);
 
   const treatments = patient.treatments || [];
-  const activeTreatments = treatments.filter(
-    (t) => t.status !== "Concluído"
+  const notStartedTreatments = treatments.filter(
+    (t) => t.status === "Não Iniciado"
+  ).length;
+  const inProgressTreatments = treatments.filter(
+    (t) => t.status === "Em Andamento"
   ).length;
   const completedTreatments = treatments.filter(
     (t) => t.status === "Concluído"
@@ -48,8 +51,7 @@ const PatientTreatments: React.FC<PatientTreatmentsProps> = ({ patient }) => {
       await refreshPatientData(patient.id); // Ensure data consistency
       showFeedback(
         "success",
-        `Tratamento "${
-          treatments.find((t) => t.id === treatmentId)?.procedure
+        `Tratamento "${treatments.find((t) => t.id === treatmentId)?.procedure
         }" iniciado com sucesso!`
       );
     } catch (error: any) {
@@ -64,19 +66,17 @@ const PatientTreatments: React.FC<PatientTreatmentsProps> = ({ patient }) => {
       {/* FEEDBACK ALERT */}
       {feedback && (
         <div
-          className={`p-4 rounded-lg border ${
-            feedback.type === "success"
-              ? "bg-green-50 border-green-200 text-green-800 dark:bg-green-900/20 dark:border-green-800 dark:text-green-300"
-              : "bg-red-50 border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300"
-          }`}
+          className={`p-4 rounded-lg border ${feedback.type === "success"
+            ? "bg-green-50 border-green-200 text-green-800 dark:bg-green-900/20 dark:border-green-800 dark:text-green-300"
+            : "bg-red-50 border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300"
+            }`}
         >
           <div className="flex items-center gap-2">
             <div
-              className={`p-1 rounded-full ${
-                feedback.type === "success"
-                  ? "bg-green-100 dark:bg-green-900/30"
-                  : "bg-red-100 dark:bg-red-900/30"
-              }`}
+              className={`p-1 rounded-full ${feedback.type === "success"
+                ? "bg-green-100 dark:bg-green-900/30"
+                : "bg-red-100 dark:bg-red-900/30"
+                }`}
             >
               {feedback.type === "success" ? (
                 <CheckCircle
@@ -104,7 +104,20 @@ const PatientTreatments: React.FC<PatientTreatmentsProps> = ({ patient }) => {
       )}
 
       {/* TREATMENT HEADER */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex items-center gap-4">
+          <div className="p-3 bg-gray-50 dark:bg-gray-900/30 rounded-lg text-gray-600 dark:text-gray-400">
+            <Clock size={24} />
+          </div>
+          <div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 uppercase font-bold">
+              Não Iniciado
+            </p>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">
+              {notStartedTreatments}
+            </p>
+          </div>
+        </div>
         <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex items-center gap-4">
           <div className="p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg text-blue-600 dark:text-blue-400">
             <Activity size={24} />
@@ -114,7 +127,7 @@ const PatientTreatments: React.FC<PatientTreatmentsProps> = ({ patient }) => {
               Em Andamento
             </p>
             <p className="text-2xl font-bold text-gray-900 dark:text-white">
-              {activeTreatments}
+              {inProgressTreatments}
             </p>
           </div>
         </div>
@@ -175,13 +188,12 @@ const PatientTreatments: React.FC<PatientTreatmentsProps> = ({ patient }) => {
                   <td className="px-6 py-4">
                     <span
                       className={`flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-bold w-fit border
-                                    ${
-                                      treatment.status === "Concluído"
-                                        ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800"
-                                        : treatment.status === "Em Andamento"
-                                        ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800"
-                                        : "bg-gray-50 text-gray-500 border-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600"
-                                    }`}
+                                    ${treatment.status === "Concluído"
+                          ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800"
+                          : treatment.status === "Em Andamento"
+                            ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800"
+                            : "bg-gray-50 text-gray-500 border-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600"
+                        }`}
                     >
                       {treatment.status === "Concluído" ? (
                         <CheckCircle size={12} />
@@ -198,7 +210,7 @@ const PatientTreatments: React.FC<PatientTreatmentsProps> = ({ patient }) => {
                       {treatment.procedure}
                     </span>
                     <span className="text-xs text-gray-400">
-                      Dr. {treatment.doctorName || "Logado"}
+                      {treatment.doctorName || "Profissional não informado"}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-gray-500 dark:text-gray-400 font-mono text-xs">
@@ -276,13 +288,12 @@ const PatientTreatments: React.FC<PatientTreatmentsProps> = ({ patient }) => {
                 </div>
                 <div
                   className={`p-1.5 rounded-full 
-                             ${
-                               treatment.status === "Concluído"
-                                 ? "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400"
-                                 : treatment.status === "Em Andamento"
-                                 ? "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"
-                                 : "bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-300"
-                             }`}
+                             ${treatment.status === "Concluído"
+                      ? "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400"
+                      : treatment.status === "Em Andamento"
+                        ? "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"
+                        : "bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-300"
+                    }`}
                 >
                   {treatment.status === "Concluído" ? (
                     <CheckCircle size={16} />
