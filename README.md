@@ -20,32 +20,37 @@
 **ClinicPro** é um sistema completo de gestão para clínicas odontológicas e de harmonização facial, desenvolvido para centralizar todas as operações administrativas e clínicas em uma única plataforma moderna e intuitiva.
 
 ### Propósito
+
 Otimizar a gestão de clínicas através de um sistema integrado que abrange desde o primeiro contato com o lead até o pós-tratamento, incluindo controle financeiro completo e inteligência de negócios.
 
 ### Status Atual
+
 > **Última Atualização**: 18 de Dezembro de 2025  
 > **Status**: ✅ **TOTALMENTE FUNCIONAL**  
 > **Versão**: 1.0.0
 
 ### Público-Alvo
+
 - Clínicas odontológicas e de harmonização facial
 - Dentistas e profissionais de saúde
 - Recepcionistas e equipe administrativa
 - Gestores e administradores de clínicas
 
 ### Características Principais
-- ✅ **Multi-tenancy**: Suporta múltiplas clínicas em uma única instância
+
+- ✅ **Multi-tenancy Completo**: Suporta múltiplas clínicas com gerenciamento central (MASTER)
 - ✅ **Tempo Real**: Atualizações em tempo real via Supabase Realtime
 - ✅ **Responsivo**: Interface adaptável para desktop e mobile
 - ✅ **Seguro**: Row Level Security (RLS) para isolamento de dados
 - ✅ **Escalável**: Arquitetura serverless com Supabase
-- ✅ **Completo**: 31 tabelas, 8 módulos principais, 100% funcional
+- ✅ **Completo**: 31 tabelas, 9 módulos principais, 100% funcional
 
 ---
 
 ## 🛠️ Tecnologias Utilizadas
 
 ### Frontend
+
 - **React 19.2.3**: Biblioteca principal para construção da interface
 - **TypeScript 5.8.2**: Tipagem estática para maior segurança
 - **Vite 6.2.0**: Build tool moderna e rápida
@@ -53,6 +58,7 @@ Otimizar a gestão de clínicas através de um sistema integrado que abrange des
 - **Lucide React 0.561.0**: Biblioteca de ícones moderna
 
 ### Backend & Infraestrutura
+
 - **Supabase**: Backend-as-a-Service completo
   - PostgreSQL: Banco de dados relacional
   - Auth: Autenticação e autorização
@@ -61,6 +67,7 @@ Otimizar a gestão de clínicas através de um sistema integrado que abrange des
   - Row Level Security (RLS): Segurança a nível de linha
 
 ### Bibliotecas Adicionais
+
 - **@tanstack/react-query 5.17.15**: Gerenciamento de estado assíncrono
 - **Recharts 3.5.1**: Gráficos e visualizações
 - **jsPDF 2.5.1**: Geração de PDFs
@@ -69,6 +76,7 @@ Otimizar a gestão de clínicas através de um sistema integrado que abrange des
 - **Zod 3.22.4**: Validação de schemas
 
 ### Gerenciamento de Estado
+
 - **Context API**: Estado global da aplicação
 - **React Query**: Cache e sincronização de dados do servidor
 - **Hooks customizados**: Lógica reutilizável
@@ -78,6 +86,7 @@ Otimizar a gestão de clínicas através de um sistema integrado que abrange des
 ## 🏗️ Arquitetura do Sistema
 
 ### Arquitetura Geral
+
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                    Frontend (React)                      │
@@ -97,12 +106,14 @@ Otimizar a gestão de clínicas através de um sistema integrado que abrange des
 ```
 
 ### Padrões Arquiteturais
+
 - **SPA (Single Page Application)**: Navegação sem recarregamento de página
 - **Component-Based**: Componentes reutilizáveis e modulares
 - **Serverless**: Sem servidor próprio, totalmente gerenciado pelo Supabase
 - **Multi-tenancy**: Isolamento de dados por `clinic_id` via RLS
 
 ### Fluxo de Autenticação
+
 1. Usuário insere código da clínica, email e senha
 2. Supabase Auth valida credenciais
 3. JWT é gerado e armazenado no localStorage
@@ -110,6 +121,7 @@ Otimizar a gestão de clínicas através de um sistema integrado que abrange des
 5. Todas as queries são automaticamente filtradas por `clinic_id` via RLS
 
 ### Comunicação com Banco de Dados
+
 - **Queries diretas**: Uso do cliente Supabase sem ORM
 - **Exemplo**: `supabase.from('patients').select('*').eq('clinic_id', clinicId)`
 - **Realtime**: Subscriptions para atualizações automáticas
@@ -120,9 +132,11 @@ Otimizar a gestão de clínicas através de um sistema integrado que abrange des
 ## 📦 Módulos e Funcionalidades
 
 ### 1. 🏠 Dashboard (Central de Inteligência)
+
 **Status**: ✅ Funcional
 
 **Funcionalidades**:
+
 - **KPIs Principais**: Atendimentos, Novas Oportunidades, Meta do Dia
 - **Agenda de Hoje**: Lista de agendamentos do dia
 - **Lembretes & Tarefas**: Gestão de tarefas e lembretes rápidos
@@ -134,11 +148,13 @@ Otimizar a gestão de clínicas através de um sistema integrado que abrange des
 ---
 
 ### 2. 💼 CRM - Central de Conversão
+
 **Status**: ✅ Funcional
 
 ![CRM Kanban](file:///C:/Users/marce/.gemini/antigravity/brain/37a74915-7de3-47e2-86f0-8fdfe51804c7/crm_kanban_board_1765999103958.png)
 
 **Funcionalidades**:
+
 - **Kanban Board**: Visualização do funil de vendas
 - **Estágios**: Nova Oportunidade → Em Contato → Agendado → Orçamento → Negociação → Aprovado/Perdido
 - **Métricas**:
@@ -157,6 +173,7 @@ Otimizar a gestão de clínicas através de um sistema integrado que abrange des
   - Vincular orçamentos
 
 **Tabelas Relacionadas**:
+
 - `leads`: Dados principais dos leads
 - `lead_interactions`: Histórico de comunicações
 - `lead_tasks`: Tarefas de acompanhamento
@@ -166,9 +183,11 @@ Otimizar a gestão de clínicas através de um sistema integrado que abrange des
 ---
 
 ### 3. 📅 Agenda
+
 **Status**: ✅ Funcional (com ressalvas)
 
 **Funcionalidades**:
+
 - **Visualizações**:
   - Dia: Visão detalhada por hora
   - Semana: Visão semanal
@@ -188,6 +207,7 @@ Otimizar a gestão de clínicas através de um sistema integrado que abrange des
   - Dias de funcionamento
 
 **Tabelas Relacionadas**:
+
 - `appointments`: Agendamentos
 - `professional_schedules`: Horários dos profissionais
 - `clinics`: Configurações de agenda
@@ -197,11 +217,13 @@ Otimizar a gestão de clínicas através de um sistema integrado que abrange des
 ---
 
 ### 4. 👥 Pacientes
+
 **Status**: ✅ Funcional
 
 ![Listagem de Pacientes](file:///C:/Users/marce/.gemini/antigravity/brain/37a74915-7de3-47e2-86f0-8fdfe51804c7/patients_listing_page_1765999027186.png)
 
 **Funcionalidades**:
+
 - **Cadastro Completo**:
   - Dados pessoais (nome, CPF, telefone, email, endereço)
   - Data de nascimento e gênero
@@ -222,6 +244,7 @@ Otimizar a gestão de clínicas através de um sistema integrado que abrange des
   - Saldo devedor
 
 **Tabelas Relacionadas**:
+
 - `patients`: Dados principais
 - `clinical_notes`: Prontuário
 - `budgets` + `budget_items`: Orçamentos
@@ -232,6 +255,7 @@ Otimizar a gestão de clínicas através de um sistema integrado que abrange des
 ---
 
 ### 5. 💰 Financeiro
+
 **Status**: ✅ Funcional
 
 ![Módulo Financeiro](file:///C:/Users/marce/.gemini/antigravity/brain/37a74915-7de3-47e2-86f0-8fdfe51804c7/.system_generated/click_feedback/click_feedback_1765999273242.png)
@@ -239,6 +263,7 @@ Otimizar a gestão de clínicas através de um sistema integrado que abrange des
 **Funcionalidades**:
 
 #### 5.1 Visão Geral (Dashboard Financeiro)
+
 - **Métricas do Dia**:
   - Entradas hoje
   - Saídas hoje
@@ -254,6 +279,7 @@ Otimizar a gestão de clínicas através de um sistema integrado que abrange des
   - Contas a receber vencidas
 
 #### 5.2 Caixa Diário
+
 - **Abertura de Caixa**:
   - Saldo inicial
   - Responsável
@@ -269,6 +295,7 @@ Otimizar a gestão de clínicas através de um sistema integrado que abrange des
   - Observações
 
 #### 5.3 Contas a Pagar (Despesas)
+
 - **Cadastro de Despesas**:
   - Descrição
   - Categoria (Fixa, Variável, Impostos, Laboratório, Pessoal)
@@ -282,6 +309,7 @@ Otimizar a gestão de clínicas através de um sistema integrado que abrange des
   - Filtros por período e categoria
 
 #### 5.4 Contas a Receber (Receitas)
+
 - **Parcelas de Pacientes**:
   - Descrição (vinculada a orçamento)
   - Paciente
@@ -295,6 +323,7 @@ Otimizar a gestão de clínicas através de um sistema integrado que abrange des
   - Vinculação com transações de caixa
 
 **Tabelas Relacionadas**:
+
 - `financial_installments`: Contas a receber
 - `expenses`: Contas a pagar
 - `transactions`: Movimentações financeiras
@@ -305,9 +334,11 @@ Otimizar a gestão de clínicas através de um sistema integrado que abrange des
 ---
 
 ### 6. 📄 Documentos
+
 **Status**: ✅ Funcional
 
 **Funcionalidades**:
+
 - **Modelos de Documentos**:
   - Contratos de prestação de serviços
   - TCLEs (Termos de Consentimento)
@@ -331,15 +362,18 @@ Otimizar a gestão de clínicas através de um sistema integrado que abrange des
   - Exportação em PDF
 
 **Tabelas Relacionadas**:
+
 - `document_templates`: Modelos
 - `patient_documents`: Documentos gerados
 
 ---
 
 ### 7. 📊 Relatórios - Central de Inteligência
+
 **Status**: ✅ Funcional
 
 **Funcionalidades**:
+
 - **KPIs Estratégicos**:
   - Resultado líquido do mês
   - Margem de lucro
@@ -362,6 +396,7 @@ Otimizar a gestão de clínicas através de um sistema integrado que abrange des
 ---
 
 ### 8. ⚙️ Configurações
+
 **Status**: ✅ Funcional
 
 ![Configurações da Clínica](file:///C:/Users/marce/.gemini/antigravity/brain/37a74915-7de3-47e2-86f0-8fdfe51804c7/.system_generated/click_feedback/click_feedback_1765999555110.png)
@@ -369,17 +404,20 @@ Otimizar a gestão de clínicas através de um sistema integrado que abrange des
 **Seções**:
 
 #### 8.1 Clínica
+
 - Dados básicos (nome, CNPJ, endereço, telefone, email)
 - Código de identificação (único)
 - Configurações de agenda (horários, duração de slots, dias de funcionamento)
 
 #### 8.2 Usuários
+
 - Cadastro de usuários do sistema
 - Roles: Admin, Dentista, Recepcionista, Auxiliar
 - Vinculação com profissionais
 - Ativação/desativação
 
 #### 8.3 Profissionais
+
 - Cadastro de dentistas e profissionais
 - CRC/CRO e especialidade
 - Foto e cor (para agenda)
@@ -387,6 +425,7 @@ Otimizar a gestão de clínicas através de um sistema integrado que abrange des
 - Status ativo/inativo
 
 #### 8.4 Procedimentos
+
 - Cadastro de serviços oferecidos
 - Categorias (Prevenção, Dentística, Implantodontia, Estética, etc.)
 - Preço base
@@ -396,6 +435,7 @@ Otimizar a gestão de clínicas através de um sistema integrado que abrange des
 - Descrição
 
 #### 8.5 Tabelas de Preço
+
 - Criação de múltiplas tabelas (Particular, Convênios)
 - Ajuste global por percentual
 - Preços específicos por procedimento
@@ -403,12 +443,14 @@ Otimizar a gestão de clínicas através de um sistema integrado que abrange des
 - Ativação/desativação
 
 #### 8.6 Convênios
+
 - Cadastro de convênios/planos de saúde
 - Código do convênio
 - Vinculação com tabela de preços
 - Status ativo/inativo
 
 #### 8.7 Financeiro & CRM
+
 - **Categorias de Despesa**: Customizáveis por clínica
 - **Categorias de Receita**: Customizáveis por clínica
 - **Métodos de Pagamento**: Customizáveis (Pix, Cartão, Boleto, Dinheiro, etc.)
@@ -416,6 +458,7 @@ Otimizar a gestão de clínicas através de um sistema integrado que abrange des
 - **Status de Leads**: Customizáveis com ordenação
 
 **Tabelas Relacionadas**:
+
 - `clinics`: Dados da clínica
 - `users`: Usuários do sistema
 - `professionals`: Profissionais
@@ -431,72 +474,74 @@ Otimizar a gestão de clínicas através de um sistema integrado que abrange des
 ## 🗄️ Banco de Dados
 
 ### Tecnologia
+
 - **PostgreSQL** (via Supabase)
 - **Versão**: 15+
 - **Extensões**: uuid-ossp, pgcrypto
 
 ### Estrutura
+
 O banco de dados possui **31 tabelas** organizadas em módulos:
 
 #### Tabelas Principais
 
-| Tabela | Descrição | Registros Típicos |
-|--------|-----------|-------------------|
-| `clinics` | Dados das clínicas (multi-tenancy) | 1-N clínicas |
-| `users` | Usuários do sistema | 5-50 por clínica |
-| `patients` | Cadastro de pacientes | 100-10.000+ |
-| `procedure` | Procedimentos/Serviços | 50-500 |
-| `price_tables` | Tabelas de preços | 3-20 |
-| `price_table_items` | Preços específicos | 150-10.000 |
+| Tabela              | Descrição                          | Registros Típicos |
+| ------------------- | ---------------------------------- | ----------------- |
+| `clinics`           | Dados das clínicas (multi-tenancy) | 1-N clínicas      |
+| `users`             | Usuários do sistema                | 5-50 por clínica  |
+| `patients`          | Cadastro de pacientes              | 100-10.000+       |
+| `procedure`         | Procedimentos/Serviços             | 50-500            |
+| `price_tables`      | Tabelas de preços                  | 3-20              |
+| `price_table_items` | Preços específicos                 | 150-10.000        |
 
 #### Módulo CRM
 
-| Tabela | Descrição |
-|--------|-----------|
-| `leads` | Leads/Oportunidades |
-| `lead_interactions` | Histórico de interações |
-| `lead_tasks` | Tarefas de follow-up |
-| `lead_source` | Origens customizáveis |
-| `custom_lead_status` | Status personalizados |
+| Tabela               | Descrição               |
+| -------------------- | ----------------------- |
+| `leads`              | Leads/Oportunidades     |
+| `lead_interactions`  | Histórico de interações |
+| `lead_tasks`         | Tarefas de follow-up    |
+| `lead_source`        | Origens customizáveis   |
+| `custom_lead_status` | Status personalizados   |
 
 #### Módulo Clínico
 
-| Tabela | Descrição |
-|--------|-----------|
-| `appointments` | Agendamentos |
-| `clinical_notes` | Prontuário/Notas clínicas |
-| `budgets` | Orçamentos |
-| `budget_items` | Itens de orçamento |
-| `treatment_items` | Itens de tratamento |
+| Tabela            | Descrição                 |
+| ----------------- | ------------------------- |
+| `appointments`    | Agendamentos              |
+| `clinical_notes`  | Prontuário/Notas clínicas |
+| `budgets`         | Orçamentos                |
+| `budget_items`    | Itens de orçamento        |
+| `treatment_items` | Itens de tratamento       |
 
 #### Módulo Financeiro
 
-| Tabela | Descrição |
-|--------|-----------|
-| `financial_installments` | Contas a receber |
-| `expenses` | Contas a pagar |
-| `transactions` | Movimentações financeiras |
-| `cash_registers` | Registros de caixa |
-| `payment_history` | Histórico de pagamentos |
+| Tabela                   | Descrição                 |
+| ------------------------ | ------------------------- |
+| `financial_installments` | Contas a receber          |
+| `expenses`               | Contas a pagar            |
+| `transactions`           | Movimentações financeiras |
+| `cash_registers`         | Registros de caixa        |
+| `payment_history`        | Histórico de pagamentos   |
 
 #### Módulo Documentos
 
-| Tabela | Descrição |
-|--------|-----------|
+| Tabela               | Descrição             |
+| -------------------- | --------------------- |
 | `document_templates` | Modelos de documentos |
-| `patient_documents` | Documentos gerados |
+| `patient_documents`  | Documentos gerados    |
 
 #### Configurações
 
-| Tabela | Descrição |
-|--------|-----------|
-| `professionals` | Profissionais da clínica |
-| `professional_schedules` | Horários de trabalho |
-| `conventions` | Convênios |
-| `insurance_plans` | Planos de saúde |
-| `expense_category` | Categorias de despesas |
-| `revenue_category` | Categorias de receitas |
-| `payment_method` | Métodos de pagamento |
+| Tabela                   | Descrição                |
+| ------------------------ | ------------------------ |
+| `professionals`          | Profissionais da clínica |
+| `professional_schedules` | Horários de trabalho     |
+| `conventions`            | Convênios                |
+| `insurance_plans`        | Planos de saúde          |
+| `expense_category`       | Categorias de despesas   |
+| `revenue_category`       | Categorias de receitas   |
+| `payment_method`         | Métodos de pagamento     |
 
 ### Tipos Enum (USER-DEFINED)
 
@@ -560,7 +605,7 @@ Todas as tabelas principais possuem RLS habilitado para garantir isolamento de d
 
 ```sql
 -- Exemplo de política RLS
-CREATE POLICY "clinic_isolation" ON patients 
+CREATE POLICY "clinic_isolation" ON patients
   FOR ALL USING (
     clinic_id = (SELECT clinic_id FROM users WHERE id = auth.uid())
   );
@@ -665,6 +710,7 @@ VITE_SUPABASE_ANON_KEY=sua-chave-anonima-aqui
 ```
 
 > **Como obter as credenciais**:
+>
 > 1. Acesse [supabase.com](https://supabase.com)
 > 2. Crie um novo projeto ou acesse um existente
 > 3. Vá em Settings > API
@@ -706,6 +752,7 @@ Senha: admin123
 ![Login](file:///C:/Users/marce/.gemini/antigravity/brain/37a74915-7de3-47e2-86f0-8fdfe51804c7/login_page_1765998194955.png)
 
 **Elementos**:
+
 - Código da clínica (identificador único)
 - Email do usuário
 - Senha
@@ -718,6 +765,7 @@ Senha: admin123
 ![CRM Kanban](file:///C:/Users/marce/.gemini/antigravity/brain/37a74915-7de3-47e2-86f0-8fdfe51804c7/crm_kanban_board_1765999103958.png)
 
 **Funcionalidades Visíveis**:
+
 - 5 colunas do funil (Nova Oportunidade → Negociação)
 - Cards de leads com nome, origem e valor
 - Métricas: 5 oportunidades, 20% conversão, R$ 9.700 em pipeline
@@ -731,6 +779,7 @@ Senha: admin123
 ![Pacientes](file:///C:/Users/marce/.gemini/antigravity/brain/37a74915-7de3-47e2-86f0-8fdfe51804c7/patients_listing_page_1765999027186.png)
 
 **Funcionalidades Visíveis**:
+
 - Busca por nome, CPF ou telefone
 - Filtros por status
 - Tabela com: Paciente, Contato, Status, Última Visita, Ações
@@ -745,6 +794,7 @@ Senha: admin123
 ![Financeiro](file:///C:/Users/marce/.gemini/antigravity/brain/37a74915-7de3-47e2-86f0-8fdfe51804c7/.system_generated/click_feedback/click_feedback_1765999273242.png)
 
 **Funcionalidades Visíveis**:
+
 - 4 tabs: Visão Geral, Caixa Diário, A Pagar, A Receber
 - Métricas: Entradas/Saídas Hoje, DRE, Ticket Médio
 - Tabelas de contas a pagar e receber
@@ -758,6 +808,7 @@ Senha: admin123
 ![Configurações](file:///C:/Users/marce/.gemini/antigravity/brain/37a74915-7de3-47e2-86f0-8fdfe51804c7/.system_generated/click_feedback/click_feedback_1765999555110.png)
 
 **Funcionalidades Visíveis**:
+
 - Menu lateral com seções: Clínica, Usuários, Profissionais, Procedimentos, Tabelas de Preço, Convênios, Financeiro & CRM
 - Formulário de dados da clínica
 - Configurações de agenda (horários, duração de slots, dias de funcionamento)
@@ -768,6 +819,7 @@ Senha: admin123
 ## ⚠️ Problemas Conhecidos
 
 ### ~~1. Dashboard Principal - Erro de Carregamento~~ ✅ CORRIGIDO
+
 **Status**: ✅ **RESOLVIDO**
 
 **Descrição**: A página `/dashboard` apresentava erro ao carregar dados de agendamentos.
@@ -775,6 +827,7 @@ Senha: admin123
 **Erro**: `column appointments.time does not exist`
 
 **Solução Aplicada** (17/12/2025):
+
 - Arquivo `hooks/useDashboardData.ts` corrigido
 - Linha 62: Alterado `.order("time")` para `.order("date")`
 - Linhas 60-62: Alterado filtro de data para usar range de timestamps (`gte`/`lte`)
@@ -784,6 +837,7 @@ Senha: admin123
 ---
 
 ### 2. Tabela `procedure` (Singular)
+
 **Descrição**: A tabela de procedimentos é `procedure` (singular), não `procedures` (plural).
 
 **Status**: ✅ Já corrigido no código atual
@@ -797,52 +851,66 @@ Senha: admin123
 ### 18/12/2025 - Sessão de Correções Críticas
 
 #### 1. ✅ Seletor de Profissional em Orçamentos
+
 **Problema**: Orçamentos sempre usavam o usuário logado como profissional responsável  
 **Solução**:
+
 - Adicionado dropdown de seleção de profissional no formulário de orçamento
 - Auto-seleção do profissional logado (se tiver `professional_id`)
 - Auto-seleção da tabela "Particular" por padrão
 - Validação obrigatória de profissional e tabela de preços
 
 #### 2. ✅ Nome do Profissional em Orçamentos e Tratamentos
+
 **Problema**: Exibindo nome do usuário em vez do profissional responsável  
 **Solução**:
+
 - Corrigido join com tabelas `users` e `professionals`
 - Nome completo do profissional agora aparece corretamente
 - Prefixo "Dr." adicionado automaticamente
 - Eliminada duplicação de prefixos
 
 #### 3. ✅ Exclusão de Orçamentos
+
 **Problema**: Botão excluir não funcionava (diálogo `confirm()` não aparecia)  
 **Solução**:
+
 - Substituído `window.confirm()` por modal customizado
 - Modal estilizado com confirmação visual clara
 - Exclusão agora funciona perfeitamente
 
 #### 4. ✅ Recálculo Financeiro ao Excluir Orçamento
+
 **Problema**: Saldo do paciente ficava incorreto após excluir orçamento aprovado  
 **Solução**:
+
 - Corrigido filtro de parcelas financeiras (estava mantendo em vez de remover)
 - Recálculo correto de `total_approved`, `total_paid` e `balance_due`
 - Script SQL criado para corrigir dados legados
 
 #### 5. ✅ Data de Execução em Tratamentos
+
 **Problema**: Data de conclusão não aparecia nos tratamentos concluídos  
 **Solução**:
+
 - Adicionado campo `executionDate` ao mapeamento de tratamentos
 - Join com profissionais ao recarregar após conclusão
 - Data formatada em português (DD/MM/AAAA)
 
 #### 6. ✅ Cards de Estatísticas em Tratamentos
+
 **Problema**: Faltava card "Não Iniciado"  
 **Solução**:
+
 - Adicionado 4º card com contador de tratamentos não iniciados
 - Grid responsivo (1/2/4 colunas)
 - Ícones e cores diferenciadas por status
 
 #### 7. ✅ Tratamentos Não Apareciam Após Aprovar Orçamento
+
 **Problema**: Erro `PGRST201` - ambiguidade no relacionamento `treatment_items` → `users`  
 **Solução**:
+
 - Especificado relacionamento `doctor:users!doctor_id` na query
 - Join correto com tabela de profissionais
 - Tratamentos agora carregam automaticamente após aprovação
@@ -852,6 +920,7 @@ Senha: admin123
 ## 🗺️ Roadmap
 
 ### Curto Prazo (1-2 meses)
+
 - [x] ~~Corrigir erro do Dashboard principal~~ ✅ **CONCLUÍDO** (17/12/2025)
 - [ ] Implementar notificações push
 - [ ] Adicionar suporte a anexos em prontuários
@@ -859,6 +928,7 @@ Senha: admin123
 - [ ] Adicionar testes automatizados
 
 ### Médio Prazo (3-6 meses)
+
 - [ ] Integração com WhatsApp Business API
 - [ ] Assinatura digital de documentos
 - [ ] Aplicativo mobile nativo (React Native)
@@ -866,6 +936,7 @@ Senha: admin123
 - [ ] Backup automático de dados
 
 ### Longo Prazo (6-12 meses)
+
 - [ ] IA para sugestões de diagnósticos
 - [ ] Integração com NFe (Nota Fiscal Eletrônica)
 - [ ] Sistema de fidelidade para pacientes
@@ -877,6 +948,7 @@ Senha: admin123
 ## 📞 Suporte e Contribuição
 
 ### Como Contribuir
+
 1. Faça um fork do repositório
 2. Crie uma branch para sua feature (`git checkout -b feature/MinhaFeature`)
 3. Commit suas mudanças (`git commit -m 'Adiciona MinhaFeature'`)
@@ -884,6 +956,7 @@ Senha: admin123
 5. Abra um Pull Request
 
 ### Convenções de Código
+
 - **TypeScript**: Sempre tipar variáveis e funções
 - **Componentes**: PascalCase para nomes de componentes
 - **Funções**: camelCase para funções e variáveis
@@ -891,7 +964,9 @@ Senha: admin123
 - **Commits**: Mensagens em português, descritivas
 
 ### Reportar Bugs
+
 Abra uma issue no GitHub com:
+
 - Descrição detalhada do problema
 - Passos para reproduzir
 - Screenshots (se aplicável)
