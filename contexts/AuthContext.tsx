@@ -116,8 +116,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         if (
           pendingClinicCode &&
           clinicData &&
-          clinicData.code !== pendingClinicCode
+          clinicData.code?.toUpperCase() !== pendingClinicCode?.toUpperCase()
         ) {
+          console.error("AuthContext: Código da clínica inválido", {
+            esperado: clinicData.code,
+            recebido: pendingClinicCode,
+          });
           await supabase.auth.signOut();
           throw new Error("Código da clínica inválido");
         }

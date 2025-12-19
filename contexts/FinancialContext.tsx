@@ -1,371 +1,364 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "./AuthContext";
-import { toast } from "react-hot-toast";
-
-interface ActiveSession {
-  session_id: string;
-  user_id: string;
-  clinic_id: string;
-  opened_at: string;
-  opening_balance: number;
-  status: string;
-  user_name: string;
-  user_email: string;
-  current_balance: number;
-  transaction_count: number;
-  hours_open: number;
-}
-
-interface FinancialSettings {
-  clinic_id: string;
-  force_cash_opening: boolean;
-  force_daily_closing: boolean;
-  allow_negative_balance: boolean;
-  blind_closing: boolean;
-  default_change_fund: number;
-  max_difference_without_approval: number;
-}
+import { CashRegister, ClinicFinancialSettings, Expense, FinancialRecord } from "../types";
 
 interface FinancialContextType {
-  // Sessão ativa
-  activeSession: ActiveSession | null;
-  isLoadingSession: boolean;
-  refreshSession: () => Promise<void>;
+  // State
+  financialSettings: ClinicFinancialSettings | null;
+  cashRegisters: CashRegister[];
+  activeSession: CashRegister | null;
+  expenses: Expense[];
+  globalTransactions: FinancialRecord[];
 
-  // Configurações
-  settings: FinancialSettings | null;
-  isLoadingSettings: boolean;
+  // Actions
+  refreshFinancialData: () => Promise<void>;
+  openSession: (initialBalance: number, user: string) => Promise<void>;
+  closeSession: (id: string, closingBalance: number, observations?: string) => Promise<void>;
+  addExpense: (expense: Omit<Expense, "id">) => Promise<void>;
+  payExpense: (id: string, amount: number, method: string, date: string, notes?: string) => Promise<void>;
+  addCashMovement: (type: 'sangria' | 'suprimento', amount: number, description: string) => Promise<void>;
 
-  // Operações
-  openCashSession: (openingBalance: number) => Promise<boolean>;
-  closeCashSession: (
-    declaredBalance: number,
-    differenceReason?: string
-  ) => Promise<boolean>;
-  performWithdrawal: (amount: number, reason: string) => Promise<boolean>;
-  performDeposit: (amount: number, reason: string) => Promise<boolean>;
 
-  // Estado do modal
-  showOpeningModal: boolean;
-  setShowOpeningModal: (show: boolean) => void;
+  // Helper to record transaction from other contexts (e.g. Patient Payment)
+  recordTransaction: (transaction: Omit<FinancialRecord, "id">) => void;
 }
 
-const FinancialContext = createContext<FinancialContextType | undefined>(
-  undefined
-);
+const FinancialContext = createContext<FinancialContextType | undefined>(undefined);
 
-export function FinancialProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
-  const [activeSession, setActiveSession] = useState<ActiveSession | null>(
-    null
-  );
-  const [settings, setSettings] = useState<FinancialSettings | null>(null);
-  const [isLoadingSession, setIsLoadingSession] = useState(false);
-  const [isLoadingSettings, setIsLoadingSettings] = useState(false);
-  const [showOpeningModal, setShowOpeningModal] = useState(false);
+export const FinancialProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const { profile } = useAuth();
 
-  // Buscar configurações da clínica
-  const loadSettings = async () => {
-    if (!user?.clinic_id) return;
+  const [financialSettings, setFinancialSettings] = useState<ClinicFinancialSettings | null>(null);
+  const [cashRegisters, setCashRegisters] = useState<CashRegister[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [globalTransactions, setGlobalTransactions] = useState<FinancialRecord[]>([]);
 
-    setIsLoadingSettings(true);
+  // Derived active session
+  const activeSession = cashRegisters.find((cr) => cr.status === "Aberto") || null;
+
+  // Initial Fetch
+  useEffect(() => {
+    if (profile?.clinic_id) {
+      refreshFinancialData();
+    }
+  }, [profile?.clinic_id]);
+
+  const refreshFinancialData = async () => {
+    if (!profile?.clinic_id) return;
+
     try {
-      const { data, error } = await supabase
+      // 1. Settings
+      const { data: settingsData } = await supabase
         .from("clinic_financial_settings")
         .select("*")
-        .eq("clinic_id", user.clinic_id)
+        .eq("clinic_id", profile.clinic_id)
         .single();
 
-      if (error && error.code !== "PGRST116") {
-        // PGRST116 = not found
-        console.error("Erro ao carregar configurações:", error);
-        return;
-      }
+      if (settingsData) setFinancialSettings(settingsData);
 
-      setSettings(data);
-    } catch (error) {
-      console.error("Erro ao carregar configurações:", error);
-    } finally {
-      setIsLoadingSettings(false);
-    }
-  };
-
-  // Buscar sessão ativa
-  const loadActiveSession = async () => {
-    if (!user?.id || !user?.clinic_id) return;
-
-    setIsLoadingSession(true);
-    try {
-      const { data, error } = await supabase
-        .from("user_active_session")
+      // 2. Expenses
+      const { data: expensesData } = await supabase
+        .from("expenses")
         .select("*")
-        .eq("user_id", user.id)
-        .eq("clinic_id", user.clinic_id)
-        .single();
+        .eq("clinic_id", profile.clinic_id)
+        .order("due_date", { ascending: true });
 
-      if (error && error.code !== "PGRST116") {
-        // PGRST116 = not found
-        console.error("Erro ao carregar sessão ativa:", error);
-        return;
+      if (expensesData) {
+        setExpenses(expensesData.map((e: any) => ({
+          id: e.id,
+          description: e.description,
+          category: e.category,
+          provider: e.provider || '',
+          amount: e.amount,
+          amountPaid: e.amount_paid || 0,
+          dueDate: new Date(e.due_date).toLocaleDateString("pt-BR"),
+          status: e.status === 'PENDING' ? 'Pendente' :
+            e.status === 'PAID' ? 'Pago' :
+              e.status === 'PARTIAL' ? 'Pago Parcial' :
+                e.status === 'OVERDUE' ? 'Atrasado' : e.status,
+          paymentHistory: []
+        })));
       }
 
-      setActiveSession(data);
+      // 3. Cash Registers (History + Active)
+      // Fetch History
+      const { data: historyData } = await supabase
+        .from("cash_registers")
+        .select("*")
+        .eq("clinic_id", profile.clinic_id)
+        .in("status", ["CLOSED", "AUDIT_PENDING"])
+        .order("closed_at", { ascending: false })
+        .limit(10);
 
-      // Se não há sessão ativa e as configurações exigem abertura, mostrar modal
-      if (!data && settings?.force_cash_opening) {
-        setShowOpeningModal(true);
+      // Fetch Active
+      const { data: activeData } = await supabase
+        .from("cash_registers")
+        .select("*")
+        .eq("clinic_id", profile.clinic_id)
+        .eq("user_id", profile.id)
+        .eq("status", "OPEN") // DB Status
+        .is("closed_at", null)
+        .maybeSingle();
+
+      let registers: CashRegister[] = [];
+
+      // Map History
+      if (historyData) {
+        registers = historyData.map((h: any) => ({
+          id: h.id,
+          openedAt: h.opened_at,
+          responsibleName: 'N/A', // TODO: Fetch name
+          openingBalance: h.opening_balance,
+          calculatedBalance: h.calculated_balance,
+          status: (h.status === 'CLOSED' ? 'Fechado' : 'Fechado') as 'Fechado', // Temporary mapping until type supports Auditoria
+          closedAt: h.closed_at,
+          closingBalance: h.declared_balance,
+          observations: h.observations,
+          transactions: []
+        }));
       }
-    } catch (error) {
-      console.error("Erro ao carregar sessão ativa:", error);
-    } finally {
-      setIsLoadingSession(false);
+
+      // Map Active
+      if (activeData) {
+        // Fetch transactions for active session
+        const { data: txData } = await supabase
+          .from("transactions")
+          .select("*")
+          .eq("cash_register_id", activeData.id)
+          .order("created_at", { ascending: false });
+
+        const transactions: FinancialRecord[] = (txData || []).map((tx: any) => ({
+          id: tx.id,
+          description: tx.description,
+          amount: tx.amount,
+          type: tx.type === 'INCOME' ? 'income' : 'expense',
+          date: new Date(tx.created_at).toLocaleDateString("pt-BR"),
+          category: tx.category,
+          status: 'Pago',
+          paymentMethod: tx.payment_method,
+          cashRegisterId: tx.cash_register_id
+        }));
+
+        // Update global list (just for display if needed)
+        setGlobalTransactions(transactions);
+
+        const activeRegister: CashRegister = {
+          id: activeData.id,
+          openedAt: activeData.opened_at,
+          responsibleName: profile.name || 'Você',
+          openingBalance: activeData.opening_balance,
+          calculatedBalance: activeData.calculated_balance,
+          status: 'Aberto',
+          transactions: transactions
+        };
+
+        registers = [activeRegister, ...registers];
+      }
+
+      setCashRegisters(registers);
+
+    } catch (err) {
+      console.error("FinancialContext: Error refreshing data", err);
     }
   };
 
-  // Refresh session
-  const refreshSession = async () => {
-    await loadActiveSession();
-  };
+  // --- ACTIONS ---
 
-  // Abrir caixa
-  const openCashSession = async (openingBalance: number): Promise<boolean> => {
-    if (!user?.clinic_id || !user?.id) {
-      // // toast.error("Usuário não identificado");
-      return false;
-    }
-
+  const openSession = async (initialBalance: number, user: string) => {
+    if (activeSession) return;
     try {
       const { data, error } = await supabase
-        .from("cash_registers")
+        .from('cash_registers')
         .insert({
-          clinic_id: user.clinic_id,
-          user_id: user.id,
-          opening_balance: openingBalance,
-          calculated_balance: openingBalance,
-          status: "OPEN",
+          clinic_id: profile?.clinic_id,
+          user_id: profile?.id,
+          opened_at: new Date().toISOString(),
+          opening_balance: initialBalance,
+          calculated_balance: initialBalance,
+          status: 'OPEN'
         })
         .select()
         .single();
 
-      if (error) {
-        console.error("Erro ao abrir caixa:", error);
-        // // toast.error("Erro ao abrir caixa: " + error.message);
-        return false;
-      }
-
-      setActiveSession(data);
-      setShowOpeningModal(false);
-      // toast.success("Caixa aberto com sucesso!");
-      return true;
-    } catch (error) {
-      console.error("Erro ao abrir caixa:", error);
-      // toast.error("Erro inesperado ao abrir caixa");
-      return false;
+      if (error) throw error;
+      await refreshFinancialData(); // Reload to get everything fresh
+    } catch (error: any) {
+      console.error("Error opening register:", error);
+      alert("Erro ao abrir caixa: " + error.message);
     }
   };
 
-  // Fechar caixa
-  const closeCashSession = async (
-    declaredBalance: number,
-    differenceReason?: string
-  ): Promise<boolean> => {
-    if (!activeSession) {
-      // toast.error("Nenhuma sessão ativa encontrada");
-      return false;
-    }
-
+  const closeSession = async (id: string, closingBalance: number, observations?: string) => {
     try {
-      const difference = declaredBalance - activeSession.current_balance;
-      const isCriticalDifference =
-        Math.abs(difference) >
-        (settings?.max_difference_without_approval || 50);
-      const status = isCriticalDifference ? "AUDIT_PENDING" : "CLOSED";
+      const reg = cashRegisters.find(c => c.id === id);
+      const calculated = reg ? reg.calculatedBalance : closingBalance;
+      const diff = closingBalance - calculated;
 
       const { error } = await supabase
-        .from("cash_registers")
+        .from('cash_registers')
         .update({
+          status: 'CLOSED',
           closed_at: new Date().toISOString(),
-          declared_balance: declaredBalance,
-          difference_amount: difference,
-          difference_reason: differenceReason || null,
-          status: status,
+          declared_balance: closingBalance,
+          difference_amount: diff,
+          difference_reason: observations,
+          observations: observations
         })
-        .eq("id", activeSession.session_id);
+        .eq('id', id);
 
-      if (error) {
-        console.error("Erro ao fechar caixa:", error);
-        // toast.error("Erro ao fechar caixa: " + error.message);
-        return false;
-      }
-
-      setActiveSession(null);
-      // toast.success(
-        `Caixa fechado com sucesso! ${
-          status === "AUDIT_PENDING" ? "(Pendente de auditoria)" : ""
-        }`
-      );
-      return true;
-    } catch (error) {
-      console.error("Erro ao fechar caixa:", error);
-      // toast.error("Erro inesperado ao fechar caixa");
-      return false;
+      if (error) throw error;
+      await refreshFinancialData();
+    } catch (error: any) {
+      console.error("Error closing register:", error);
+      alert("Erro ao fechar caixa: " + error.message);
     }
   };
 
-  // Sangria (retirada)
-  const performWithdrawal = async (
-    amount: number,
-    reason: string
-  ): Promise<boolean> => {
-    if (!activeSession) {
-      // toast.error("Caixa não está aberto");
-      return false;
-    }
-
-    if (amount <= 0) {
-      // toast.error("Valor deve ser positivo");
-      return false;
-    }
-
+  const addExpense = async (expense: Omit<Expense, "id">) => {
     try {
-      const { error } = await supabase.from("transactions").insert({
-        clinic_id: user?.clinic_id,
-        cash_register_id: activeSession.session_id,
-        description: `Sangria: ${reason}`,
+      let isoDate = expense.dueDate;
+      if (expense.dueDate.includes('/')) {
+        const [day, month, year] = expense.dueDate.split('/');
+        isoDate = `${year}-${month}-${day}`;
+      }
+
+      const { error } = await supabase
+        .from('expenses')
+        .insert({
+          clinic_id: profile?.clinic_id,
+          description: expense.description,
+          category: expense.category,
+          provider: expense.provider,
+          amount: expense.amount,
+          amount_paid: 0,
+          due_date: isoDate,
+          status: 'PENDING'
+        });
+
+      if (error) throw error;
+      await refreshFinancialData();
+    } catch (error: any) {
+      console.error("Error adding expense:", error);
+      alert("Erro ao adicionar despesa: " + error.message);
+    }
+  };
+
+  const payExpense = async (id: string, amount: number, method: string, date: string, notes?: string) => {
+    try {
+      const expense = expenses.find(e => e.id === id);
+      if (!expense) return;
+
+      // 1. Update Expense
+      const currentPaid = expense.amountPaid || 0;
+      const newPaidTotal = currentPaid + amount;
+      const isFullyPaid = newPaidTotal >= expense.amount;
+
+      const { error: expError } = await supabase
+        .from('expenses')
+        .update({
+          amount_paid: newPaidTotal,
+          status: isFullyPaid ? 'PAID' : 'PARTIAL'
+          // TODO: update payment method if needed
+        })
+        .eq('id', id);
+
+      if (expError) throw expError;
+
+      // 2. Insert Transaction (Trigger handles checks)
+      const { error: txError } = await supabase.from('transactions').insert({
+        clinic_id: profile?.clinic_id,
+        description: expense.description,
         amount: amount,
-        type: "EXPENSE",
-        category: "Sangria",
-        date: new Date().toISOString().split("T")[0],
-        payment_method: "Dinheiro",
+        type: 'EXPENSE',
+        category: expense.category,
+        payment_method: method,
+        date: new Date().toISOString(),
+        cash_register_id: activeSession?.id || null, // Let trigger validate/assign
+        expense_id: id
       });
 
-      if (error) {
-        console.error("Erro na sangria:", error);
-        // toast.error("Erro na sangria: " + error.message);
-        return false;
+      if (txError) {
+        if (txError.message.includes("BLOQUEIO")) {
+          alert("ATENÇÃO: Pagamento registrado na despesa mas bloqueado no caixa (Caixa Fechado).");
+        } else {
+          throw txError;
+        }
       }
 
-      await refreshSession(); // Atualizar saldo
-      // toast.success(`Sangria de R$ ${amount.toFixed(2)} realizada`);
-      return true;
-    } catch (error) {
-      console.error("Erro na sangria:", error);
-      // toast.error("Erro inesperado na sangria");
-      return false;
+      await refreshFinancialData();
+
+    } catch (error: any) {
+      console.error("Error paying expense:", error);
+      alert("Erro ao pagar despesa: " + error.message);
     }
   };
 
-  // Suprimento (depósito)
-  const performDeposit = async (
-    amount: number,
-    reason: string
-  ): Promise<boolean> => {
-    if (!activeSession) {
-      // toast.error("Caixa não está aberto");
-      return false;
-    }
-
-    if (amount <= 0) {
-      // toast.error("Valor deve ser positivo");
-      return false;
-    }
-
+  const addCashMovement = async (type: 'sangria' | 'suprimento', amount: number, description: string) => {
     try {
-      const { error } = await supabase.from("transactions").insert({
-        clinic_id: user?.clinic_id,
-        cash_register_id: activeSession.session_id,
-        description: `Suprimento: ${reason}`,
+      if (!activeSession) {
+        throw new Error("É necessário ter um caixa aberto para realizar movimentações.");
+      }
+
+      const txType = type === 'sangria' ? 'EXPENSE' : 'INCOME';
+      const category = type === 'sangria' ? 'Sangria' : 'Suprimento';
+
+      const { error } = await supabase.from('transactions').insert({
+        clinic_id: profile?.clinic_id,
+        description: `${category}: ${description}`,
         amount: amount,
-        type: "INCOME",
-        category: "Suprimento",
-        date: new Date().toISOString().split("T")[0],
-        payment_method: "Dinheiro",
+        type: txType,
+        category: category,
+        payment_method: 'Dinheiro', // Movimentações de caixa são sempre em espécie
+        date: new Date().toISOString(),
+        cash_register_id: activeSession.id
       });
 
-      if (error) {
-        console.error("Erro no suprimento:", error);
-        // toast.error("Erro no suprimento: " + error.message);
-        return false;
-      }
+      if (error) throw error;
+      await refreshFinancialData();
 
-      await refreshSession(); // Atualizar saldo
-      // toast.success(`Suprimento de R$ ${amount.toFixed(2)} realizado`);
-      return true;
-    } catch (error) {
-      console.error("Erro no suprimento:", error);
-      // toast.error("Erro inesperado no suprimento");
-      return false;
+    } catch (error: any) {
+      console.error(`Error adding ${type}:`, error);
+      alert(`Erro ao registrar ${type}: ` + error.message);
     }
   };
 
-  // Carregar dados iniciais
-  useEffect(() => {
-    if (user?.clinic_id) {
-      loadSettings();
-    }
-  }, [user?.clinic_id]);
-
-  useEffect(() => {
-    if (user?.id && user?.clinic_id && settings) {
-      loadActiveSession();
-    }
-  }, [user?.id, user?.clinic_id, settings]);
-
-  // Verificar abertura obrigatória
-  useEffect(() => {
-    if (settings?.force_cash_opening && !activeSession && !isLoadingSession) {
-      setShowOpeningModal(true);
-    }
-  }, [settings, activeSession, isLoadingSession]);
-
-  const value: FinancialContextType = {
-    activeSession,
-    isLoadingSession,
-    refreshSession,
-    settings,
-    isLoadingSettings,
-    openCashSession,
-    closeCashSession,
-    performWithdrawal,
-    performDeposit,
-    showOpeningModal,
-    setShowOpeningModal,
+  const recordTransaction = (transaction: Omit<FinancialRecord, "id">) => {
+    // Optimistic update for UI, but real data comes from refresh
+    // This is mostly used when DataContext (ReceivePayment) triggers a transaction
+    // For now, simpler to just trigger a refresh
+    refreshFinancialData();
   };
 
   return (
-    <FinancialContext.Provider value={value}>
+    <FinancialContext.Provider
+      value={{
+        financialSettings,
+        cashRegisters,
+        activeSession,
+        expenses,
+        globalTransactions,
+        refreshFinancialData,
+        openSession,
+        closeSession,
+        addExpense,
+        addCashMovement,
+        recordTransaction
+      }}
+    >
       {children}
     </FinancialContext.Provider>
   );
-}
+};
 
-export function useFinancial() {
+export const useFinancial = () => {
   const context = useContext(FinancialContext);
-  if (context === undefined) {
-    throw new Error("useFinancial must be used within a FinancialProvider");
-  }
+  if (!context) throw new Error("useFinancial must be used within a FinancialProvider");
   return context;
-}
-
-// Hooks específicos
-export function useActiveSession() {
-  const { activeSession, isLoadingSession, refreshSession } = useFinancial();
-  return { activeSession, isLoadingSession, refreshSession };
-}
-
-export function useCashOperations() {
-  const {
-    openCashSession,
-    closeCashSession,
-    performWithdrawal,
-    performDeposit,
-  } = useFinancial();
-
-  return {
-    openCashSession,
-    closeCashSession,
-    performWithdrawal,
-    performDeposit,
-  };
-}
+};

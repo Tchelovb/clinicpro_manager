@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useNavigate } from 'react-router-dom';
@@ -7,6 +6,8 @@ import {
     Wallet, FileText, TrendingUp, AlertTriangle, Lock, Unlock,
     Plus, Calendar, CreditCard, CheckCircle, Clock
 } from 'lucide-react';
+import CashClosingWizard from './CashClosingWizard';
+import SangriaSuprimentoModal from './SangriaSuprimentoModal';
 
 const Financial: React.FC = () => {
     const {
@@ -16,6 +17,8 @@ const Financial: React.FC = () => {
     const navigate = useNavigate();
 
     const [activeTab, setActiveTab] = useState<'dashboard' | 'caixa' | 'pagar' | 'receber'>('dashboard');
+    const [showClosingWizard, setShowClosingWizard] = useState(false);
+    const [showSangriaModal, setShowSangriaModal] = useState<{ open: boolean; type: 'sangria' | 'suprimento' }>({ open: false, type: 'suprimento' });
 
     const DashboardView = () => {
         const today = new Date().toLocaleDateString('pt-BR');
@@ -54,19 +57,10 @@ const Financial: React.FC = () => {
 
     const CaixaView = () => {
         const [openAmount, setOpenAmount] = useState('');
-        const [closeAmount, setCloseAmount] = useState('');
-        const [obs, setObs] = useState('');
 
         const handleOpen = () => {
             openRegister(parseFloat(openAmount) || 0, 'Dr. Marcelo Vilas Boas');
             setOpenAmount('');
-        };
-
-        const handleClose = () => {
-            if (!currentRegister) return;
-            closeRegister(currentRegister.id, parseFloat(closeAmount) || 0, obs);
-            setCloseAmount('');
-            setObs('');
         };
 
         return (
@@ -107,61 +101,88 @@ const Financial: React.FC = () => {
                 </div>
 
                 {currentRegister && (
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col">
-                            <div className="p-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 flex justify-between items-center">
-                                <h3 className="font-bold text-gray-800 dark:text-white">Movimentações</h3>
-                                <span className="text-[10px] text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-700 border dark:border-gray-600 px-2 py-1 rounded">ID: {currentRegister.id}</span>
-                            </div>
-                            <div className="divide-y divide-gray-100 dark:divide-gray-700 max-h-[400px] overflow-y-auto">
-                                {currentRegister.transactions.length > 0 ? (
-                                    currentRegister.transactions.map(t => (
-                                        <div key={t.id} className="p-4 flex justify-between items-center hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                                            <div className="flex items-center gap-3">
-                                                <div className={`p-2 rounded-full shrink-0 ${t.type === 'income' ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'}`}>
-                                                    {t.type === 'income' ? <ArrowUpCircle size={18} /> : <ArrowDownCircle size={18} />}
-                                                </div>
-                                                <div className="min-w-0">
-                                                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{t.description}</p>
-                                                    <p className="text-xs text-gray-500 dark:text-gray-400">{t.paymentMethod} • {t.category}</p>
-                                                </div>
-                                            </div>
-                                            <span className={`font-bold text-sm ml-2 ${t.type === 'income' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                                                {t.type === 'income' ? '+' : '-'} {t.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                                            </span>
-                                        </div>
-                                    ))
-                                ) : <div className="p-8 text-center text-gray-400">Nenhuma movimentação registrada hoje.</div>}
-                            </div>
+                    <div className="flex flex-col gap-6">
+                        {/* Quick Actions Bar */}
+                        <div className="flex gap-3 overflow-x-auto pb-2">
+                            <button
+                                onClick={() => setShowSangriaModal({ open: true, type: 'suprimento' })}
+                                className="flex items-center gap-2 px-4 py-2 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 rounded-lg font-bold hover:bg-green-200 transition-colors shadow-sm text-sm"
+                            >
+                                <ArrowUpCircle size={18} /> Suprimento
+                            </button>
+                            <button
+                                onClick={() => setShowSangriaModal({ open: true, type: 'sangria' })}
+                                className="flex items-center gap-2 px-4 py-2 bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 rounded-lg font-bold hover:bg-red-200 transition-colors shadow-sm text-sm"
+                            >
+                                <ArrowDownCircle size={18} /> Sangria
+                            </button>
                         </div>
 
-                        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 h-fit">
-                            <h3 className="font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2"><Lock size={18} /> Fechamento</h3>
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Saldo em Sistema</label>
-                                    <div className="text-xl font-bold text-gray-900 dark:text-white border-b dark:border-gray-700 pb-2">
-                                        {financialSettings?.blind_closing ? (
-                                            <span className="text-gray-400 font-normal italic flex items-center gap-1">
-                                                <Lock size={14} /> Oculto (Fechamento Cego)
-                                            </span>
-                                        ) : (
-                                            `R$ ${currentRegister.calculatedBalance.toLocaleString('pt-BR')}`
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col">
+                                <div className="p-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 flex justify-between items-center">
+                                    <h3 className="font-bold text-gray-800 dark:text-white">Movimentações</h3>
+                                    <span className="text-[10px] text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-700 border dark:border-gray-600 px-2 py-1 rounded">ID: {currentRegister.id}</span>
+                                </div>
+                                <div className="divide-y divide-gray-100 dark:divide-gray-700 max-h-[400px] overflow-y-auto">
+                                    {currentRegister.transactions.length > 0 ? (
+                                        currentRegister.transactions.map(t => (
+                                            <div key={t.id} className="p-4 flex justify-between items-center hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                                <div className="flex items-center gap-3">
+                                                    <div className={`p-2 rounded-full shrink-0 ${t.type === 'income' ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'}`}>
+                                                        {t.type === 'income' ? <ArrowUpCircle size={18} /> : <ArrowDownCircle size={18} />}
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{t.description}</p>
+                                                        <p className="text-xs text-gray-500 dark:text-gray-400">{t.paymentMethod} • {t.category}</p>
+                                                    </div>
+                                                </div>
+                                                <span className={`font-bold text-sm ml-2 ${t.type === 'income' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                                    {t.type === 'income' ? '+' : '-'} {t.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                                </span>
+                                            </div>
+                                        ))
+                                    ) : <div className="p-8 text-center text-gray-400">Nenhuma movimentação registrada hoje.</div>}
+                                </div>
+                            </div>
+
+                            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 h-fit">
+                                <h3 className="font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2"><Lock size={18} /> Fechamento</h3>
+                                <div className="space-y-4">
+                                    <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                                        <p className="text-sm text-yellow-800 dark:text-yellow-200 mb-2">
+                                            Ao fechar o caixa, você precisará conferir os comprovantes de cartão e contar o dinheiro em espécie.
+                                        </p>
+                                        {financialSettings?.blind_closing && (
+                                            <div className="flex items-center gap-2 text-xs font-bold text-yellow-700 dark:text-yellow-300 mt-2">
+                                                <Lock size={12} /> MODO CEGO ATIVO
+                                            </div>
                                         )}
                                     </div>
+                                    <button
+                                        onClick={() => setShowClosingWizard(true)}
+                                        className="w-full bg-red-600 text-white py-3 rounded-lg font-bold hover:bg-red-700 transition-colors shadow-sm active:scale-95 flex items-center justify-center gap-2"
+                                    >
+                                        <CheckCircle size={18} /> Iniciar Fechamento
+                                    </button>
                                 </div>
-                                <div>
-                                    <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase block mb-1">Saldo em Gaveta (Contagem)</label>
-                                    <input type="number" className="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-3 text-lg font-medium bg-white dark:bg-gray-700 dark:text-white" placeholder="0,00" value={closeAmount} onChange={e => setCloseAmount(e.target.value)} />
-                                </div>
-                                <div>
-                                    <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase block mb-1">Observações / Divergência</label>
-                                    <textarea className="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-3 text-sm h-24 resize-none bg-white dark:bg-gray-700 dark:text-white" placeholder="Justifique se houver diferença..." value={obs} onChange={e => setObs(e.target.value)} />
-                                </div>
-                                <button onClick={handleClose} className="w-full bg-red-600 text-white py-3 rounded-lg font-bold hover:bg-red-700 transition-colors shadow-sm active:scale-95">Fechar Caixa</button>
                             </div>
                         </div>
                     </div>
+                )}
+
+                {showSangriaModal.open && (
+                    <SangriaSuprimentoModal
+                        onClose={() => setShowSangriaModal({ ...showSangriaModal, open: false })}
+                        type={showSangriaModal.type}
+                    />
+                )}
+
+                {showClosingWizard && currentRegister && (
+                    <CashClosingWizard
+                        registerId={currentRegister.id}
+                        onClose={() => setShowClosingWizard(false)}
+                    />
                 )}
             </div>
         );

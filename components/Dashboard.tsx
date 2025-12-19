@@ -20,6 +20,8 @@ import {
 import { useAuth } from "../contexts/AuthContext";
 import { useDashboardData } from "../hooks/useDashboardData";
 import { LeadStatus } from "../types";
+import AIInsightsFeed from "./dashboard/AIInsightsFeed";
+import ComplianceWidget from "./dashboard/ComplianceWidget";
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -181,9 +183,8 @@ const Dashboard: React.FC = () => {
 
     return (
       <div
-        className={`p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 border-l-4 relative group transition-all duration-300 hover:shadow-md ${
-          colors[item.color]
-        }`}
+        className={`p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 border-l-4 relative group transition-all duration-300 hover:shadow-md ${colors[item.color]
+          }`}
       >
         <div className="flex justify-between items-start mb-2">
           <div className="flex items-center gap-2">
@@ -193,25 +194,23 @@ const Dashboard: React.FC = () => {
                 .replace("100", "50")}`}
             >
               <div
-                className={`w-2 h-2 rounded-full ${
-                  badgeColors[item.type].split(" ")[0] === "bg-orange"
-                    ? "bg-orange-500"
-                    : badgeColors[item.type].split(" ")[0] === "bg-purple"
+                className={`w-2 h-2 rounded-full ${badgeColors[item.type].split(" ")[0] === "bg-orange"
+                  ? "bg-orange-500"
+                  : badgeColors[item.type].split(" ")[0] === "bg-purple"
                     ? "bg-purple-500"
                     : "bg-blue-500"
-                }`}
+                  }`}
               />
             </div>
             <span
-              className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ${
-                badgeColors[item.type]
-              }`}
+              className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ${badgeColors[item.type]
+                }`}
             >
               {item.type === "urgent"
                 ? "Prioridade"
                 : item.type === "medium"
-                ? "Atenção"
-                : "Lembrete"}
+                  ? "Atenção"
+                  : "Lembrete"}
             </span>
           </div>
           <button
@@ -277,11 +276,10 @@ const Dashboard: React.FC = () => {
                   <div
                     className="h-1.5 bg-blue-500 rounded-full"
                     style={{
-                      width: `${
-                        kpis.appointments > 0
-                          ? (kpis.confirmed / kpis.appointments) * 100
-                          : 0
-                      }%`,
+                      width: `${kpis.appointments > 0
+                        ? (kpis.confirmed / kpis.appointments) * 100
+                        : 0
+                        }%`,
                     }}
                   ></div>
                 </div>
@@ -322,11 +320,10 @@ const Dashboard: React.FC = () => {
           <div className="relative">
             <button
               onClick={() => setShowNotifications(!showNotifications)}
-              className={`p-3 rounded-xl border transition-colors relative ${
-                showNotifications
-                  ? "bg-blue-50 dark:bg-blue-900 border-blue-200 dark:border-blue-700 text-blue-600 dark:text-blue-300"
-                  : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-              }`}
+              className={`p-3 rounded-xl border transition-colors relative ${showNotifications
+                ? "bg-blue-50 dark:bg-blue-900 border-blue-200 dark:border-blue-700 text-blue-600 dark:text-blue-300"
+                : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                }`}
             >
               <Bell size={20} />
             </button>
@@ -351,8 +348,11 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* --- VERTICAL STACK LAYOUT --- */}
-      <div className="flex flex-col gap-8 w-full">
+      {/* AI INSIGHTS WIDGET (BOS LAYER) */}
+      <AIInsightsFeed />
+
+      {/* --- GRID LAYOUT --- */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 w-full items-start">
         {/* BLOCK 1: AGENDA DO DIA */}
         <div className="flex flex-col gap-4 w-full">
           <div className="flex items-center justify-between shrink-0">
@@ -394,15 +394,14 @@ const Dashboard: React.FC = () => {
                         </div>
                       </div>
                       <div
-                        className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                          apt.status === "Confirmado"
-                            ? "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300"
-                            : apt.status === "Pendente"
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${apt.status === "Confirmado"
+                          ? "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300"
+                          : apt.status === "Pendente"
                             ? "bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300"
                             : apt.status === "Concluído"
-                            ? "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300"
-                            : "bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-300"
-                        }`}
+                              ? "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300"
+                              : "bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-300"
+                          }`}
                       >
                         {apt.status}
                       </div>
@@ -449,7 +448,8 @@ const Dashboard: React.FC = () => {
         </div>
 
         {/* BLOCK 2: LEMBRETES */}
-        <div className="flex flex-col gap-4 w-full">
+        <div className="flex flex-col gap-6 w-full">
+          <ComplianceWidget />
           <div className="flex items-center justify-between shrink-0">
             <h3 className="font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
               <ListTodo className="text-orange-500" size={18} /> Lembretes &
@@ -514,11 +514,10 @@ const Dashboard: React.FC = () => {
                       <div>
                         <div className="flex items-center gap-2">
                           <span
-                            className={`w-2 h-2 rounded-full ${
-                              lead.status === "Nova Oportunidade"
-                                ? "bg-blue-500"
-                                : "bg-yellow-500"
-                            }`}
+                            className={`w-2 h-2 rounded-full ${lead.status === "Nova Oportunidade"
+                              ? "bg-blue-500"
+                              : "bg-yellow-500"
+                              }`}
                           ></span>
                           <h4 className="text-sm font-bold text-gray-800 dark:text-gray-200">
                             {lead.name}
@@ -585,7 +584,7 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
       </div>
-    </div>
+    </div >
   );
 };
 

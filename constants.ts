@@ -2,78 +2,78 @@
 import { Lead, LeadStatus, Patient, Appointment, FinancialRecord, Expense, CashRegister, Procedure, Professional, PriceTable, InsurancePlan, ClinicConfig, AgendaConfig, DocumentTemplate, ClinicalDocument } from './types';
 
 export const MOCK_LEADS: Lead[] = [
-  { 
-    id: '1', 
-    name: 'Ana Silva', 
-    phone: '(11) 99999-1111', 
+  {
+    id: '1',
+    name: 'Ana Silva',
+    phone: '(11) 99999-1111',
     email: 'ana.silva@email.com',
-    source: 'Instagram', 
-    status: LeadStatus.NEW, 
+    source: 'Instagram',
+    status: LeadStatus.NEW,
     createdAt: '2023-10-25T10:00:00',
     lastInteraction: '2023-10-25T10:00:00',
     history: [
-        { id: 'h1', type: 'System', content: 'Oportunidade criada via Instagram', date: '2023-10-25T10:00:00', user: 'System' }
-    ],
-    tasks: [] 
-  },
-  { 
-    id: '2', 
-    name: 'Carlos Oliveira', 
-    phone: '(11) 98888-2222', 
-    source: 'Google', 
-    status: LeadStatus.CONTACT, 
-    createdAt: '2023-10-24T14:30:00',
-    lastInteraction: '2023-10-25T09:15:00',
-    history: [
-        { id: 'h2', type: 'System', content: 'Oportunidade criada via Google Ads', date: '2023-10-24T14:30:00', user: 'System' },
-        { id: 'h3', type: 'WhatsApp', content: 'Enviada mensagem de boas-vindas. Aguardando retorno.', date: '2023-10-25T09:15:00', user: 'Dra. Sofia' }
-    ],
-    tasks: [
-        { id: 't1', title: 'Ligar novamente à tarde', dueDate: '2023-10-26', completed: false }
-    ]
-  },
-  { 
-    id: '3', 
-    name: 'Mariana Souza', 
-    phone: '(11) 97777-3333', 
-    source: 'Indicação', 
-    status: LeadStatus.SCHEDULED, 
-    createdAt: '2023-10-20T11:00:00',
-    lastInteraction: '2023-10-25T16:00:00', 
-    value: 1500,
-    history: [
-        { id: 'h4', type: 'Call', content: 'Conversa inicial. Paciente quer lentes de contato.', date: '2023-10-20T11:15:00', user: 'Dr. Marcelo Vilas Boas' },
-        { id: 'h5', type: 'System', content: 'Agendamento confirmado para 27/10', date: '2023-10-25T16:00:00', user: 'Recepção' }
+      { id: 'h1', type: 'System', content: 'Oportunidade criada via Instagram', date: '2023-10-25T10:00:00', user: 'System' }
     ],
     tasks: []
   },
-  { 
-    id: '4', 
-    name: 'Roberto Santos', 
-    phone: '(11) 96666-4444', 
-    source: 'Facebook', 
-    status: LeadStatus.PROPOSAL, 
-    createdAt: '2023-10-15T09:00:00',
-    lastInteraction: '2023-10-24T10:00:00', 
-    value: 3200,
+  {
+    id: '2',
+    name: 'Carlos Oliveira',
+    phone: '(11) 98888-2222',
+    source: 'Google',
+    status: LeadStatus.CONTACT,
+    createdAt: '2023-10-24T14:30:00',
+    lastInteraction: '2023-10-25T09:15:00',
     history: [
-        { id: 'h6', type: 'WhatsApp', content: 'Orçamento enviado em PDF.', date: '2023-10-24T10:00:00', user: 'Dr. Marcelo Vilas Boas' }
+      { id: 'h2', type: 'System', content: 'Oportunidade criada via Google Ads', date: '2023-10-24T14:30:00', user: 'System' },
+      { id: 'h3', type: 'WhatsApp', content: 'Enviada mensagem de boas-vindas. Aguardando retorno.', date: '2023-10-25T09:15:00', user: 'Dra. Sofia' }
     ],
     tasks: [
-        { id: 't2', title: 'Cobrar retorno do orçamento', dueDate: '2023-10-27', completed: false }
+      { id: 't1', title: 'Ligar novamente à tarde', dueDate: '2023-10-26', completed: false }
     ]
   },
-  { 
-    id: '5', 
-    name: 'Fernanda Lima', 
-    phone: '(11) 95555-5555', 
-    source: 'Instagram', 
-    status: LeadStatus.WON, 
+  {
+    id: '3',
+    name: 'Mariana Souza',
+    phone: '(11) 97777-3333',
+    source: 'Indicação',
+    status: LeadStatus.SCHEDULED,
+    createdAt: '2023-10-20T11:00:00',
+    lastInteraction: '2023-10-25T16:00:00',
+    value: 1500,
+    history: [
+      { id: 'h4', type: 'Call', content: 'Conversa inicial. Paciente quer lentes de contato.', date: '2023-10-20T11:15:00', user: 'Dr. Marcelo Vilas Boas' },
+      { id: 'h5', type: 'System', content: 'Agendamento confirmado para 27/10', date: '2023-10-25T16:00:00', user: 'Recepção' }
+    ],
+    tasks: []
+  },
+  {
+    id: '4',
+    name: 'Roberto Santos',
+    phone: '(11) 96666-4444',
+    source: 'Facebook',
+    status: LeadStatus.PROPOSAL,
+    createdAt: '2023-10-15T09:00:00',
+    lastInteraction: '2023-10-24T10:00:00',
+    value: 3200,
+    history: [
+      { id: 'h6', type: 'WhatsApp', content: 'Orçamento enviado em PDF.', date: '2023-10-24T10:00:00', user: 'Dr. Marcelo Vilas Boas' }
+    ],
+    tasks: [
+      { id: 't2', title: 'Cobrar retorno do orçamento', dueDate: '2023-10-27', completed: false }
+    ]
+  },
+  {
+    id: '5',
+    name: 'Fernanda Lima',
+    phone: '(11) 95555-5555',
+    source: 'Instagram',
+    status: LeadStatus.WON,
     createdAt: '2023-10-10T15:00:00',
-    lastInteraction: '2023-10-22T14:00:00', 
+    lastInteraction: '2023-10-22T14:00:00',
     value: 5000,
     history: [
-        { id: 'h7', type: 'System', content: 'Venda realizada! Início do tratamento.', date: '2023-10-22T14:00:00', user: 'System' }
+      { id: 'h7', type: 'System', content: 'Venda realizada! Início do tratamento.', date: '2023-10-22T14:00:00', user: 'System' }
     ],
     tasks: []
   },
@@ -117,20 +117,20 @@ const PATIENT_101_FINANCIALS = [
 ];
 
 export const MOCK_PATIENTS: Patient[] = [
-  { 
-    id: '101', 
-    name: 'João Pereira', 
-    email: 'joao@email.com', 
-    phone: '(11) 91111-1111', 
-    cpf: '123.456.789-00', 
+  {
+    id: '101',
+    name: 'João Pereira',
+    email: 'joao@email.com',
+    phone: '(11) 91111-1111',
+    cpf: '123.456.789-00',
     birthDate: '1990-05-15',
     gender: 'Masculino',
     address: 'Rua das Flores, 123 - São Paulo, SP',
-    status: 'Em Tratamento', 
-    lastVisit: '2023-10-27', 
+    status: 'Em Tratamento',
+    lastVisit: '2023-10-27',
     responsibleDoctor: 'Dr. Marcelo Vilas Boas',
-    
-    totalSpent: 500, 
+
+    totalSpent: 500,
     totalBudgeted: 3700,
     totalApproved: 2500,
     totalPaid: 500,
@@ -141,18 +141,18 @@ export const MOCK_PATIENTS: Patient[] = [
     treatments: PATIENT_101_TREATMENTS as any,
     financials: PATIENT_101_FINANCIALS as any
   },
-  { 
-    id: '102', 
-    name: 'Cláudia Mendes', 
-    email: 'claudia@email.com', 
-    phone: '(11) 92222-2222', 
-    cpf: '234.567.890-11', 
+  {
+    id: '102',
+    name: 'Cláudia Mendes',
+    email: 'claudia@email.com',
+    phone: '(11) 92222-2222',
+    cpf: '234.567.890-11',
     birthDate: '1985-08-20',
     gender: 'Feminino',
     address: 'Av. Paulista, 1000 - São Paulo, SP',
-    status: 'Manutenção', 
-    lastVisit: '2023-09-20', 
-    nextVisit: '2023-11-05', 
+    status: 'Manutenção',
+    lastVisit: '2023-09-20',
+    nextVisit: '2023-11-05',
     responsibleDoctor: 'Dra. Sofia',
     totalSpent: 800,
     totalBudgeted: 800,
@@ -160,17 +160,17 @@ export const MOCK_PATIENTS: Patient[] = [
     totalPaid: 800,
     balanceDue: 0
   },
-  { 
-    id: '103', 
-    name: 'Ricardo Alves', 
-    email: 'ricardo@email.com', 
-    phone: '(11) 93333-3333', 
-    cpf: '345.678.901-22', 
+  {
+    id: '103',
+    name: 'Ricardo Alves',
+    email: 'ricardo@email.com',
+    phone: '(11) 93333-3333',
+    cpf: '345.678.901-22',
     birthDate: '1978-01-10',
     gender: 'Masculino',
     address: 'Rua Augusta, 500 - São Paulo, SP',
-    status: 'Arquivo', 
-    lastVisit: '2023-01-10', 
+    status: 'Arquivo',
+    lastVisit: '2023-01-10',
     responsibleDoctor: 'Dr. Marcelo Vilas Boas',
     totalSpent: 150,
     totalBudgeted: 150,
@@ -201,18 +201,28 @@ export const MOCK_EXPENSES: Expense[] = [
 ];
 
 export const MOCK_CASH_REGISTERS: CashRegister[] = [
-  { 
-    id: 'cr1', 
-    openedAt: '2023-10-26T08:00:00', 
-    closedAt: '2023-10-26T18:30:00', 
-    responsibleName: 'Dr. Marcelo Vilas Boas', 
-    openingBalance: 200, 
-    closingBalance: 1450, 
-    calculatedBalance: 1450, 
-    status: 'Fechado', 
+  {
+    id: 'cr1',
+    openedAt: '2023-10-26T08:00:00',
+    closedAt: '2023-10-26T18:30:00',
+    responsibleName: 'Dr. Marcelo Vilas Boas',
+    openingBalance: 200,
+    closingBalance: 1450,
+    calculatedBalance: 1450,
+    status: 'Fechado',
     transactions: [MOCK_FINANCIALS[0], MOCK_FINANCIALS[3]] // Just generic link for mock
   }
 ];
+
+export const LEAD_STATUS_LABELS: Record<string, string> = {
+  [LeadStatus.NEW]: 'Novo',
+  [LeadStatus.CONTACT]: 'Em Contato',
+  [LeadStatus.SCHEDULED]: 'Agendado',
+  [LeadStatus.PROPOSAL]: 'Orçamento',
+  [LeadStatus.NEGOTIATION]: 'Negociação',
+  [LeadStatus.WON]: 'Ganho',
+  [LeadStatus.LOST]: 'Perdido',
+};
 
 export const KANBAN_COLUMNS = [
   { id: LeadStatus.NEW, title: 'Nova Oportunidade', color: 'border-blue-400', bg: 'bg-blue-50' },
@@ -244,25 +254,25 @@ export const INITIAL_PROFESSIONALS: Professional[] = [
 // --- NEW CONFIG DATA ---
 
 export const INITIAL_PRICE_TABLES: PriceTable[] = [
-  { 
-    id: 'pt1', 
-    name: 'Particular (Padrão)', 
-    active: true, 
+  {
+    id: 'pt1',
+    name: 'Particular (Padrão)',
+    active: true,
     items: [] // Empty items implies using base price
   },
-  { 
-    id: 'pt2', 
-    name: 'Unimed Dental', 
-    active: true, 
+  {
+    id: 'pt2',
+    name: 'Unimed Dental',
+    active: true,
     items: [
       { procedureId: 'p1', price: 120 }, // Discounted cleaning
       { procedureId: 'p7', price: 150 }, // Discounted extraction
     ]
   },
-  { 
-    id: 'pt3', 
-    name: 'Amil Dental', 
-    active: true, 
+  {
+    id: 'pt3',
+    name: 'Amil Dental',
+    active: true,
     items: [
       { procedureId: 'p1', price: 100 },
       { procedureId: 'p2', price: 200 },

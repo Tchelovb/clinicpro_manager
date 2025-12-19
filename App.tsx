@@ -3,7 +3,7 @@ import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import BottomNav from "./components/BottomNav";
 import Dashboard from "./components/Dashboard";
-import CRM from "./components/CRM";
+import CommercialCentral from "./components/CommercialCentral";
 import { CRMForm, CRMDetail } from "./components/CRMPages";
 import Agenda from "./components/Agenda";
 import { AgendaForm, AgendaDetail } from "./components/AgendaPages";
@@ -26,7 +26,7 @@ import Reports from "./components/Reports";
 import Settings from "./components/Settings";
 import Support from "./components/Support";
 import Notifications from "./components/Notifications";
-import Documents from "./components/Documents";
+import DocumentsCenter from "./components/DocumentsCenter";
 import BlankSheets from "./components/BlankSheets";
 import {
   DocumentTemplateForm,
@@ -42,6 +42,7 @@ import NewClinicForm from "./components/master/NewClinicForm";
 import AppLayout from "./components/AppLayout";
 import { DataProvider } from "./contexts/DataContext";
 import { AuthProvider } from "./contexts/AuthContext";
+import { FinancialProvider } from "./contexts/FinancialContext";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
 import { supabase } from "./lib/supabase";
@@ -85,134 +86,136 @@ const App: React.FC = () => {
     <HashRouter>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <DataProvider>
-            <Routes>
-              {/* Rotas Públicas - Sem Layout */}
-              <Route path="/" element={<Login />} />
+          <FinancialProvider>
+            <DataProvider>
+              <Routes>
+                {/* Rotas Públicas - Sem Layout */}
+                <Route path="/" element={<Login />} />
 
-              {/* Rotas Master - Sem Layout Padrão */}
-              <Route
-                path="/master/*"
-                element={
-                  <ProtectedRoute requiredRole="MASTER">
-                    <Routes>
-                      <Route path="/" element={<MasterDashboard />} />
-                      <Route path="/clinics/new" element={<NewClinicForm />} />
-                    </Routes>
-                  </ProtectedRoute>
-                }
-              />
-
-              {/* Rotas Protegidas - Com Layout */}
-              <Route
-                path="/*"
-                element={
-                  <ProtectedRoute>
-                    <AppLayout>
+                {/* Rotas Master - Sem Layout Padrão */}
+                <Route
+                  path="/master/*"
+                  element={
+                    <ProtectedRoute requiredRole="MASTER">
                       <Routes>
-                        <Route
-                          path="/"
-                          element={<Navigate to="/dashboard" replace />}
-                        />
-                        <Route path="/dashboard" element={<Dashboard />} />
-
-                        {/* CRM Routes */}
-                        <Route path="/crm" element={<CRM />} />
-                        <Route path="/crm/new" element={<CRMForm />} />
-                        <Route path="/crm/:id" element={<CRMDetail />} />
-
-                        {/* Agenda Routes */}
-                        <Route path="/agenda" element={<Agenda />} />
-                        <Route path="/agenda/new" element={<AgendaForm />} />
-                        <Route path="/agenda/:id" element={<AgendaDetail />} />
-
-                        {/* Patient Routes */}
-                        <Route path="/patients" element={<Patients />} />
-                        <Route path="/patients/new" element={<PatientForm />} />
-                        <Route
-                          path="/patients/:id"
-                          element={<PatientDetail />}
-                        />
-                        <Route
-                          path="/patients/:id/notes/new"
-                          element={<PatientNoteForm />}
-                        />
-                        <Route
-                          path="/patients/:id/documents/new"
-                          element={<PatientDocumentForm />}
-                        />
-                        <Route
-                          path="/patients/:id/treatments/:treatmentId/conclude"
-                          element={<TreatmentConclusionForm />}
-                        />
-
-                        {/* Budget Routes */}
-                        <Route
-                          path="/patients/:id/new-budget"
-                          element={<BudgetForm />}
-                        />
-                        <Route
-                          path="/patients/:id/budgets/:budgetId"
-                          element={<BudgetForm />}
-                        />
-
-                        {/* Document Routes */}
-                        <Route path="/documents" element={<Documents />} />
-                        <Route
-                          path="/documents/blank-sheets"
-                          element={<BlankSheets />}
-                        />
-                        <Route
-                          path="/documents/new"
-                          element={<PatientDocumentForm />}
-                        />
-                        <Route
-                          path="/documents/:id"
-                          element={<DocumentViewer />}
-                        />
-                        <Route
-                          path="/documents/templates/new"
-                          element={<DocumentTemplateForm />}
-                        />
-                        <Route
-                          path="/documents/templates/:id"
-                          element={<DocumentTemplateForm />}
-                        />
-
-                        {/* Financial Routes */}
-                        <Route path="/financial" element={<Financial />} />
-                        <Route
-                          path="/financial/expenses/new"
-                          element={<FinancialExpenseForm />}
-                        />
-                        <Route
-                          path="/financial/receive/:installmentId"
-                          element={<PaymentReceivePage />}
-                        />
-                        <Route
-                          path="/financial/pay/:expenseId"
-                          element={<ExpensePayPage />}
-                        />
-
-                        <Route path="/reports" element={<Reports />} />
-                        <Route
-                          path="/settings/users"
-                          element={<UserManagement />}
-                        />
-                        <Route path="/settings" element={<Settings />} />
-                        <Route path="/support" element={<Support />} />
-                        <Route
-                          path="/notifications"
-                          element={<Notifications />}
-                        />
-                        <Route path="/profile" element={<UserProfile />} />
+                        <Route path="/" element={<MasterDashboard />} />
+                        <Route path="/clinics/new" element={<NewClinicForm />} />
                       </Routes>
-                    </AppLayout>
-                  </ProtectedRoute>
-                }
-              />
-            </Routes>
-          </DataProvider>
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Rotas Protegidas - Com Layout */}
+                <Route
+                  path="/*"
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout>
+                        <Routes>
+                          <Route
+                            path="/"
+                            element={<Navigate to="/dashboard" replace />}
+                          />
+                          <Route path="/dashboard" element={<Dashboard />} />
+
+                          {/* CRM Routes */}
+                          <Route path="/crm" element={<CommercialCentral />} />
+                          <Route path="/crm/new" element={<CRMForm />} />
+                          <Route path="/crm/:id" element={<CRMDetail />} />
+
+                          {/* Agenda Routes */}
+                          <Route path="/agenda" element={<Agenda />} />
+                          <Route path="/agenda/new" element={<AgendaForm />} />
+                          <Route path="/agenda/:id" element={<AgendaDetail />} />
+
+                          {/* Patient Routes */}
+                          <Route path="/patients" element={<Patients />} />
+                          <Route path="/patients/new" element={<PatientForm />} />
+                          <Route
+                            path="/patients/:id"
+                            element={<PatientDetail />}
+                          />
+                          <Route
+                            path="/patients/:id/notes/new"
+                            element={<PatientNoteForm />}
+                          />
+                          <Route
+                            path="/patients/:id/documents/new"
+                            element={<PatientDocumentForm />}
+                          />
+                          <Route
+                            path="/patients/:id/treatments/:treatmentId/conclude"
+                            element={<TreatmentConclusionForm />}
+                          />
+
+                          {/* Budget Routes */}
+                          <Route
+                            path="/patients/:id/new-budget"
+                            element={<BudgetForm />}
+                          />
+                          <Route
+                            path="/patients/:id/budgets/:budgetId"
+                            element={<BudgetForm />}
+                          />
+
+                          {/* Document Routes */}
+                          <Route path="/documents" element={<DocumentsCenter />} />
+                          <Route
+                            path="/documents/blank-sheets"
+                            element={<BlankSheets />}
+                          />
+                          <Route
+                            path="/documents/new"
+                            element={<PatientDocumentForm />}
+                          />
+                          <Route
+                            path="/documents/:id"
+                            element={<DocumentViewer />}
+                          />
+                          <Route
+                            path="/documents/templates/new"
+                            element={<DocumentTemplateForm />}
+                          />
+                          <Route
+                            path="/documents/templates/:id"
+                            element={<DocumentTemplateForm />}
+                          />
+
+                          {/* Financial Routes */}
+                          <Route path="/financial" element={<Financial />} />
+                          <Route
+                            path="/financial/expenses/new"
+                            element={<FinancialExpenseForm />}
+                          />
+                          <Route
+                            path="/financial/receive/:installmentId"
+                            element={<PaymentReceivePage />}
+                          />
+                          <Route
+                            path="/financial/pay/:expenseId"
+                            element={<ExpensePayPage />}
+                          />
+
+                          <Route path="/reports" element={<Reports />} />
+                          <Route
+                            path="/settings/users"
+                            element={<UserManagement />}
+                          />
+                          <Route path="/settings" element={<Settings />} />
+                          <Route path="/support" element={<Support />} />
+                          <Route
+                            path="/notifications"
+                            element={<Notifications />}
+                          />
+                          <Route path="/profile" element={<UserProfile />} />
+                        </Routes>
+                      </AppLayout>
+                    </ProtectedRoute>
+                  }
+                />
+              </Routes>
+            </DataProvider>
+          </FinancialProvider>
         </AuthProvider>
       </QueryClientProvider>
     </HashRouter>

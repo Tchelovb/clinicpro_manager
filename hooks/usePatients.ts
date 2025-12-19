@@ -115,12 +115,13 @@ export const usePatient = (id: string) => {
           `
           *,
           budgets (*),
-          treatments (*),
-          financials (*),
-          notes (*)
+          treatments:treatment_items (*),
+          financials:financial_installments (*),
+          notes:clinical_notes (*)
         `
         )
         .eq("id", id)
+        .eq("clinic_id", clinicId)
         .single();
 
       if (error) throw error;

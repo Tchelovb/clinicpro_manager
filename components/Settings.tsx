@@ -5,6 +5,10 @@ import {
   Stethoscope,
   DollarSign,
   Heart,
+  Palette,
+  Shield,
+  FileText,
+  Target,
   Settings as SettingsIcon,
 } from "lucide-react";
 import ClinicSettings from "./settings/ClinicSettings";
@@ -12,21 +16,35 @@ import UsersSettings from "./settings/UsersSettings";
 import ProceduresSettings from "./settings/ProceduresSettings";
 import PriceTablesSettings from "./settings/PriceTablesSettings";
 import InsurancePlansSettings from "./settings/InsurancePlansSettings";
-import FinancialCRMSettings from "./settings/FinancialCRMSettings";
+import CRMSettings from "./settings/CRMSettings";
 import ProfessionalsSettings from "./settings/ProfessionalsSettings";
+import FinancialRulesSettings from "./settings/financial-rules/FinancialRulesSettings";
 import CashRulesSettings from "./settings/CashRulesSettings";
-import { ShieldCheck } from "lucide-react";
+import BrandingSettings from "./settings/branding/BrandingSettings";
+import SecuritySettings from "./settings/security/SecuritySettings";
+import ClinicalSettings from "./settings/clinical/ClinicalSettings";
+import AutomationsSettings from "./settings/automations/AutomationsSettings";
+import IntegrationsSettings from "./settings/integrations/IntegrationsSettings";
+import BusinessGoalsSettings from "./settings/goals/BusinessGoalsSettings";
+import { ShieldCheck, Bell, Network } from "lucide-react";
 
 const Settings: React.FC = () => {
   const [activeSection, setActiveSection] = useState<
     | "clinic"
+    | "branding"
+    | "security"
+    | "clinical"
+    | "automations"
+    | "integrations"
+    | "goals"
+    | "crm"
     | "Users"
     | "professionals"
     | "procedure"
     | "price-tables"
     | "insurance-plans"
-    | "financial-crm"
     | "cash-rules"
+    | "financial-rules"
   >("clinic");
 
   const sections = [
@@ -37,15 +55,57 @@ const Settings: React.FC = () => {
       component: ClinicSettings,
     },
     {
+      key: "branding" as const,
+      label: "Identidade Visual",
+      icon: Palette,
+      component: BrandingSettings,
+    },
+    {
+      key: "security" as const,
+      label: "Segurança & Auditoria",
+      icon: Shield,
+      component: SecuritySettings,
+    },
+    {
+      key: "clinical" as const,
+      label: "Formulários Clínicos",
+      icon: FileText,
+      component: ClinicalSettings,
+    },
+    {
+      key: "automations" as const,
+      label: "Notificações & Automações",
+      icon: Bell,
+      component: AutomationsSettings,
+    },
+    {
+      key: "integrations" as const,
+      label: "Integrações & Backup",
+      icon: Network,
+      component: IntegrationsSettings,
+    },
+    {
+      key: "goals" as const,
+      label: "Metas de Negócio",
+      icon: Target,
+      component: BusinessGoalsSettings,
+    },
+    {
       key: "Users" as const,
       label: "Usuários",
       icon: Users,
       component: UsersSettings,
     },
     {
-      key: "cash-rules" as const,
+      key: "financial-rules" as const,
       label: "Regras Financeiras",
       icon: ShieldCheck,
+      component: FinancialRulesSettings,
+    },
+    {
+      key: "cash-rules" as const,
+      label: "Regras de Caixa (Fort Knox)",
+      icon: DollarSign,
       component: CashRulesSettings,
     },
     {
@@ -73,10 +133,10 @@ const Settings: React.FC = () => {
       component: InsurancePlansSettings,
     },
     {
-      key: "financial-crm" as const,
-      label: "Financeiro & CRM",
-      icon: SettingsIcon,
-      component: FinancialCRMSettings,
+      key: "crm" as const,
+      label: "CRM",
+      icon: Users,
+      component: CRMSettings,
     },
   ];
 

@@ -160,12 +160,7 @@ export const useDashboardData = () => {
           `
           id,
           name,
-          budgets (
-            id,
-            status,
-            total_value,
-            final_value
-          )
+          phone
         `
         )
         .eq("clinic_id", clinicId)
@@ -213,7 +208,10 @@ export const useDashboardData = () => {
     });
   }
 
-  // Orçamentos em análise
+  // Orçamentos em análise (Desativado - Migrado para Hub Comercial)
+  // const pendingBudgets = patients.flatMap((p) => ...
+
+  /*
   const pendingBudgets = patients.flatMap((p) =>
     (p.budgets || []).filter((b) => b.status === "DRAFT")
   );
@@ -235,6 +233,7 @@ export const useDashboardData = () => {
       actionPath: "/crm",
     });
   }
+  */
 
   return {
     // Dados
