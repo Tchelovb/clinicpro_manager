@@ -46,6 +46,24 @@ import { FinancialProvider } from "./contexts/FinancialContext";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
 import { supabase } from "./lib/supabase";
+import { IntelligenceDashboard } from "./components/IntelligenceDashboard";
+import { WarRoom } from "./components/WarRoom";
+import ChatBOSPage from "./components/ChatBOSPage";
+import BOSIntelligencePage from "./components/BOSIntelligencePage";
+import IntelligenceCenter from "./components/IntelligenceCenter";
+import IntelligenceGateway from "./components/IntelligenceGateway";
+import ClinicHealthCenter from "./components/ClinicHealthCenter";
+import GamificationTestPage from "./components/GamificationTestPage";
+import TeamCommandCenter from "./components/TeamCommandCenter";
+import { HighTicketPipeline } from "./components/HighTicketPipeline";
+import { OpportunityRadar } from "./components/OpportunityRadar";
+import { MasterGateway } from "./components/MasterGateway";
+import { NetworkHub } from "./components/NetworkHub";
+import { TycoonGameHub } from "./components/TycoonGameHub";
+import { ConfirmationDashboard } from "./components/confirmations";
+import { LabOrderList } from "./components/lab";
+import { ReferralDashboard } from "./components/referrals";
+import { RecallDashboard } from "./components/recalls";
 
 // Monitorar todas as queries para pacientes
 const originalFrom = supabase.from;
@@ -92,15 +110,12 @@ const App: React.FC = () => {
                 {/* Rotas Públicas - Sem Layout */}
                 <Route path="/" element={<Login />} />
 
-                {/* Rotas Master - Sem Layout Padrão */}
+                {/* Rotas Master - Redirect para Intelligence Gateway */}
                 <Route
                   path="/master/*"
                   element={
                     <ProtectedRoute requiredRole="MASTER">
-                      <Routes>
-                        <Route path="/" element={<MasterDashboard />} />
-                        <Route path="/clinics/new" element={<NewClinicForm />} />
-                      </Routes>
+                      <Navigate to="/dashboard/intelligence-gateway" replace />
                     </ProtectedRoute>
                   }
                 />
@@ -195,6 +210,45 @@ const App: React.FC = () => {
                             path="/financial/pay/:expenseId"
                             element={<ExpensePayPage />}
                           />
+
+                          {/* Intelligence Gateway - Portal Central */}
+                          <Route path="/dashboard/intelligence-gateway" element={<IntelligenceGateway />} />
+
+                          {/* Master Routes - Rede e Jogo */}
+                          <Route path="/dashboard/network" element={<NetworkHub />} />
+                          <Route path="/dashboard/game" element={<TycoonGameHub />} />
+
+                          {/* ClinicHealth Intelligence Center */}
+                          <Route path="/dashboard/clinic-health" element={<ClinicHealthCenter />} />
+
+                          {/* BOS Intelligence Center */}
+                          <Route path="/dashboard/bos-intelligence" element={<BOSIntelligencePage />} />
+
+                          {/* ChatBOS - Embedded */}
+                          <Route path="/dashboard/chatbos" element={<ChatBOSPage />} />
+
+                          {/* Gamification Test Page (BOS 8.0) */}
+                          <Route path="/dashboard/gamification-test" element={<GamificationTestPage />} />
+
+                          {/* Team Command Center (BOS 12.5) - ADMIN Only */}
+                          <Route path="/dashboard/team-command" element={<TeamCommandCenter />} />
+
+                          {/* High-Ticket Pipeline (BOS 12.7) - CRC Focus */}
+                          <Route path="/dashboard/high-ticket" element={<HighTicketPipeline />} />
+
+                          {/* Opportunity Radar (BOS 18.7) - CRC Multidisciplinar */}
+                          <Route path="/dashboard/opportunity-radar" element={<OpportunityRadar />} />
+
+                          {/* REFINAMENTO EASYDENT - P0 */}
+                          <Route path="/dashboard/confirmacoes" element={<ConfirmationDashboard />} />
+                          <Route path="/dashboard/laboratorio" element={<LabOrderList />} />
+                          <Route path="/dashboard/indicacoes" element={<ReferralDashboard />} />
+                          <Route path="/dashboard/recalls" element={<RecallDashboard />} />
+
+                          {/* Legacy Routes (manter compatibilidade) */}
+                          <Route path="/intelligence" element={<IntelligenceCenter />} />
+                          <Route path="/bos-intelligence" element={<BOSIntelligencePage />} />
+                          <Route path="/chatbos" element={<ChatBOSPage />} />
 
                           <Route path="/reports" element={<Reports />} />
                           <Route

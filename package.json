@@ -1,32 +1,43 @@
 {
-  "name": "clinicpro-manager",
+  "name": "clinicpro",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "build": "tsc && vite build",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "preview": "vite preview",
+    "generate:insights": "node -r dotenv/config scripts/generate-insights-simple.js dotenv_config_path=.env.local"
   },
   "dependencies": {
-    "@google/generative-ai": "^0.24.1",
-    "@supabase/supabase-js": "^2.39.1",
-    "@tanstack/react-query": "^5.17.15",
-    "html2canvas": "1.4.1",
-    "jspdf": "2.5.1",
-    "jspdf-autotable": "3.8.2",
-    "lucide-react": "^0.561.0",
-    "react": "^19.2.3",
-    "react-dom": "^19.2.3",
-    "react-router-dom": "^7.10.1",
-    "recharts": "^3.5.1",
-    "xlsx": "0.18.5",
-    "zod": "^3.22.4"
+    "@google/generative-ai": "^0.21.0",
+    "@supabase/supabase-js": "^2.39.7",
+    "@tanstack/react-query": "^5.17.19",
+    "dotenv": "^16.4.7",
+    "jspdf": "^3.0.4",
+    "jspdf-autotable": "^5.0.2",
+    "lucide-react": "^0.447.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-hot-toast": "^2.6.0",
+    "react-router-dom": "^6.21.3",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
-    "@types/node": "^22.14.0",
-    "@vitejs/plugin-react": "^5.0.0",
-    "typescript": "~5.8.2",
-    "vite": "^6.2.0"
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@typescript-eslint/eslint-plugin": "^6.16.0",
+    "@typescript-eslint/parser": "^6.16.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.16",
+    "eslint": "^8.56.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-react-refresh": "^0.4.5",
+    "postcss": "^8.4.33",
+    "tailwindcss": "^3.4.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.11"
   }
 }

@@ -1,0 +1,4 @@
+# Cloudflare Pages - SPA Redirects
+# Todas as rotas devem retornar index.html para o React Router funcionar
+
+/*    /index.html   200

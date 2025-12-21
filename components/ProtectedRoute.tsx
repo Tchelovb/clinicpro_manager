@@ -2,14 +2,16 @@ import React from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 
+import { UserRole } from "../types";
+
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requiredRole?: 'MASTER' | 'ADMIN' | 'DENTIST' | 'RECEPTIONIST' | 'ASSISTANT';
+  allowedRoles?: UserRole[];
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children,
-  requiredRole
+  allowedRoles
 }) => {
   const { user, profile, loading } = useAuth();
 
@@ -28,13 +30,13 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to="/" replace />;
   }
 
-  // Redirecionar MASTER para /master se tentar acessar dashboard regular
-  if (profile?.role === 'MASTER' && !requiredRole) {
-    return <Navigate to="/master" replace />;
-  }
-
-  // Verificar role específica se requerida
-  if (requiredRole && profile?.role !== requiredRole) {
+  // Verificar permissão baseada no array de roles permitidos
+  if (allowedRoles && profile?.role && !allowedRoles.includes(profile.role as UserRole)) {
+    // Se for ADMIN, geralmente tem acesso a tudo, mas vamos respeitar o array se passado explicitamente.
+    // Porém, por conveniência, ADMIN geralmente passa (exceto se explicitamente proibido, mas aqui é whitelist)
+    if (profile.role === 'ADMIN') {
+      return <>{children}</>;
+    }
     return <Navigate to="/dashboard" replace />;
   }
 

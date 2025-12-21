@@ -1,1049 +1,676 @@
-
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useData } from '../contexts/DataContext';
-import { useBusinessGoals } from '../hooks/useBusinessGoals';
+import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
 import {
-    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-    LineChart, Line, PieChart, Pie, Cell, AreaChart, Area, Legend, ComposedChart
-} from 'recharts';
-import {
-    TrendingUp, TrendingDown, AlertTriangle, Lightbulb,
-    DollarSign, Users, Activity, Filter, Download, Calendar,
-    ArrowRight, Target, Clock, AlertCircle, Briefcase, Stethoscope, Layers, FileText, Table
+    FileText, Calendar, Users, AlertCircle, CheckCircle, DollarSign, Clock,
+    Filter, Download, Search, RefreshCw, Smartphone, ArrowUpRight, BarChart2,
+    CalendarDays, Power
 } from 'lucide-react';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
-import { TransactionListModal, TreatmentListModal } from './reports/ReportsDrillDownModals';
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
-
-type DashboardType = 'executivo' | 'financeiro' | 'comercial' | 'operacional' | 'clinico' | 'funil' | 'insights';
-type PeriodType = 'Este Mês' | 'Últimos 3 Meses' | 'Este Ano' | 'Últimos 30 Dias';
+// --- TYPES FOR RADAR 7.0 ---
+type EntityType = 'Pacientes' | 'Orçamentos' | 'Financeiro' | 'Leads' | 'Comissões' | 'Produção' | 'Operacional' | 'Todos';
+type CategoryType = 'all' | 'Cirurgias Estéticas da Face' | 'Harmonização Facial' | 'Implantodontia' | 'Ortodontia' | 'Clínica Geral';
+type OriginType = 'all' | 'Instagram' | 'Google Ads' | 'Indicação' | 'Facebook' | 'Orgânico' | 'WhatsApp';
 
 const Reports: React.FC = () => {
-    const { patients, globalFinancials, leads, treatments, appointments, expenses } = useData();
-    const { goals } = useBusinessGoals();
-    const [activeTab, setActiveTab] = useState<DashboardType>('executivo');
-    const [period, setPeriod] = useState<PeriodType>('Este Mês');
-    const [activeDrillDown, setActiveDrillDown] = useState<'revenue' | 'expense' | 'treatments' | null>(null);
-    const [showExportMenu, setShowExportMenu] = useState(false);
+    // Basic data hooks - in a real "Big Data" scenario we would fetch based on filters
+    const { patients, appointments, leads, globalFinancials, expenses = [] } = useData();
+    const { profile, updateProfileSettings } = useAuth();
 
-    // --- HELPER: GET DATE RANGE ---
-    const getDateRange = (periodType: PeriodType) => {
-        const now = new Date();
-        const startDate = new Date();
+    // --- STATE ---
+    const [entity, setEntity] = useState<EntityType>('Orçamentos');
+    const [viewData, setViewData] = useState<any[]>([]);
+    const [isLoadingView, setIsLoadingView] = useState(false);
+    const [insights, setInsights] = useState<any[]>([]);
+    const [isLoadingInsights, setIsLoadingInsights] = useState(false);
 
-        switch (periodType) {
-            case 'Este Mês':
-                startDate.setDate(1);
-                break;
-            case 'Últimos 30 Dias':
-                startDate.setDate(now.getDate() - 30);
-                break;
-            case 'Últimos 3 Meses':
-                startDate.setMonth(now.getMonth() - 3);
-                break;
-            case 'Este Ano':
-                startDate.setMonth(0);
-                startDate.setDate(1);
-                break;
-        }
+    // --- FETCH AI INSIGHTS ---
+    useEffect(() => {
+        const fetchInsights = async () => {
+            setIsLoadingInsights(true);
+            const { data } = await supabase
+                .from('ai_insights')
+                .select('*')
+                .eq('status', 'open')
+                .order('created_at', { ascending: false });
 
-        return { startDate, endDate: now };
-    };
-
-    // --- HELPER: GET PREVIOUS PERIOD RANGE ---
-    const getPreviousPeriodRange = (periodType: PeriodType) => {
-        const { startDate, endDate } = getDateRange(periodType);
-        const duration = endDate.getTime() - startDate.getTime();
-
-        return {
-            startDate: new Date(startDate.getTime() - duration),
-            endDate: new Date(startDate.getTime() - 1)
-        };
-    };
-
-    // --- HELPER: FILTER DATA BY DATE ---
-    const filterByDateRange = (data: any[], dateField: string, range: { startDate: Date; endDate: Date }) => {
-        return data.filter(item => {
-            const itemDate = new Date(item[dateField]);
-            return itemDate >= range.startDate && itemDate <= range.endDate;
-        });
-    };
-
-    // --- CALCULATE HISTORICAL DATA FROM REAL DATABASE ---
-    const financialHistory = useMemo(() => {
-        const months = [];
-        const now = new Date();
-
-        for (let i = 5; i >= 0; i--) {
-            const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
-            const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
-
-            const monthData = globalFinancials.filter(f => {
-                const fDate = new Date(f.date);
-                return fDate >= monthDate && fDate <= monthEnd;
-            });
-
-            const receita = monthData.filter(f => f.type === 'income').reduce((acc, f) => acc + f.amount, 0);
-            const despesa = monthData.filter(f => f.type === 'expense').reduce((acc, f) => acc + f.amount, 0);
-            const lucro = receita - despesa;
-
-            const monthPatients = patients.filter(p => {
-                const pDate = new Date(p.createdAt || p.firstVisit || '');
-                return pDate >= monthDate && pDate <= monthEnd;
-            });
-            const inadimplencia = monthPatients.reduce((acc, p) => acc + (p.balanceDue || 0), 0);
-
-            months.push({
-                month: monthDate.toLocaleDateString('pt-BR', { month: 'short' }),
-                receita,
-                despesa,
-                lucro,
-                inadimplencia
-            });
-        }
-
-        return months;
-    }, [globalFinancials, patients]);
-
-    // --- CALCULATE OCCUPANCY DATA FROM REAL APPOINTMENTS ---
-    const occupancyData = useMemo(() => {
-        const range = getDateRange(period);
-        const periodAppts = filterByDateRange(appointments, 'date', range);
-
-        const completed = periodAppts.filter(a => a.status === 'Concluído' || a.status === 'Confirmado').length;
-        const noShows = periodAppts.filter(a => a.status === 'Faltou').length;
-        const total = periodAppts.length || 1;
-
-        const occupiedPercent = Math.round((completed / total) * 100);
-        const noShowPercent = Math.round((noShows / total) * 100);
-        const idlePercent = 100 - occupiedPercent - noShowPercent;
-
-        return [
-            { name: 'Ocupado', value: occupiedPercent, fill: '#3b82f6' },
-            { name: 'Ocioso', value: Math.max(0, idlePercent), fill: '#e2e8f0' },
-            { name: 'Faltas', value: noShowPercent, fill: '#ef4444' },
-        ];
-    }, [appointments, period]);
-
-    // --- DRILL DOWN DATA ---
-    const drillDownData = useMemo(() => {
-        const range = getDateRange(period);
-        const periodFinancials = filterByDateRange(globalFinancials, 'date', range);
-        const periodTreatments = treatments ? filterByDateRange(treatments, 'start_date', range) : [];
-
-        return {
-            revenue: periodFinancials.filter(f => f.type === 'income'),
-            expense: periodFinancials.filter(f => f.type === 'expense'),
-            treatments: periodTreatments
-        };
-    }, [globalFinancials, treatments, period]);
-
-    // --- KPI ENGINE: REAL-TIME CALCULATIONS WITH PERIOD FILTER ---
-    const kpis = useMemo(() => {
-        const range = getDateRange(period);
-        const prevRange = getPreviousPeriodRange(period);
-
-        // Filter data by period
-        const periodFinancials = filterByDateRange(globalFinancials, 'date', range);
-        const prevPeriodFinancials = filterByDateRange(globalFinancials, 'date', prevRange);
-        const periodLeads = filterByDateRange(leads, 'createdAt', range);
-        const prevPeriodLeads = filterByDateRange(leads, 'createdAt', prevRange);
-        const periodAppts = filterByDateRange(appointments, 'date', range);
-        const prevPeriodAppts = filterByDateRange(appointments, 'date', prevRange);
-
-        // Current Period Financial
-        const totalRevenue = periodFinancials.filter(r => r.type === 'income').reduce((acc, r) => acc + r.amount, 0);
-        const totalExpense = periodFinancials.filter(r => r.type === 'expense').reduce((acc, r) => acc + r.amount, 0);
-        const netResult = totalRevenue - totalExpense;
-        const payingPatients = patients.filter(p => (p.totalPaid || 0) > 0).length || 1;
-        const ticketAvg = totalRevenue / payingPatients;
-        const totalReceivables = patients.reduce((acc, p) => acc + (p.balanceDue || 0), 0);
-
-        // Previous Period Financial (for comparison)
-        const prevRevenue = prevPeriodFinancials.filter(r => r.type === 'income').reduce((acc, r) => acc + r.amount, 0);
-        const prevExpense = prevPeriodFinancials.filter(r => r.type === 'expense').reduce((acc, r) => acc + r.amount, 0);
-        const prevNetResult = prevRevenue - prevExpense;
-
-        // Commercial
-        const totalLeads = periodLeads.length || 1;
-        const wonLeads = periodLeads.filter(l => l.status === 'Aprovado').length;
-        const conversionRate = (wonLeads / totalLeads) * 100;
-        const prevTotalLeads = prevPeriodLeads.length || 1;
-        const prevWonLeads = prevPeriodLeads.filter(l => l.status === 'Aprovado').length;
-        const prevConversionRate = (prevWonLeads / prevTotalLeads) * 100;
-
-        // Operational
-        const totalAppts = periodAppts.length || 1;
-        const completedAppts = periodAppts.filter(a => a.status === 'Concluído').length;
-        const canceledAppts = periodAppts.filter(a => a.status === 'Cancelado' || a.status === 'Faltou').length;
-        const noShowRate = (canceledAppts / totalAppts) * 100;
-        const prevTotalAppts = prevPeriodAppts.length || 1;
-        const prevCanceledAppts = prevPeriodAppts.filter(a => a.status === 'Cancelado' || a.status === 'Faltou').length;
-        const prevNoShowRate = (prevCanceledAppts / prevTotalAppts) * 100;
-
-        // Clinical
-        const totalTreatments = treatments.length;
-        const completedTreatments = treatments.filter(t => t.status === 'Concluído').length;
-
-        // Calculate trends (% change vs previous period)
-        const revenueTrend = prevRevenue > 0 ? ((totalRevenue - prevRevenue) / prevRevenue) * 100 : 0;
-        const expenseTrend = prevExpense > 0 ? ((totalExpense - prevExpense) / prevExpense) * 100 : 0;
-        const netResultTrend = prevNetResult !== 0 ? ((netResult - prevNetResult) / Math.abs(prevNetResult)) * 100 : 0;
-        const conversionTrend = prevConversionRate > 0 ? conversionRate - prevConversionRate : 0;
-        const noShowTrend = prevNoShowRate > 0 ? noShowRate - prevNoShowRate : 0;
-
-        return {
-            totalRevenue, totalExpense, netResult, ticketAvg, totalReceivables,
-            conversionRate, totalLeads, wonLeads,
-            noShowRate, totalAppts, completedAppts,
-            totalTreatments, completedTreatments,
-            // Trends
-            revenueTrend, expenseTrend, netResultTrend, conversionTrend, noShowTrend,
-            // Previous period values
-            prevRevenue, prevExpense, prevNetResult
-        };
-    }, [globalFinancials, patients, leads, appointments, treatments, period]);
-
-    // --- AUTOMATED INSIGHTS GENERATOR ---
-    const generatedInsights = useMemo(() => {
-        const list = [];
-
-        // Commercial Insight
-        if (kpis.conversionRate < 20) {
-            list.push({ type: 'alert', title: 'Baixa Conversão', desc: `Sua taxa de conversão está em ${kpis.conversionRate.toFixed(1)}%. A média de mercado é 30%. Verifique o tempo de resposta às oportunidades.` });
-        } else {
-            list.push({ type: 'success', title: 'Conversão Saudável', desc: `Parabéns! Sua taxa de conversão de ${kpis.conversionRate.toFixed(1)}% está acima da média de mercado.` });
-        }
-
-        // Financial Insight
-        if (kpis.netResult > 0) {
-            const margin = (kpis.netResult / kpis.totalRevenue) * 100;
-            list.push({ type: 'info', title: 'Margem de Lucro', desc: `Sua margem operacional atual é de ${margin.toFixed(1)}%. Mantenha os custos fixos controlados para preservar este resultado.` });
-        }
-
-        // Operational Insight
-        if (kpis.noShowRate > 10) {
-            list.push({ type: 'warning', title: 'Índice de Faltas', desc: `Sua taxa de no-show é de ${kpis.noShowRate.toFixed(1)}%. Considere implementar confirmação via WhatsApp 24h antes.` });
-        }
-
-        return list;
-    }, [kpis]);
-
-    // --- PROFESSIONAL EXPORT FUNCTIONS ---
-
-    const generatePDF = () => {
-        // ... (Existing export logic remains same, it uses explicit colors so it's theme independent for output)
-        const doc = new jsPDF();
-        const pageWidth = doc.internal.pageSize.width;
-        const pageHeight = doc.internal.pageSize.height;
-        const dateStr = new Date().toLocaleDateString('pt-BR');
-        const timeStr = new Date().toLocaleTimeString('pt-BR');
-        const auditHash = Math.random().toString(36).substring(2, 15).toUpperCase();
-
-        // --- 1. HEADER (Branding & Context) ---
-        doc.setFillColor(30, 58, 138); // Blue 900
-        doc.rect(0, 0, pageWidth, 28, 'F');
-
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(18);
-        doc.setFont("helvetica", "bold");
-        doc.text('ClinicPro Manager', 14, 18);
-
-        doc.setFontSize(10);
-        doc.setFont("helvetica", "normal");
-        doc.text(`Relatório: ${activeTab.toUpperCase()}`, pageWidth - 14, 12, { align: 'right' });
-        doc.text(`Gerado por: Dr. Marcelo Vilas Boas (Admin)`, pageWidth - 14, 17, { align: 'right' });
-        doc.text(`${dateStr} às ${timeStr}`, pageWidth - 14, 22, { align: 'right' });
-
-        let y = 38;
-
-        // --- 2. EXECUTIVE KPI CARDS (Visual Rendering) ---
-        doc.setFontSize(14);
-        doc.setTextColor(31, 41, 55);
-        doc.setFont("helvetica", "bold");
-        doc.text('Indicadores Estratégicos', 14, y);
-        y += 8;
-
-        const cardWidth = 45;
-        const cardHeight = 25;
-        const gap = 5;
-        let x = 14;
-
-        // Define KPIs based on active tab context
-        const reportKPIs = [
-            { label: 'Faturamento Liq.', value: `R$ ${kpis.netResult.toLocaleString('pt-BR')}`, color: [220, 252, 231] }, // Green-100
-            { label: 'Ticket Médio', value: `R$ ${kpis.ticketAvg.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`, color: [224, 242, 254] }, // Blue-100
-            { label: 'Conversão', value: `${kpis.conversionRate.toFixed(1)}%`, color: [243, 232, 255] }, // Purple-100
-            { label: 'Novos Pacientes', value: `${kpis.totalLeads}`, color: [255, 237, 213] } // Orange-100
-        ];
-
-        reportKPIs.forEach(kpi => {
-            doc.setFillColor(kpi.color[0], kpi.color[1], kpi.color[2]);
-            doc.setDrawColor(200, 200, 200);
-            doc.roundedRect(x, y, cardWidth, cardHeight, 2, 2, 'FD');
-
-            doc.setTextColor(100, 100, 100);
-            doc.setFontSize(8);
-            doc.text(kpi.label, x + 3, y + 8);
-
-            doc.setTextColor(30, 30, 30);
-            doc.setFontSize(12);
-            doc.setFont("helvetica", "bold");
-            doc.text(kpi.value, x + 3, y + 18);
-
-            x += cardWidth + gap;
-        });
-
-        y += cardHeight + 15;
-
-        // --- 3. INSIGHTS SECTION ---
-        if (generatedInsights.length > 0) {
-            doc.setFontSize(12);
-            doc.setTextColor(31, 41, 55);
-            doc.text('Análise Inteligente & Insights', 14, y);
-            y += 6;
-
-            generatedInsights.forEach(insight => {
-                doc.setFontSize(10);
-                if (insight.type === 'alert') {
-                    doc.setTextColor(185, 28, 28); // Red
-                    doc.text(`[ALERTA] ${insight.title}`, 14, y);
-                } else if (insight.type === 'success') {
-                    doc.setTextColor(21, 128, 61); // Green
-                    doc.text(`[SUCESSO] ${insight.title}`, 14, y);
-                } else {
-                    doc.setTextColor(30, 64, 175); // Blue
-                    doc.text(`[INFO] ${insight.title}`, 14, y);
-                }
-
-                y += 5;
-                doc.setTextColor(75, 85, 99);
-                doc.setFont("helvetica", "normal");
-                const desc = doc.splitTextToSize(insight.desc, pageWidth - 28);
-                doc.text(desc, 14, y);
-                y += (desc.length * 4) + 4;
-            });
-            y += 5;
-        }
-
-        // --- 4. DETAILED DATA TABLE (With Visual Data Bars) ---
-        doc.setFontSize(12);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(0, 0, 0);
-        doc.text('Detalhamento de Dados', 14, y);
-        y += 5;
-
-        let tableHead = [];
-        let tableBody = [];
-
-        // Select Data Source based on Tab
-        if (activeTab === 'financeiro' || activeTab === 'executivo') {
-            tableHead = [['Data', 'Descrição', 'Categ', 'Valor', 'Status']];
-            tableBody = globalFinancials.slice(0, 30).map(f => [
-                f.date,
-                f.description,
-                f.category,
-                { content: `R$ ${f.amount.toLocaleString('pt-BR')}`, styles: { textColor: f.type === 'income' ? [22, 163, 74] : [220, 38, 38], fontStyle: 'bold' } },
-                f.status
-            ]);
-        } else if (activeTab === 'comercial' || activeTab === 'funil') {
-            tableHead = [['Nome', 'Origem', 'Status', 'Valor Potencial']];
-            tableBody = leads.map(l => [
-                l.name,
-                l.source,
-                l.status,
-                l.value ? `R$ ${l.value.toLocaleString('pt-BR')}` : '-'
-            ]);
-        } else if (activeTab === 'clinico') {
-            tableHead = [['Procedimento', 'Profissional', 'Status', 'Valor']];
-            // We mock values for treatments here for visual purpose as context might not have specific value per treatment item readily available in flat list without join
-            tableBody = treatments.map(t => [
-                t.procedure,
-                t.doctorName || '-',
-                t.status,
-                'R$ -' // Placeholder as raw treatment doesn't always carry value in this mock
-            ]);
-        } else {
-            tableHead = [['Data', 'Hora', 'Paciente', 'Tipo', 'Status']];
-            tableBody = appointments.map(a => [a.date, a.time || '-', a.patientName, a.type, a.status]);
-        }
-
-        autoTable(doc, {
-            startY: y,
-            head: tableHead,
-            body: tableBody,
-            theme: 'striped',
-            headStyles: { fillColor: [30, 58, 138], textColor: 255, fontStyle: 'bold' },
-            styles: { fontSize: 9, cellPadding: 3 },
-            alternateRowStyles: { fillColor: [243, 244, 246] },
-            // Custom Hook to Draw "Visuals" if needed (e.g. data bars)
-            didDrawCell: (data) => {
-                // Example: Add a colored dot for Status column
-                if (data.section === 'body' && (data.column.index === 2 || data.column.index === 4)) {
-                    // simple visual indicator could go here
-                }
+            if (data) {
+                // Sort by priority manually if needed, or rely on DB
+                const priorityOrder: any = { 'high': 3, 'medium': 2, 'low': 1 };
+                const sorted = data.sort((a, b) => (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0));
+                setInsights(sorted);
             }
-        });
+            setIsLoadingInsights(false);
+        };
+        fetchInsights();
+    }, [entity]); // Refresh on context switch
 
-        // --- 5. FOOTER (Audit & Page Info) ---
-        const pageCount = (doc as any).internal.getNumberOfPages();
-        for (let i = 1; i <= pageCount; i++) {
-            doc.setPage(i);
-            doc.setFillColor(243, 244, 246);
-            doc.rect(0, pageHeight - 15, pageWidth, 15, 'F');
+    // --- INTELLIGENCE CENTER: FETCH FROM VIEWS ---
+    useEffect(() => {
+        const fetchViewData = async () => {
+            let viewName = '';
+            switch (entity) {
+                case 'Todos': viewName = 'view_radar_360'; break;
+                case 'Produção': viewName = 'view_radar_producao'; break;
+                case 'Financeiro': viewName = 'view_radar_financeiro'; break;
+                case 'Orçamentos': viewName = 'view_radar_comercial'; break;
+                case 'Operacional': viewName = 'view_radar_operacional'; break;
+                default: setViewData([]); return;
+            }
 
-            doc.setFontSize(8);
-            doc.setTextColor(156, 163, 175);
-            doc.text(`Audit Hash: ${auditHash} | ClinicPro Manager System`, 14, pageHeight - 6);
-            doc.text(`Página ${i} de ${pageCount}`, pageWidth - 14, pageHeight - 6, { align: 'right' });
-        }
+            setIsLoadingView(true);
+            const { data, error } = await supabase.from(viewName).select('*').order('data_referencia', { ascending: false });
 
-        doc.save(`ClinicPro_${activeTab}_${dateStr.replace(/\//g, '-')}.pdf`);
-        setShowExportMenu(false);
-    };
+            if (error) {
+                console.error('Error fetching Intelligence View:', viewName, error);
+                setViewData([]); // Fallback to client-side logic
+            } else {
+                // MAP VIEW COLUMNS TO UI
+                const mapped = data?.map(item => ({
+                    id: item.production_id || item.transaction_id || item.budget_id || Math.random().toString(),
+                    entity: item.departamento || entity,
+                    description: item.descricao || item.description || item.procedure_name || 'Item',
+                    patientName: item.paciente || item.description, // Fallback
+                    status: item.status || item.status_clinico || item.kpi_status,
+                    value: item.valor || item.montante || item.montante_bruto || item.amount || 0,
+                    date: item.data_referencia,
+                    professional: item.profissional || 'Sistema',
+                    category: item.unidade_negocio || 'Geral',
+                    origin: item.origem || 'N/A',
+                    rawDate: new Date(item.data_referencia).getTime()
+                })) || [];
+                setViewData(mapped);
+            }
+            setIsLoadingView(false);
+        };
 
-    const generateExcel = () => {
-        const wb = XLSX.utils.book_new();
-        const dateStr = new Date().toLocaleDateString('pt-BR');
+        fetchViewData();
+    }, [entity]);
+    const [category, setCategory] = useState<CategoryType>('all');
+    const [professional, setProfessional] = useState<string>('all');
+    const [statusFilter, setStatusFilter] = useState<string>('all');
+    const [origin, setOrigin] = useState<OriginType>('all');
 
-        // --- SHEET 1: RESUMO EXECUTIVO (KPIs) ---
-        const summaryData = [
-            ["Relatório Gerencial", `Gerado em ${dateStr}`],
-            ["Usuário", "Dr. Marcelo Vilas Boas (Admin)"],
-            [],
-            ["INDICADORES DE PERFORMANCE", ""],
-            ["Faturamento Líquido", kpis.netResult],
-            ["Receita Total", kpis.totalRevenue],
-            ["Despesas Totais", kpis.totalExpense],
-            ["Ticket Médio", kpis.ticketAvg],
-            ["Taxa de Conversão (%)", kpis.conversionRate],
-            ["Inadimplência Total", kpis.totalReceivables]
-        ];
-        const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
-        XLSX.utils.book_append_sheet(wb, wsSummary, "Resumo Executivo");
+    // Date Filters (Defaults to current month)
+    const [startDate, setStartDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]);
+    const [endDate, setEndDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0]);
 
-        // --- SHEET 2: DADOS DETALHADOS ---
-        let detailedData: any[] = [];
-        let sheetName = "Dados";
+    const [searchTerm, setSearchTerm] = useState('');
 
-        if (activeTab === 'financeiro' || activeTab === 'executivo') {
-            detailedData = globalFinancials.map(f => ({
-                Data: f.date,
-                Descricao: f.description,
-                Tipo: f.type === 'income' ? 'Entrada' : 'Saída',
-                Categoria: f.category,
-                Valor: f.amount,
-                Status: f.status,
-                Metodo: f.paymentMethod || '-'
-            }));
-            sheetName = "Financeiro";
-        } else if (activeTab === 'comercial' || activeTab === 'funil') {
-            detailedData = leads.map(l => ({
-                Nome: l.name,
-                Origem: l.source,
-                Status: l.status,
-                Ultima_Interacao: l.lastInteraction,
-                Valor_Potencial: l.value || 0
-            }));
-            sheetName = "Comercial";
+    // --- MOCK PROFESSIONALS (Should come from DB) ---
+    const professionals = ['Dr. Marcelo', 'Dra. Filha', 'Dr. Associado 1'];
+
+    // --- FILTER ENGINE (7 LEVELS) ---
+    const filteredData = useMemo(() => {
+        let data: any[] = [];
+        const start = new Date(startDate).getTime();
+        const end = new Date(endDate).getTime();
+
+        // 1. PREFER INTELLIGENCE VIEW DATA (SERVER-SIDE)
+        if (viewData && viewData.length > 0) {
+            data = viewData;
         } else {
-            detailedData = appointments.map(a => ({
-                Data: a.date,
-                Hora: a.time || '-',
-                Paciente: a.patientName,
-                Medico: a.doctorName,
-                Tipo: a.type,
-                Status: a.status
-            }));
-            sheetName = "Operacional";
+            // 2. FALLBACK TO LEGACY CLIENT-SIDE MAPPING
+            if (entity === 'Orçamentos') {
+                data = patients.flatMap(p => p.budgets?.map(b => ({
+                    id: b.id,
+                    entity: 'Orçamento',
+                    description: `Orçamento #${b.id.substr(0, 4)} - ${p.name}`,
+                    patientName: p.name,
+                    phone: p.phone,
+                    origin: p.origin || 'Não Informado',
+                    category: b.categoryId || 'Clínica Geral',
+                    professional: b.doctorName || 'Não Informado', // Mock joining simple string
+                    status: b.status,
+                    value: b.totalValue, // Gross Value
+                    cost: 0, // Would need procedure_costs join
+                    date: b.createdAt,
+                    rawDate: new Date(b.createdAt).getTime()
+                })) || []);
+            }
+            else if (entity === 'Produção') {
+                data = patients.flatMap(p => p.treatments?.map(t => {
+                    // Financial Cross-Check logic
+                    let derivedStatus = 'Não Iniciado';
+                    const isPaid = p.balance_due <= 0;
+
+                    if (t.status === 'Concluído') {
+                        derivedStatus = isPaid ? 'Concluído (Pago)' : 'Concluído (Inadimplente)';
+                    } else if (t.status === 'Em Andamento') {
+                        derivedStatus = 'Em Andamento';
+                    } else {
+                        derivedStatus = isPaid ? 'Pendente (Pago)' : 'Pendente (Inadimplente)';
+                    }
+
+                    return {
+                        id: t.id,
+                        entity: 'Produção',
+                        description: `${t.procedure} (${t.region}) - ${p.name}`,
+                        patientName: p.name,
+                        phone: p.phone,
+                        origin: p.origin || 'Não Informado',
+                        category: 'Clínica Geral', // Need to map procedure to category in real DB
+                        professional: t.doctorName || 'Não Informado',
+                        status: derivedStatus,
+                        value: 0,
+                        date: t.executionDate || p.created_at,
+                        rawDate: new Date(t.executionDate || p.created_at).getTime()
+                    };
+                }) || []);
+            }
+            else if (entity === 'Pacientes') {
+                data = patients.map(p => {
+                    // Determine inactivity based on last appointment
+                    const lastAppt = appointments
+                        .filter(a => a.patientId === p.id)
+                        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+                    const lastDate = lastAppt ? new Date(lastAppt.date).getTime() : 0;
+
+                    return {
+                        id: p.id,
+                        entity: 'Paciente',
+                        description: p.name,
+                        patientName: p.name,
+                        phone: p.phone,
+                        origin: p.origin || 'Não Informado',
+                        category: p.budgets?.[0]?.categoryId || 'Clínica Geral',
+                        professional: lastAppt?.doctorName || 'Todos',
+                        status: p.status, // "Em Tratamento", etc.
+                        date: p.created_at, // Cadastro date
+                        lastVisit: lastDate,
+                        value: p.total_approved || 0,
+                        rawDate: new Date(p.created_at).getTime()
+                    };
+                });
+            }
+            else if (entity === 'Financeiro') {
+                // Transactions (Received) + Expenses (Paid)
+                // Simplified to Transactions for Revenue Analysis
+                data = globalFinancials.map(f => ({
+                    id: f.id,
+                    entity: f.type === 'income' ? 'Receita' : 'Despesa',
+                    description: f.description,
+                    category: f.category,
+                    professional: 'Todos', // Financial often generic unless split
+                    status: f.status,
+                    origin: 'Não Informado',
+                    value: f.amount,
+                    date: f.date,
+                    rawDate: new Date(f.date).getTime()
+                }));
+            }
+            else if (entity === 'Leads') {
+                data = leads.map(l => ({
+                    id: l.id,
+                    entity: 'Lead',
+                    description: `${l.name} - ${l.status}`,
+                    patientName: l.name,
+                    phone: l.phone,
+                    origin: l.source,
+                    category: 'Clínica Geral',
+                    professional: 'Todos',
+                    status: l.status,
+                    value: 0,
+                    date: l.createdAt,
+                    rawDate: new Date(l.createdAt).getTime()
+                }));
+            }
+            else if (entity === 'Operacional') {
+                data = appointments.map(a => ({
+                    id: a.id,
+                    entity: 'Agenda',
+                    description: `${a.type} - ${a.patientName}`,
+                    patientName: a.patientName,
+                    phone: 'N/A', // Usually appointment obj has patientId, need to lookup if phone needed, simplified for now
+                    origin: 'Não Informado',
+                    category: 'Clínica Geral',
+                    professional: a.doctorName,
+                    status: a.status, // "Confirmado", "Faltou", etc.
+                    value: 0,
+                    date: a.date,
+                    rawDate: new Date(a.date).getTime()
+                }));
+            }
+            else if (entity === 'Todos') {
+                // UNION of all critical events
+                const budgetsData = patients.flatMap(p => p.budgets?.map(b => ({
+                    id: b.id,
+                    entity: 'Venda',
+                    description: `Orçamento Aprovado #${b.id.substr(0, 4)}`,
+                    patientName: p.name,
+                    phone: p.phone,
+                    origin: p.origin || 'Não Informado',
+                    category: b.categoryId || 'Clínica Geral',
+                    professional: b.doctorName || 'Não Informado',
+                    status: b.status,
+                    value: b.totalValue,
+                    date: b.createdAt,
+                    rawDate: new Date(b.createdAt).getTime()
+                })) || []);
+
+                const financialData = globalFinancials.map(f => ({
+                    id: f.id,
+                    entity: f.type === 'income' ? 'Receita' : 'Despesa',
+                    description: f.description,
+                    category: f.category,
+                    professional: 'Todos',
+                    status: f.status,
+                    origin: 'Não Informado',
+                    value: f.amount,
+                    date: f.date,
+                    rawDate: new Date(f.date).getTime()
+                    // Assuming patientName is undefined for generic financials
+                }));
+
+                const agendaData = appointments.map(a => ({
+                    id: a.id,
+                    entity: 'Agenda',
+                    description: `${a.type} - ${a.patientName}`,
+                    patientName: a.patientName,
+                    category: 'Clínica Geral',
+                    professional: a.doctorName,
+                    status: a.status,
+                    value: 0,
+                    date: a.date,
+                    rawDate: new Date(a.date).getTime(),
+                    origin: 'Não Informado'
+                }));
+
+                // Combine and Sort
+                data = [...budgetsData, ...financialData, ...agendaData].sort((a, b) => b.rawDate - a.rawDate);
+            }
         }
 
-        const wsDetail = XLSX.utils.json_to_sheet(detailedData);
-        XLSX.utils.book_append_sheet(wb, wsDetail, sheetName);
+        // --- APPLY FILTERS ---
+        return data.filter(item => {
+            // 2. CATEGORY
+            if (category !== 'all' && item.category !== category) return false;
 
-        // --- SHEET 3: INSIGHTS ---
-        const insightsData = generatedInsights.map(i => ({
-            Tipo: i.type.toUpperCase(),
-            Titulo: i.title,
-            Descricao: i.desc
-        }));
-        const wsInsights = XLSX.utils.json_to_sheet(insightsData);
-        XLSX.utils.book_append_sheet(wb, wsInsights, "Insights IA");
+            // 3. PROFESSIONAL
+            if (professional !== 'all' && item.professional !== professional) return false;
 
-        XLSX.writeFile(wb, `ClinicPro_Relatorio_${activeTab}_${dateStr.replace(/\//g, '-')}.xlsx`);
-        setShowExportMenu(false);
+            // 4. KPI/STATUS
+            if (statusFilter !== 'all') {
+                // Custom Logic for 'Churn' or specific KPIs could go here
+                if (item.status !== statusFilter) return false;
+            }
+
+            // 5. ORIGIN
+            if (origin !== 'all' && item.origin !== origin) return false;
+
+            // 6 & 7. DATE RANGE
+            if (startDate && item.rawDate < start) return false;
+            if (endDate && item.rawDate > end) return false;
+
+            // SEARCH
+            const searchStr = searchTerm.toLowerCase();
+            const nameMatch = item.patientName ? item.patientName.toLowerCase().includes(searchStr) : false;
+            const descMatch = item.description ? item.description.toLowerCase().includes(searchStr) : false;
+            if (searchTerm && !nameMatch && !descMatch) return false;
+
+            return true;
+        });
+    }, [entity, category, professional, statusFilter, origin, startDate, endDate, searchTerm, patients, leads, globalFinancials, appointments]);
+
+    // --- CARDS CALCULATIONS ---
+    const metrics = useMemo(() => {
+        if (entity === 'Todos') {
+            const revenue = filteredData.filter(i => i.entity === 'Receita' && i.status === 'Pago').reduce((a, b) => a + (b.value || 0), 0);
+            const budgetsCount = filteredData.filter(i => i.entity === 'Venda').length;
+            const agendaCount = filteredData.filter(i => i.entity === 'Agenda' && i.status !== 'Cancelado').length;
+            return {
+                totalVal: revenue,
+                avgTicket: budgetsCount, // Repurposed: Total Budgets
+                margin: agendaCount,     // Repurposed: Agenda Volume
+                count: filteredData.length
+            };
+        }
+
+        const count = filteredData.length;
+        const totalVal = filteredData.reduce((acc, item) => acc + (item.value || 0), 0);
+        const avgTicket = count > 0 ? totalVal / count : 0;
+
+        // Mock Margin (EBITDA) - in real app would sum (Income - Expenses)
+        // Here we just take 30% of total as "Estimated Margin" for demo
+        const margin = totalVal * 0.30;
+
+        return { count, totalVal, avgTicket, margin };
+    }, [filteredData, entity]);
+
+    // --- DYNAMIC OPTIONS HELPERS (CONTEXTUAL FILTERS) ---
+    const getCategoryOptions = () => {
+        switch (entity) {
+            case 'Todos': return ['Marketing', 'Comercial', 'Clínico', 'Financeiro', 'Operacional'];
+            case 'Orçamentos': return ['Cirurgias Estéticas da Face', 'Harmonização Facial', 'Implantodontia', 'Ortodontia', 'Clínica Geral'];
+            case 'Produção': return ['Cirurgias Estéticas da Face', 'Harmonização Facial', 'Implantodontia', 'Ortodontia', 'Clínica Geral'];
+            case 'Pacientes': return ['Novo Paciente', 'Recorrente', 'Indicação', 'VIP (High-Ticket)'];
+            case 'Financeiro': return ['Receitas', 'Despesas Fixas', 'Despesas Variáveis', 'Impostos', 'Laboratório', 'Pessoal'];
+            case 'Leads': return ['Instagram', 'Google Ads', 'Indicação', 'Facebook', 'Orgânico', 'WhatsApp'];
+            case 'Operacional': return ['Consultório 1', 'Consultório 2', 'Sala de Cirurgia'];
+            default: return [];
+        }
     };
 
-    // --- COMPONENT: METRIC CARD ---
-    const MetricCard = ({ title, value, subtext, trend, type = 'neutral', icon: Icon, onClick }: any) => (
-        <div
-            onClick={onClick}
-            className={`bg-white dark:bg-gray-800 p-5 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group ${onClick ? 'cursor-pointer hover:border-blue-300 dark:hover:border-blue-700' : ''}`}
-        >
-            <div className="flex justify-between items-start mb-2 relative z-10">
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{title}</p>
-                {Icon && <div className={`p-2 bg-gray-50 dark:bg-gray-700 rounded-lg text-gray-400 transition-colors ${onClick ? 'group-hover:text-blue-600 group-hover:bg-blue-50 dark:group-hover:text-blue-400 dark:group-hover:bg-blue-900/30' : ''}`}><Icon size={18} /></div>}
-            </div>
-            <h3 className="text-2xl font-bold text-gray-900 dark:text-white relative z-10">{value}</h3>
-            <div className="flex items-center gap-2 mt-2 relative z-10">
-                {trend && (
-                    <span className={`flex items-center text-xs font-bold px-1.5 py-0.5 rounded 
-                ${type === 'positive' ? 'text-green-600 bg-green-50 dark:bg-green-900/30 dark:text-green-400' :
-                            type === 'negative' ? 'text-red-600 bg-red-50 dark:bg-red-900/30 dark:text-red-400' : 'text-gray-600 bg-gray-50 dark:text-gray-300 dark:bg-gray-700'}`}>
-                        {type === 'positive' ? <TrendingUp size={12} className="mr-1" /> : <TrendingDown size={12} className="mr-1" />}
-                        {trend}
-                    </span>
-                )}
-                <p className="text-xs text-gray-400 dark:text-gray-500">{subtext}</p>
-            </div>
-        </div>
-    );
+    const getStatusOptions = () => {
+        // Dynamic status for 360 view based on selected Department (Category)
+        if (entity === 'Todos' && category === 'Operacional') {
+            return ['Taxa de No-Show', 'Ocupação de Agenda', 'Status de Agendamentos'];
+        }
+
+        switch (entity) {
+            case 'Todos': return ['Saúde do Negócio', 'Faturamento', 'Conversão', 'Novos Pacientes'];
+            case 'Orçamentos': return ['Em Análise', 'Aprovado', 'Reprovado', 'Em Negociação', 'Perdido por Preço'];
+            case 'Produção': return ['Concluído (Pago)', 'Concluído (Inadimplente)', 'Pendente (Pago)', 'Pendente (Inadimplente)', 'Em Andamento'];
+            case 'Pacientes': return ['Em Tratamento', 'Finalizado', 'Manutenção', 'Arquivo', 'Churn'];
+            case 'Financeiro': return ['Pago', 'Pendente', 'Atrasado', 'Conciliado'];
+            case 'Leads': return ['Nova Oportunidade', 'Em Contato', 'Qualificação', 'Avaliação Agendada', 'Negociação', 'Aprovado', 'Perdido'];
+            case 'Operacional': return ['Confirmado', 'Pendente', 'Concluído', 'Cancelado', 'Faltou'];
+            default: return [];
+        }
+    };
+
+    const handleInsightAction = (insight: any) => {
+        // Deep Links Logic
+        const routes: Record<string, string> = {
+            'COMERCIAL': '/dashboard/orcamentos',
+            'FINANCEIRO': '/dashboard/financeiro',
+            'OPERACIONAL': '/dashboard/agenda',
+            'PRODUÇÃO': '/dashboard/pacientes',
+            'MARKETING': '/dashboard/leads'
+        };
+
+        const basePath = routes[insight.category] || '/dashboard';
+        const targetUrl = `${basePath}?ref=${insight.related_entity_id}&action=${insight.action_type}`;
+
+        // Simulação
+        alert(`🚀 BOS Action Triggered!\n\nCategoria: ${insight.category}\nAção: ${insight.action_label}\nDestino: ${targetUrl}`);
+        // window.location.href = targetUrl;
+    };
+
+    const exportExcel = () => {
+        const ws = XLSX.utils.json_to_sheet(filteredData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Radar_Dados_7.0");
+        XLSX.writeFile(wb, `Radar_${entity}_${startDate}_${endDate}.xlsx`);
+    };
 
     return (
-        <div className="space-y-6 pb-20 md:pb-0" onClick={() => showExportMenu && setShowExportMenu(false)}>
+        <div className="space-y-6 pb-20 md:pb-0 animate-in fade-in">
             {/* HEADER */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
-                        <Activity className="text-blue-600 dark:text-blue-400" />
-                        Intelligence Center
+                        <BarChart2 className="text-blue-600 dark:text-blue-400" />
+                        Radar de Dados 7.0
                     </h1>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Gestão estratégica orientada a dados</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Inteligência Preditiva: Cruzamento de 7 Eixos (Marketing, Clínico, Financeiro).</p>
                 </div>
+                <div className="flex gap-2">
+                    <button onClick={exportExcel} className="flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/50 transition-colors text-sm font-bold">
+                        <Download size={16} /> Excel
+                    </button>
+                    <button
+                        onClick={() => {
+                            setCategory('all'); setStatusFilter('all'); setOrigin('all'); setProfessional('all');
+                            setSearchTerm('');
+                        }}
+                        className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        title="Resetar Filtros"
+                    >
+                        <RefreshCw size={20} />
+                    </button>
+                </div>
+            </div>
 
-                {/* FILTERS TOOLBAR */}
-                <div className="flex flex-wrap gap-2 bg-white dark:bg-gray-800 p-1.5 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
-                    <div className="relative">
-                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
+            {/* DATE RANGE BAR (FILTERS 6 & 7) */}
+            <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex flex-col md:flex-row items-center gap-4">
+                <div className="flex items-center gap-2 text-primary-700 dark:text-primary-400 font-bold uppercase text-xs">
+                    <CalendarDays size={18} />
+                    <span>Período de Análise:</span>
+                </div>
+                <div className="flex items-center gap-2">
+                    <input
+                        type="date"
+                        value={startDate}
+                        onChange={e => setStartDate(e.target.value)}
+                        className="p-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm"
+                    />
+                    <span className="text-gray-400">até</span>
+                    <input
+                        type="date"
+                        value={endDate}
+                        onChange={e => setEndDate(e.target.value)}
+                        className="p-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm"
+                    />
+                </div>
+            </div>
+
+            {/* 4 BI CARDS */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="bg-gradient-to-br from-blue-600 to-blue-700 p-4 rounded-xl text-white shadow-lg">
+                    <p className="text-blue-100 text-xs font-bold uppercase mb-1">
+                        {entity === 'Todos' && category === 'Operacional'
+                            ? 'Taxa de Ocupação (%)'
+                            : entity === 'Todos' ? 'Faturamento Realizado' : 'Volume Financeiro'}
+                    </p>
+                    <h3 className="text-2xl font-bold">
+                        {entity === 'Todos' && category === 'Operacional'
+                            ? '85%' // Mock occupancy for now until metrics updated
+                            : `R$ ${metrics.totalVal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+                    </h3>
+                    <p className="text-xs text-blue-200 mt-1">{metrics.count} registros</p>
+                </div>
+                <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                    <p className="text-gray-500 dark:text-gray-400 text-xs font-bold uppercase mb-1">{entity === 'Todos' ? 'Novos Orçamentos' : 'Ticket Médio (Filtro)'}</p>
+                    <h3 className="text-2xl font-bold text-gray-800 dark:text-white">
+                        {entity === 'Todos'
+                            ? metrics.avgTicket
+                            : `R$ ${metrics.avgTicket.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}`}
+                    </h3>
+                </div>
+                <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                    <p className="text-gray-500 dark:text-gray-400 text-xs font-bold uppercase mb-1">{entity === 'Todos' ? 'Volume Agenda' : 'Margem Est. (30%)'}</p>
+                    <h3 className="text-2xl font-bold text-green-600 dark:text-green-400">
+                        {entity === 'Todos'
+                            ? metrics.margin
+                            : `R$ ${metrics.margin.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}`}
+                    </h3>
+                </div>
+                {/* ROI simplified as Conversion based on Entity type */}
+                <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                    <p className="text-gray-500 dark:text-gray-400 text-xs font-bold uppercase mb-1">{entity === 'Todos' ? 'Geral 360' : 'ROI / Conversão'}</p>
+                    <h3 className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                        {entity === 'Orçamentos' ? 'N/A' : (entity === 'Todos' ? 'Ativo' : '-%')}
+                    </h3>
+                    <p className="text-xs text-gray-400 mt-1">Depende de Custos Ads</p>
+                </div>
+            </div>
+
+            {/* 5-LEVEL FILTER PANEL */}
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-4 gap-x-6">
+
+                    {/* LEVEL 1: ENTITY */}
+                    <div>
+                        <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1.5 uppercase">1. Entidade (Visão)</label>
                         <select
-                            value={period}
-                            onChange={e => setPeriod(e.target.value as PeriodType)}
-                            className="pl-9 pr-8 py-1.5 bg-transparent text-sm font-medium text-gray-700 dark:text-gray-300 focus:outline-none cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg"
+                            value={entity}
+                            onChange={(e) => { setEntity(e.target.value as EntityType); setStatusFilter('all'); }}
+                            className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none"
                         >
-                            <option>Este Mês</option>
-                            <option>Últimos 30 Dias</option>
-                            <option>Últimos 3 Meses</option>
-                            <option>Este Ano</option>
+                            <option value="Orçamentos">Comercial (Orçamentos)</option>
+                            <option value="Produção">Clínico (Produção)</option>
+                            <option value="Pacientes">Clínico (Pacientes)</option>
+                            <option value="Financeiro">Financeiro (Caixa)</option>
+                            <option value="Leads">Marketing (Leads)</option>
+                            <option value="Operacional">Operacional (Agenda)</option>
+                            <option value="Todos">Visão Executiva 360º</option>
                         </select>
                     </div>
-                    <div className="w-px bg-gray-200 dark:bg-gray-700 my-1"></div>
-                    <button className="flex items-center gap-2 px-3 py-1.5 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg text-sm font-medium transition-colors">
-                        <Filter size={14} /> <span className="hidden sm:inline">Filtros</span>
-                    </button>
 
-                    {/* EXPORT BUTTON & DROPDOWN */}
-                    <div className="relative">
-                        <button
-                            onClick={(e) => { e.stopPropagation(); setShowExportMenu(!showExportMenu); }}
-                            className="flex items-center gap-2 px-3 py-1.5 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-lg text-sm font-medium transition-colors"
+                    {/* LEVEL 2: CATEGORY / UNIT */}
+                    <div>
+                        <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1.5 uppercase">
+                            {entity === 'Todos' ? '2. Departamento (Visão)' : '2. Unidade de Negócio (Categoria)'}
+                        </label>
+                        <select
+                            value={category}
+                            onChange={(e) => setCategory(e.target.value as CategoryType)}
+                            className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm outline-none"
                         >
-                            <Download size={14} /> <span className="hidden sm:inline">Exportar</span>
-                        </button>
+                            <option value="all">Todas</option>
+                            {getCategoryOptions().map(opt => (
+                                <option key={opt} value={opt}>{opt}</option>
+                            ))}
+                        </select>
+                    </div>
 
-                        {showExportMenu && (
-                            <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-100 dark:border-gray-700 z-50 animate-in fade-in zoom-in-95 duration-100 overflow-hidden">
-                                <button
-                                    onClick={generatePDF}
-                                    className="w-full text-left px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 border-b border-gray-50 dark:border-gray-700"
-                                >
-                                    <FileText size={16} className="text-red-500" /> Relatório PDF
-                                </button>
-                                <button
-                                    onClick={generateExcel}
-                                    className="w-full text-left px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
-                                >
-                                    <Table size={16} className="text-green-600" /> Dados Excel (XLS)
-                                </button>
-                            </div>
-                        )}
+                    {/* LEVEL 3: PROFESSIONAL */}
+                    <div>
+                        <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1.5 uppercase">3. Profissional</label>
+                        <select
+                            value={professional}
+                            onChange={(e) => setProfessional(e.target.value)}
+                            className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm outline-none"
+                        >
+                            <option value="all">Todos os Doutores</option>
+                            {professionals.map(p => <option key={p} value={p}>{p}</option>)}
+                        </select>
+                    </div>
+
+                    {/* LEVEL 4: KPI / STATUS */}
+                    <div>
+                        <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1.5 uppercase">
+                            {entity === 'Todos' ? '4. Indicador de Saúde (KPI)' : '4. KPI / Status'}
+                        </label>
+                        <select
+                            value={statusFilter}
+                            onChange={(e) => setStatusFilter(e.target.value)}
+                            className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm outline-none"
+                        >
+                            <option value="all">Status Geral</option>
+                            {getStatusOptions().map(opt => (
+                                <option key={opt} value={opt}>{opt}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* LEVEL 5: ORIGIN */}
+                    <div>
+                        <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1.5 uppercase">5. Origem (Canal Marketing)</label>
+                        <select
+                            value={origin}
+                            onChange={(e) => setOrigin(e.target.value as OriginType)}
+                            className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm outline-none"
+                        >
+                            <option value="all">Todos os Canais</option>
+                            <option>Instagram</option>
+                            <option>Google Ads</option>
+                            <option>Facebook</option>
+                            <option>Indicação</option>
+                            <option>WhatsApp</option>
+                            <option>Orgânico</option>
+                        </select>
+                    </div>
+
+                    {/* SEARCH */}
+                    <div>
+                        <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1.5 uppercase">Busca Específica</label>
+                        <div className="relative">
+                            <input
+                                type="text"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                placeholder="Nome, Descrição..."
+                                className="w-full pl-9 pr-3 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm outline-none"
+                            />
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                        </div>
                     </div>
                 </div>
             </div>
 
-            {/* NAVIGATION TABS */}
-            <div className="border-b border-gray-200 dark:border-gray-700 overflow-x-auto scrollbar-hide">
-                <div className="flex gap-1 min-w-max pb-1">
-                    {[
-                        { id: 'executivo', label: 'Executivo', icon: Briefcase },
-                        { id: 'financeiro', label: 'Financeiro', icon: DollarSign },
-                        { id: 'comercial', label: 'Comercial', icon: Target },
-                        { id: 'operacional', label: 'Operacional', icon: Clock },
-                        { id: 'clinico', label: 'Clínico', icon: Stethoscope },
-                        { id: 'funil', label: 'Funil Completo', icon: Layers },
-                        { id: 'insights', label: 'Insights & Alertas', icon: Lightbulb }
-                    ].map(tab => (
-                        <button
-                            key={tab.id}
-                            onClick={() => setActiveTab(tab.id as any)}
-                            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-all
-                        ${activeTab === tab.id
-                                    ? 'border-blue-600 text-blue-600 dark:text-blue-400 bg-blue-50/30 dark:bg-blue-900/20'
-                                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
-                        >
-                            <tab.icon size={16} />
-                            {tab.label}
-                        </button>
-                    ))}
+            {/* RESULTS TABLE */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm">
+                        <thead className="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-700">
+                            <tr>
+                                <th className="px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Data</th>
+                                <th className="px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Descrição / Paciente</th>
+                                <th className="px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Profissional</th>
+                                <th className="px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Categoria</th>
+                                <th className="px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Origem</th>
+                                <th className="px-6 py-3 font-medium text-gray-500 dark:text-gray-400">KPI</th>
+                                <th className="px-6 py-3 font-medium text-gray-500 dark:text-gray-400 text-right">Montante</th>
+                                <th className="px-6 py-3 font-medium text-gray-500 dark:text-gray-400 text-right">Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                            {filteredData.length > 0 ? (
+                                filteredData.map((item, idx) => (
+                                    <tr key={item.id || idx} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                                        <td className="px-6 py-4 text-gray-500 text-xs">
+                                            {item.date && !isNaN(new Date(item.date).getTime())
+                                                ? new Date(item.date).toLocaleDateString('pt-BR')
+                                                : 'N/A'}
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <p className="font-bold text-gray-900 dark:text-white">{item.description || item.patientName}</p>
+                                            {item.phone && <p className="text-xs text-gray-500">{item.phone}</p>}
+                                        </td>
+                                        <td className="px-6 py-4 text-gray-600 dark:text-gray-300">
+                                            {item.professional}
+                                        </td>
+                                        <td className="px-6 py-4 text-gray-600 dark:text-gray-300">
+                                            <span className="inline-flex px-2 py-0.5 rounded text-xs bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600">
+                                                {item.category}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 text-gray-600 dark:text-gray-300 text-xs">
+                                            {item.origin}
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                                ${['Aprovado', 'Pago', 'Finalizado', 'Adimplente', 'Concluído (Pago)', 'Pendente (Pago)'].includes(item.status) ? 'bg-green-100 text-green-800' :
+                                                    ['Pendente', 'Em Análise', 'Em Tratamento', 'Produção em Curso', 'Em Andamento'].includes(item.status) ? 'bg-yellow-100 text-yellow-800' :
+                                                        ['Atrasado', 'Perdido', 'Inadimplente - Risco', 'Concluído (Inadimplente)', 'Pendente (Inadimplente)', 'Pendente (Débito)'].includes(item.status) ? 'bg-red-100 text-red-800' :
+                                                            'bg-gray-100 text-gray-800'}
+                                            `}>
+                                                {item.status}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 text-right font-bold text-gray-900 dark:text-white">
+                                            R$ {item.value?.toLocaleString('pt-BR')}
+                                        </td>
+                                        <td className="px-6 py-4 text-right">
+                                            {item.phone && (
+                                                <a
+                                                    href={`https://wa.me/55${item.phone.replace(/\D/g, '')}`}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="inline-flex items-center gap-2 text-green-600 hover:text-green-700 font-bold text-xs"
+                                                >
+                                                    <Smartphone size={16} /> Zap
+                                                </a>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan={8} className="px-6 py-12 text-center text-gray-400 dark:text-gray-500">
+                                        <Filter size={32} className="mx-auto mb-2 opacity-50" />
+                                        <p>Sem dados nesta seleção do Radar.</p>
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
                 </div>
             </div>
-
-            {/* --- 1. DASHBOARD EXECUTIVO --- */}
-            {activeTab === 'executivo' && (
-                <div className="space-y-6 animate-in fade-in">
-                    <div className="bg-blue-600 dark:bg-blue-700 rounded-xl p-6 text-white shadow-lg relative overflow-hidden">
-                        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
-                            <div>
-                                <p className="text-blue-100 font-medium mb-1">Resultado Líquido ({period})</p>
-                                <h2 className="text-4xl font-bold">R$ {kpis.netResult.toLocaleString('pt-BR')}</h2>
-                                <div className="flex items-center gap-2 mt-2">
-                                    <span className={`px-2 py-0.5 rounded text-sm font-medium ${kpis.netResultTrend > 0 ? 'bg-green-500/30' : 'bg-red-500/30'}`}>
-                                        {kpis.netResultTrend > 0 ? '+' : ''}{kpis.netResultTrend.toFixed(1)}% vs período anterior
-                                    </span>
-                                    <span className="text-blue-100 text-sm">Meta: R$ {goals.monthly_net_result.toLocaleString('pt-BR')}</span>
-                                </div>
-                            </div>
-                            <div className="flex gap-8 text-center md:text-right">
-                                <div>
-                                    <p className="text-blue-200 text-sm mb-1">Margem</p>
-                                    <p className="text-2xl font-bold">{kpis.totalRevenue > 0 ? ((kpis.netResult / kpis.totalRevenue) * 100).toFixed(1) : 0}%</p>
-                                </div>
-                                <div>
-                                    <p className="text-blue-200 text-sm mb-1">Ticket Médio</p>
-                                    <p className="text-2xl font-bold">R$ {kpis.ticketAvg.toFixed(0)}</p>
-                                </div>
-                            </div>
-                        </div>
-                        {/* Decorator */}
-                        <div className="absolute right-0 top-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/3 blur-3xl"></div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <MetricCard
-                            title="Faturamento Bruto"
-                            value={`R$ ${kpis.totalRevenue.toLocaleString('pt-BR')}`}
-                            trend={`${kpis.revenueTrend > 0 ? '+' : ''}${kpis.revenueTrend.toFixed(1)}%`}
-                            type={kpis.revenueTrend > 0 ? 'positive' : 'negative'}
-                            subtext={`vs período anterior`}
-                            icon={DollarSign}
-                            onClick={() => setActiveDrillDown('revenue')}
-                        />
-                        <MetricCard
-                            title="Custos Operacionais"
-                            value={`R$ ${kpis.totalExpense.toLocaleString('pt-BR')}`}
-                            trend={`${kpis.expenseTrend > 0 ? '+' : ''}${kpis.expenseTrend.toFixed(1)}%`}
-                            type={kpis.expenseTrend > 0 ? 'negative' : 'positive'}
-                            subtext={`vs período anterior`}
-                            icon={Activity}
-                            onClick={() => setActiveDrillDown('expense')}
-                        />
-                        <MetricCard
-                            title="Novos Tratamentos"
-                            value={kpis.totalTreatments}
-                            subtext={`Total de tratamentos`}
-                            icon={Stethoscope}
-                            onClick={() => setActiveDrillDown('treatments')}
-                        />
-                        <MetricCard
-                            title="Inadimplência"
-                            value={`R$ ${kpis.totalReceivables.toLocaleString('pt-BR')}`}
-                            subtext={`A receber`}
-                            icon={AlertCircle}
-                        />
-                    </div>
-
-                    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm">
-                        <h3 className="font-bold text-gray-800 dark:text-white mb-6">Crescimento vs Lucratividade</h3>
-                        <div className="h-80">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <ComposedChart data={financialHistory}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                    <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} dy={10} />
-                                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
-                                    <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} />
-                                    <Legend />
-                                    <Bar dataKey="receita" name="Receita Bruta" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={20} />
-                                    <Line type="monotone" dataKey="lucro" name="Lucro Operacional" stroke="#10b981" strokeWidth={3} dot={{ r: 4 }} />
-                                </ComposedChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* --- 2. DASHBOARD FINANCEIRO --- */}
-            {activeTab === 'financeiro' && (
-                <div className="space-y-6 animate-in fade-in">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border-l-4 border-green-500 shadow-sm">
-                            <p className="text-gray-500 dark:text-gray-400 text-sm">Entradas (Hoje)</p>
-                            <h3 className="text-2xl font-bold text-green-700 dark:text-green-400">R$ {globalFinancials.filter(f => f.type === 'income' && f.date === new Date().toLocaleDateString('pt-BR')).reduce((acc, v) => acc + v.amount, 0).toLocaleString('pt-BR')}</h3>
-                        </div>
-                        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border-l-4 border-red-500 shadow-sm">
-                            <p className="text-gray-500 dark:text-gray-400 text-sm">Saídas (Hoje)</p>
-                            <h3 className="text-2xl font-bold text-red-700 dark:text-red-400">R$ {globalFinancials.filter(f => f.type === 'expense' && f.date === new Date().toLocaleDateString('pt-BR')).reduce((acc, v) => acc + v.amount, 0).toLocaleString('pt-BR')}</h3>
-                        </div>
-                        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border-l-4 border-blue-500 shadow-sm">
-                            <p className="text-gray-500 dark:text-gray-400 text-sm">Previsão (30 Dias)</p>
-                            <h3 className="text-2xl font-bold text-blue-700 dark:text-blue-400">R$ {(kpis.totalReceivables * 0.8).toLocaleString('pt-BR')}</h3>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm">
-                            <h3 className="font-bold text-gray-800 dark:text-white mb-6">Fluxo de Caixa Diário</h3>
-                            <div className="h-64">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart data={financialHistory}> {/* Using real history data */}
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                        <XAxis dataKey="month" />
-                                        <YAxis />
-                                        <Tooltip />
-                                        <Bar dataKey="lucro" fill="#3b82f6" name="Saldo" radius={[4, 4, 0, 0]} />
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            </div>
-                        </div>
-                        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm">
-                            <h3 className="font-bold text-gray-800 dark:text-white mb-4">Contas a Pagar (Próximos 7 dias)</h3>
-                            <div className="space-y-3">
-                                {expenses.filter(e => e.status === 'Pendente').slice(0, 5).map(expense => (
-                                    <div key={expense.id} className="flex justify-between items-center p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg border border-transparent hover:border-gray-100 transition-colors">
-                                        <div>
-                                            <p className="font-medium text-gray-800 dark:text-white">{expense.description}</p>
-                                            <p className="text-xs text-gray-500 dark:text-gray-400">{expense.dueDate} • {expense.category}</p>
-                                        </div>
-                                        <span className="font-bold text-red-600 dark:text-red-400">- R$ {expense.amount.toLocaleString('pt-BR')}</span>
-                                    </div>
-                                ))}
-                                {expenses.filter(e => e.status === 'Pendente').length === 0 && <p className="text-gray-400 text-sm italic">Nenhuma conta pendente próxima.</p>}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* --- 3. DASHBOARD COMERCIAL --- */}
-            {activeTab === 'comercial' && (
-                <div className="space-y-6 animate-in fade-in">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <MetricCard title="Oportunidades Totais" value={kpis.totalLeads} subtext="Novas oportunidades" icon={Users} />
-                        <MetricCard title="Agendamentos" value={kpis.totalAppts} trend="+12%" type="positive" icon={Calendar} />
-                        <MetricCard title="Taxa Conversão" value={`${kpis.conversionRate.toFixed(1)}%`} subtext="Meta: 30%" type={kpis.conversionRate > 25 ? 'positive' : 'negative'} icon={Target} />
-                        <MetricCard title="CAC" value="R$ 45,00" subtext="Custo por aquisição" icon={DollarSign} />
-                    </div>
-
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <div className="lg:col-span-2 bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm">
-                            <h3 className="font-bold text-gray-800 dark:text-white mb-6">Funil de Vendas</h3>
-                            <div className="h-72">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart data={[
-                                        { name: 'Oportunidades', value: kpis.totalLeads },
-                                        { name: 'Agendados', value: kpis.totalAppts },
-                                        { name: 'Compareceram', value: kpis.completedAppts },
-                                        { name: 'Aprovados', value: kpis.wonLeads },
-                                    ]} layout="vertical" barCategoryGap="20%">
-                                        <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                                        <XAxis type="number" hide />
-                                        <YAxis dataKey="name" type="category" width={100} tick={{ fill: '#9CA3AF' }} />
-                                        <Tooltip cursor={{ fill: 'transparent' }} />
-                                        <Bar dataKey="value" fill="#6366f1" radius={[0, 4, 4, 0]} label={{ position: 'right', fill: '#6b7280' }}>
-                                            {/* Gradient or colored bars could go here */}
-                                        </Bar>
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            </div>
-                        </div>
-                        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm">
-                            <h3 className="font-bold text-gray-800 dark:text-white mb-6">Origem das Oportunidades</h3>
-                            <div className="h-64">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <PieChart>
-                                        <Pie
-                                            data={[
-                                                { name: 'Instagram', value: 45 },
-                                                { name: 'Google', value: 30 },
-                                                { name: 'Indicação', value: 25 },
-                                            ]}
-                                            innerRadius={60} outerRadius={80}
-                                            dataKey="value"
-                                        >
-                                            <Cell fill="#E1306C" />
-                                            <Cell fill="#4285F4" />
-                                            <Cell fill="#34A853" />
-                                        </Pie>
-                                        <Tooltip />
-                                        <Legend verticalAlign="bottom" />
-                                    </PieChart>
-                                </ResponsiveContainer>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* --- 4. DASHBOARD OPERACIONAL --- */}
-            {activeTab === 'operacional' && (
-                <div className="space-y-6 animate-in fade-in">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <MetricCard title="Ocupação de Agenda" value="68%" subtext="Meta: 80%" trend="-2%" type="negative" icon={Calendar} />
-                        <MetricCard title="Taxa de No-Show" value={`${kpis.noShowRate.toFixed(1)}%`} subtext="Faltas não avisadas" type="negative" icon={AlertCircle} />
-                        <MetricCard title="Ociosidade" value="32%" subtext="Horários vagos" icon={Clock} />
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm">
-                            <h3 className="font-bold text-gray-800 dark:text-white mb-6">Status da Agenda</h3>
-                            <div className="h-64 flex items-center justify-center">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <PieChart>
-                                        <Pie data={occupancyData} innerRadius={60} outerRadius={80} dataKey="value" paddingAngle={5}>
-                                            {occupancyData.map((entry, index) => (
-                                                <Cell key={`cell-${index}`} fill={entry.fill} />
-                                            ))}
-                                        </Pie>
-                                        <Tooltip />
-                                        <Legend layout="vertical" verticalAlign="middle" align="right" />
-                                    </PieChart>
-                                </ResponsiveContainer>
-                            </div>
-                        </div>
-                        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm">
-                            <h3 className="font-bold text-gray-800 dark:text-white mb-4">Gargalos Operacionais</h3>
-                            <ul className="space-y-4">
-                                <li className="flex items-center justify-between">
-                                    <span className="text-gray-600 dark:text-gray-300">Reagendamentos Frequentes</span>
-                                    <span className="font-bold text-red-500 dark:text-red-400">12%</span>
-                                </li>
-                                <li className="flex items-center justify-between">
-                                    <span className="text-gray-600 dark:text-gray-300">Tempo Médio em Sala de Espera</span>
-                                    <span className="font-bold text-gray-900 dark:text-white">18 min</span>
-                                </li>
-                                <li className="flex items-center justify-between">
-                                    <span className="text-gray-600 dark:text-gray-300">Horário de Pico (Recepção)</span>
-                                    <span className="font-bold text-gray-900 dark:text-white">14:00 - 15:00</span>
-                                </li>
-                                <li className="flex items-center justify-between">
-                                    <span className="text-gray-600 dark:text-gray-300">Confirmações Pendentes</span>
-                                    <span className="font-bold text-orange-500 dark:text-orange-400">8 agendamentos</span>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* --- 5. DASHBOARD CLÍNICO --- */}
-            {activeTab === 'clinico' && (
-                <div className="space-y-6 animate-in fade-in">
-                    <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm">
-                        <div className="flex justify-between items-center mb-6">
-                            <h3 className="font-bold text-gray-800 dark:text-white">Produção por Profissional</h3>
-                            <button className="text-blue-600 dark:text-blue-400 text-sm font-medium hover:underline">Ver detalhes</button>
-                        </div>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left text-sm">
-                                <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-100 dark:border-gray-700">
-                                    <tr>
-                                        <th className="px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Profissional</th>
-                                        <th className="px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Procedimentos</th>
-                                        <th className="px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Faturamento</th>
-                                        <th className="px-6 py-3 font-medium text-gray-500 dark:text-gray-400">Ticket Médio</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
-                                    <tr className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                                        <td className="px-6 py-4 font-bold text-gray-700 dark:text-white">Dr. Marcelo V. Boas</td>
-                                        <td className="px-6 py-4 text-gray-600 dark:text-gray-300">12</td>
-                                        <td className="px-6 py-4 text-green-600 dark:text-green-400 font-medium">R$ 15.400</td>
-                                        <td className="px-6 py-4 text-gray-600 dark:text-gray-300">R$ 1.283</td>
-                                    </tr>
-                                    <tr className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                                        <td className="px-6 py-4 font-bold text-gray-700 dark:text-white">Dra. Sofia</td>
-                                        <td className="px-6 py-4 text-gray-600 dark:text-gray-300">8</td>
-                                        <td className="px-6 py-4 text-green-600 dark:text-green-400 font-medium">R$ 9.800</td>
-                                        <td className="px-6 py-4 text-gray-600 dark:text-gray-300">R$ 1.225</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm">
-                            <h3 className="font-bold text-gray-800 dark:text-white mb-6">Top Procedimentos (Receita)</h3>
-                            <div className="h-60">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart layout="vertical" data={[
-                                        { name: 'Invisalign', value: 25000 },
-                                        { name: 'Implantes', value: 18000 },
-                                        { name: 'Lentes', value: 12000 },
-                                    ]}>
-                                        <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                                        <XAxis type="number" hide />
-                                        <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
-                                        <Bar dataKey="value" fill="#34d399" radius={[0, 4, 4, 0]} barSize={20} label={{ position: 'right', fill: '#9CA3AF', fontSize: 12, formatter: (val: number) => `R$ ${val / 1000}k` }} />
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            </div>
-                        </div>
-                        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm">
-                            <h3 className="font-bold text-gray-800 dark:text-white mb-4">Eficiência Clínica</h3>
-                            <div className="space-y-4">
-                                <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 uppercase font-bold">Tempo Médio de Cadeira</p>
-                                    <p className="text-xl font-bold text-gray-900 dark:text-white">45 min</p>
-                                    <p className="text-xs text-gray-400">vs 50 min (Meta)</p>
-                                </div>
-                                <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 uppercase font-bold">Taxa de Retrabalho</p>
-                                    <p className="text-xl font-bold text-green-600 dark:text-green-400">1.2%</p>
-                                    <p className="text-xs text-gray-400">Excelente (Abaixo de 3%)</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* --- 6. DASHBOARD FUNIL COMPLETO --- */}
-            {activeTab === 'funil' && (
-                <div className="space-y-6 animate-in fade-in">
-                    <div className="bg-white dark:bg-gray-800 p-8 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm">
-                        <h3 className="font-bold text-gray-800 dark:text-white mb-8 text-center">Jornada do Paciente (End-to-End)</h3>
-
-                        <div className="relative flex flex-col md:flex-row justify-between items-center gap-4 md:gap-0">
-                            {/* Step 1 */}
-                            <div className="flex flex-col items-center z-10 w-full md:w-auto">
-                                <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mb-2 border-2 border-gray-200 dark:border-gray-600">
-                                    <Users className="text-gray-500 dark:text-gray-400" />
-                                </div>
-                                <p className="font-bold text-gray-800 dark:text-white">Oportunidades</p>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">{kpis.totalLeads}</p>
-                            </div>
-
-                            {/* Connector */}
-                            <div className="hidden md:block flex-1 h-1 bg-gray-100 dark:bg-gray-700 relative">
-                                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 px-2 text-xs font-bold text-gray-400">
-                                    {((kpis.totalAppts / kpis.totalLeads) * 100).toFixed(0)}%
-                                </div>
-                            </div>
-
-                            {/* Step 2 */}
-                            <div className="flex flex-col items-center z-10 w-full md:w-auto">
-                                <div className="w-16 h-16 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center mb-2 border-2 border-blue-100 dark:border-blue-800">
-                                    <Calendar className="text-blue-500 dark:text-blue-400" />
-                                </div>
-                                <p className="font-bold text-gray-800 dark:text-white">Agendados</p>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">{kpis.totalAppts}</p>
-                            </div>
-
-                            {/* Connector */}
-                            <div className="hidden md:block flex-1 h-1 bg-gray-100 dark:bg-gray-700 relative">
-                                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 px-2 text-xs font-bold text-gray-400">
-                                    {((kpis.completedAppts / kpis.totalAppts) * 100).toFixed(0)}%
-                                </div>
-                            </div>
-
-                            {/* Step 3 */}
-                            <div className="flex flex-col items-center z-10 w-full md:w-auto">
-                                <div className="w-16 h-16 rounded-full bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center mb-2 border-2 border-purple-100 dark:border-purple-800">
-                                    <Target className="text-purple-500 dark:text-purple-400" />
-                                </div>
-                                <p className="font-bold text-gray-800 dark:text-white">Compareceram</p>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">{kpis.completedAppts}</p>
-                            </div>
-
-                            {/* Connector */}
-                            <div className="hidden md:block flex-1 h-1 bg-gray-100 dark:bg-gray-700 relative">
-                                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 px-2 text-xs font-bold text-gray-400">
-                                    50%
-                                </div>
-                            </div>
-
-                            {/* Step 4 */}
-                            <div className="flex flex-col items-center z-10 w-full md:w-auto">
-                                <div className="w-16 h-16 rounded-full bg-green-50 dark:bg-green-900/30 flex items-center justify-center mb-2 border-2 border-green-100 dark:border-green-800">
-                                    <DollarSign className="text-green-500 dark:text-green-400" />
-                                </div>
-                                <p className="font-bold text-gray-800 dark:text-white">Fechamento</p>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">{kpis.wonLeads}</p>
-                            </div>
-                        </div>
-
-                        <div className="mt-8 p-4 bg-orange-50 dark:bg-orange-900/30 border border-orange-100 dark:border-orange-800 rounded-lg flex items-start gap-3">
-                            <AlertTriangle className="text-orange-500 dark:text-orange-400 shrink-0 mt-0.5" />
-                            <div>
-                                <p className="font-bold text-orange-800 dark:text-orange-300 text-sm">Gargalo Identificado</p>
-                                <p className="text-orange-700 dark:text-orange-400 text-sm">A maior perda ocorre entre o <strong>Agendamento</strong> e o <strong>Comparecimento</strong> (No-show de {kpis.noShowRate.toFixed(1)}%). Foque em ações de confirmação nesta etapa.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* --- 7. DASHBOARD INSIGHTS --- */}
-            {activeTab === 'insights' && (
-                <div className="space-y-6 animate-in fade-in">
-                    <h3 className="font-bold text-gray-800 dark:text-white mb-2">Recomendações da IA</h3>
-                    <div className="grid grid-cols-1 gap-4">
-                        {generatedInsights.map((insight, idx) => (
-                            <div key={idx} className={`p-6 rounded-xl border flex items-start gap-4 shadow-sm
-                          ${insight.type === 'alert' ? 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800' :
-                                    insight.type === 'warning' ? 'bg-orange-50 border-orange-200 dark:bg-orange-900/20 dark:border-orange-800' :
-                                        insight.type === 'success' ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800' :
-                                            'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800'}`}>
-                                <div className={`p-2 rounded-full bg-white/50 dark:bg-black/20 shrink-0
-                             ${insight.type === 'alert' ? 'text-red-600 dark:text-red-400' :
-                                        insight.type === 'warning' ? 'text-orange-600 dark:text-orange-400' :
-                                            insight.type === 'success' ? 'text-green-600 dark:text-green-400' :
-                                                'text-blue-600 dark:text-blue-400'}`}>
-                                    {insight.type === 'success' ? <TrendingUp size={24} /> : <Lightbulb size={24} />}
-                                </div>
-                                <div>
-                                    <h4 className={`font-bold text-lg mb-1
-                                 ${insight.type === 'alert' ? 'text-red-900 dark:text-red-300' :
-                                            insight.type === 'warning' ? 'text-orange-900 dark:text-orange-300' :
-                                                insight.type === 'success' ? 'text-green-900 dark:text-green-300' :
-                                                    'text-blue-900 dark:text-blue-300'}`}>
-                                        {insight.title}
-                                    </h4>
-                                    <p className={`text-sm leading-relaxed
-                                 ${insight.type === 'alert' ? 'text-red-700 dark:text-red-400' :
-                                            insight.type === 'warning' ? 'text-orange-700 dark:text-orange-400' :
-                                                insight.type === 'success' ? 'text-green-700 dark:text-green-400' :
-                                                    'text-blue-700 dark:text-blue-400'}`}>
-                                        {insight.desc}
-                                    </p>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-            {/* Drill Down Modals */}
-            <TransactionListModal
-                isOpen={activeDrillDown === 'revenue'}
-                onClose={() => setActiveDrillDown(null)}
-                title={`Detalhamento de Receita - ${period}`}
-                transactions={drillDownData.revenue}
-                type="income"
-            />
-            <TransactionListModal
-                isOpen={activeDrillDown === 'expense'}
-                onClose={() => setActiveDrillDown(null)}
-                title={`Detalhamento de Despesas - ${period}`}
-                transactions={drillDownData.expense}
-                type="expense"
-            />
-            <TreatmentListModal
-                isOpen={activeDrillDown === 'treatments'}
-                onClose={() => setActiveDrillDown(null)}
-                treatments={drillDownData.treatments}
-            />
         </div>
     );
 };

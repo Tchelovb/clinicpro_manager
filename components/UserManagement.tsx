@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
 import { User, Plus, Edit, Trash2, UserCheck, UserX } from "lucide-react";
+import { ROLE_LABELS, UserRole } from "../types";
 
 interface UserData {
   id: string;
@@ -22,7 +23,7 @@ const UserManagement: React.FC = () => {
     name: "",
     email: "",
     password: "",
-    role: "DENTIST",
+    role: "PROFESSIONAL",
   });
 
   useEffect(() => {
@@ -75,7 +76,7 @@ const UserManagement: React.FC = () => {
       }
 
       // Reset form and reload
-      setFormData({ name: "", email: "", password: "", role: "DENTIST" });
+      setFormData({ name: "", email: "", password: "", role: "PROFESSIONAL" });
       setShowForm(false);
       setEditingUser(null);
       loadUsers();
@@ -175,10 +176,11 @@ const UserManagement: React.FC = () => {
                   }
                   className="w-full px-3 py-2 border rounded-lg"
                 >
-                  <option value="ADMIN">Administrador</option>
-                  <option value="DENTIST">Dentista</option>
-                  <option value="RECEPTIONIST">Recepcionista</option>
-                  <option value="ASSISTANT">Assistente</option>
+                  {Object.entries(ROLE_LABELS).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -198,7 +200,7 @@ const UserManagement: React.FC = () => {
                     name: "",
                     email: "",
                     password: "",
-                    role: "DENTIST",
+                    role: "PROFESSIONAL",
                   });
                 }}
                 className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600"
@@ -254,16 +256,15 @@ const UserManagement: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-                      {user.role}
+                      {ROLE_LABELS[user.role as UserRole] || user.role}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
-                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        user.active
+                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${user.active
                           ? "bg-green-100 text-green-800"
                           : "bg-red-100 text-red-800"
-                      }`}
+                        }`}
                     >
                       {user.active ? "Ativo" : "Inativo"}
                     </span>

@@ -1,0 +1,77 @@
+# BOS Auto-Pilot - Geração Diária de Insights
+# Este workflow executa automaticamente todos os dias às 6h (horário de São Paulo)
+
+name: BOS Daily Insights Generator
+
+on:
+  schedule:
+    # Executa às 9h UTC = 6h Brasília (GMT-3)
+    - cron: '0 9 * * *'
+  workflow_dispatch: # Permite execução manual
+
+jobs:
+  generate-insights:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      
+      - name: Install dependencies
+        run: npm install @supabase/supabase-js dotenv
+      
+      - name: Generate BOS Insights
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          node << 'EOF'
+          const { createClient } = require('@supabase/supabase-js');
+          
+          const supabase = createClient(
+            process.env.SUPABASE_URL,
+            process.env.SUPABASE_SERVICE_KEY
+          );
+          
+          async function generateInsights() {
+            console.log('🤖 BOS Auto-Pilot iniciado...');
+            
+            // Buscar todas as clínicas ativas
+            const { data: clinics, error } = await supabase
+              .from('clinics')
+              .select('id, name')
+              .or('status.eq.ACTIVE,status.is.null');
+            
+            if (error) throw error;
+            
+            console.log(`📋 ${clinics.length} clínicas encontradas`);
+            
+            // Gerar insights para cada clínica
+            for (const clinic of clinics) {
+              console.log(`⚙️  Processando: ${clinic.name}...`);
+              
+              const { error: genError } = await supabase.rpc(
+                'fn_generate_recovery_insights',
+                { p_clinic_id: clinic.id }
+              );
+              
+              if (genError) {
+                console.error(`❌ Erro em ${clinic.name}:`, genError);
+              } else {
+                console.log(`✅ Insights gerados para ${clinic.name}`);
+              }
+            }
+            
+            console.log('🎯 BOS Auto-Pilot concluído!');
+          }
+          
+          generateInsights().catch(console.error);
+          EOF
+      
+      - name: Notify completion
+        run: echo "✅ Insights gerados com sucesso!"

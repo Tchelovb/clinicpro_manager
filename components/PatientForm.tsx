@@ -73,6 +73,14 @@ const PatientForm: React.FC = () => {
       total_approved: 0,
       total_paid: 0,
       balance_due: 0,
+
+      // Dossiê High-Ticket
+      nickname: formData.nickname || null,
+      occupation: formData.occupation || null,
+      instagram_handle: formData.instagram_handle || null,
+      marital_status: formData.marital_status || null,
+      wedding_anniversary: formData.wedding_anniversary || null,
+      vip_notes: formData.vip_notes || null,
     };
 
     createPatient(newPatient);
@@ -153,6 +161,99 @@ const PatientForm: React.FC = () => {
                 placeholder="(00) 90000-0000"
                 onChange={handleChange}
               />
+            </div>
+          </div>
+        </div>
+
+        {/* 1.5. DOSSIÊ HIGH-TICKET (CRM de Luxo) */}
+        <div className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 p-5 rounded-xl shadow-sm border-l-4 border-purple-500 ring-1 ring-purple-100 dark:ring-purple-800">
+          <h3 className="text-xs font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+            <User size={16} /> 💎 Dossiê High-Ticket (CRM de Luxo)
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-3">
+            {/* Apelido (4) / Instagram (4) / Profissão (4) */}
+            <div className="col-span-1 md:col-span-4">
+              <label className={labelClass}>
+                Apelido / Como Chamar
+              </label>
+              <input
+                name="nickname"
+                className={inputClass}
+                placeholder="Ex: Janjão"
+                onChange={handleChange}
+              />
+              <p className="text-xs text-gray-500 mt-1">Para criar rapport</p>
+            </div>
+            <div className="col-span-1 md:col-span-4">
+              <label className={labelClass}>
+                Instagram
+              </label>
+              <input
+                name="instagram_handle"
+                className={inputClass}
+                placeholder="@usuario"
+                onChange={handleChange}
+              />
+              <p className="text-xs text-gray-500 mt-1">Análise de lifestyle</p>
+            </div>
+            <div className="col-span-1 md:col-span-4">
+              <label className={labelClass}>
+                Profissão
+              </label>
+              <input
+                name="occupation"
+                className={inputClass}
+                placeholder="Ex: Empresário"
+                onChange={handleChange}
+              />
+              <p className="text-xs text-gray-500 mt-1">Indica poder aquisitivo</p>
+            </div>
+
+            {/* Estado Civil (4) / Aniversário de Casamento (4) */}
+            <div className="col-span-1 md:col-span-4">
+              <label className={labelClass}>
+                Estado Civil
+              </label>
+              <select
+                name="marital_status"
+                className={inputClass}
+                onChange={handleChange}
+              >
+                <option value="">Selecione...</option>
+                <option value="SINGLE">Solteiro(a)</option>
+                <option value="MARRIED">Casado(a)</option>
+                <option value="DIVORCED">Divorciado(a)</option>
+                <option value="WIDOWED">Viúvo(a)</option>
+                <option value="OTHER">Outro</option>
+              </select>
+            </div>
+            <div className="col-span-1 md:col-span-4">
+              <label className={labelClass}>
+                Aniversário de Casamento
+              </label>
+              <input
+                name="wedding_anniversary"
+                type="date"
+                className={inputClass}
+                onChange={handleChange}
+              />
+              <p className="text-xs text-gray-500 mt-1">Para enviar presentes</p>
+            </div>
+
+            {/* Notas VIP (12) */}
+            <div className="col-span-1 md:col-span-12">
+              <label className={labelClass}>
+                🌟 Notas VIP (Preferências Pessoais)
+              </label>
+              <textarea
+                name="vip_notes"
+                className={`${textareaClass} h-20`}
+                placeholder="Ex: Gosta de café sem açúcar, prefere ar condicionado fraco, sempre chega 10min adiantado..."
+                onChange={handleChange}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Detalhes para atendimento personalizado e experiência VIP
+              </p>
             </div>
           </div>
         </div>
@@ -253,6 +354,22 @@ const PatientForm: React.FC = () => {
                   placeholder="cliente@email.com"
                   onChange={handleChange}
                 />
+              </div>
+              <div className="col-span-1 md:col-span-4">
+                <label className={labelClass}>Origem (Marketing)</label>
+                <select
+                  name="origin"
+                  className={inputClass}
+                  onChange={handleChange}
+                  defaultValue="Instagram"
+                >
+                  <option>Instagram</option>
+                  <option>Google Ads</option>
+                  <option>Indicação</option>
+                  <option>Facebook</option>
+                  <option>Orgânico</option>
+                  <option>WhatsApp</option>
+                </select>
               </div>
               <div className="col-span-1 md:col-span-4">
                 <label className={labelClass}>Pref. Contato</label>

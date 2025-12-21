@@ -47,6 +47,7 @@ const BudgetForm: React.FC = () => {
     const [region, setRegion] = useState('');
     const [price, setPrice] = useState(0);
     const [qty, setQty] = useState(1);
+    const [categoryId, setCategoryId] = useState('');
 
     // UI State
     const [showMobileMenu, setShowMobileMenu] = useState(false);
@@ -71,6 +72,7 @@ const BudgetForm: React.FC = () => {
             }
             if (existingBudget.priceTableId) setSelectedPriceTableId(existingBudget.priceTableId);
             if (existingBudget.doctorId) setSelectedProfessionalId(existingBudget.doctorId);
+            if (existingBudget.categoryId) setCategoryId(existingBudget.categoryId);
         } else if (!loadingBudget) {
             // Defaults for new budget
             if (priceTables.length > 0 && !selectedPriceTableId) {
@@ -147,7 +149,8 @@ const BudgetForm: React.FC = () => {
             discount: discount,
             finalValue: finalTotal,
             paymentConfig: { method: paymentMethod, installments },
-            priceTableId: selectedPriceTableId
+            priceTableId: selectedPriceTableId,
+            categoryId: categoryId || undefined
         };
 
         if (existingBudget && budgetId) {
@@ -270,6 +273,17 @@ const BudgetForm: React.FC = () => {
                                 <select className={inputClass} value={selectedProfessionalId} onChange={e => setSelectedProfessionalId(e.target.value)}>
                                     <option value="">Selecione...</option>
                                     {professionals.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                </select>
+                            </div>
+                            <div className="md:col-span-2">
+                                <label className={labelClass}>Categoria (BOS)</label>
+                                <select className={inputClass} value={categoryId} onChange={e => setCategoryId(e.target.value)}>
+                                    <option value="">Selecione...</option>
+                                    <option>Cirurgias Estéticas da Face</option>
+                                    <option>Harmonização Facial</option>
+                                    <option>Implantodontia</option>
+                                    <option>Ortodontia</option>
+                                    <option>Clínica Geral</option>
                                 </select>
                             </div>
                         </div>

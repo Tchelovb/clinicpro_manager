@@ -13,11 +13,15 @@ export interface Clinic {
   updated_at: string;
 }
 
+import { UserRole } from "../types";
+
+// ...
+
 export interface User {
   id: string;
   name: string;
   email: string;
-  role: "ADMIN" | "DENTIST" | "RECEPTIONIST" | "PROFESSIONAL";
+  role: UserRole;
   color?: string;
   active: boolean;
   phone?: string;

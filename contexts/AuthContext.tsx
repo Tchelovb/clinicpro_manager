@@ -9,6 +9,7 @@ interface Profile {
   name: string;
   role: string;
   active: boolean;
+  is_bos_fab_enabled: boolean;
   clinics: {
     id: string;
     name: string;
@@ -23,6 +24,7 @@ interface AuthContextType {
   loading: boolean;
   activeClinicId: string | null;
   setActiveClinic: (clinicId: string | null) => void;
+  updateProfileSettings: (settings: Partial<Profile>) => Promise<void>;
   signIn: (
     clinicCode: string,
     email: string,
@@ -85,6 +87,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         .eq("id", userId)
         .single();
 
+      const { data: authUser } = await supabase.auth.getUser();
+      const isBosEnabled = authUser?.user?.user_metadata?.is_bos_fab_enabled !== false; // Default true
+
       if (userError || !userData) {
         console.error("Erro Supabase:", userError);
         throw new Error("Usuário não encontrado");
@@ -136,6 +141,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         name: userData.name,
         role: userData.role,
         active: userData.active,
+        is_bos_fab_enabled: isBosEnabled,
         clinics: clinicData || null,
       };
 
@@ -177,8 +183,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     setActiveClinicId(clinicId);
   };
 
+  const updateProfileSettings = async (settings: Partial<Profile>) => {
+    if (!profile) return;
+
+    // Optimistic Update
+    setProfile(prev => prev ? { ...prev, ...settings } : null);
+
+    if (settings.is_bos_fab_enabled !== undefined) {
+      const { error } = await supabase.auth.updateUser({
+        data: { is_bos_fab_enabled: settings.is_bos_fab_enabled }
+      });
+      console.log('Updated BOS FAB Status:', settings.is_bos_fab_enabled, error || 'Success');
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, profile, loading, activeClinicId, setActiveClinic, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, profile, loading, activeClinicId, setActiveClinic, signIn, signOut, updateProfileSettings }}>
       {children}
     </AuthContext.Provider>
   );

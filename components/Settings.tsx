@@ -27,8 +27,18 @@ import AutomationsSettings from "./settings/automations/AutomationsSettings";
 import IntegrationsSettings from "./settings/integrations/IntegrationsSettings";
 import BusinessGoalsSettings from "./settings/goals/BusinessGoalsSettings";
 import { ShieldCheck, Bell, Network } from "lucide-react";
+import { useAuth } from "../contexts/AuthContext";
+import { MasterSettings } from "./MasterSettings";
 
 const Settings: React.FC = () => {
+  const { profile } = useAuth();
+
+  // MASTER gets platform control panel
+  if (profile?.role === 'MASTER') {
+    return <MasterSettings />;
+  }
+
+  // Other roles get clinic settings
   const [activeSection, setActiveSection] = useState<
     | "clinic"
     | "branding"

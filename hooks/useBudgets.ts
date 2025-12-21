@@ -107,12 +107,63 @@ export const useBudgetOperations = () => {
             };
 
             // Add optional fields only if they exist
-            // Use provided doctorId or fallback to current user to satisfy NOT NULL constraint
-            // if (data.doctorId) {
-            //     budgetPayload.doctor_id = data.doctorId;
-            // } else if (profile?.id) {
-            //     budgetPayload.doctor_id = profile.id;
-            // }
+            // doctor_id MUST be a valid ID from the users table (NOT professionals table)
+            console.log('🔍 Checking doctor_id (User ID required)...', {
+                providedId: data.doctorId,
+                profileProfessionalId: profile?.professional_id,
+                profileId: profile?.id
+            });
+
+            let userIdToSave = null;
+
+            // CASO 1: Foi passado um ID (provavelmente ID de Profissional, precisamos achar o User correspondente)
+            if (data.doctorId) {
+                // Tenta achar um usuário que tenha esse professional_id
+                const { data: userByProf, error: userProfError } = await supabase
+                    .from('users')
+                    .select('id')
+                    .eq('professional_id', data.doctorId)
+                    .single();
+
+                if (userByProf) {
+                    console.log('✅ Found User ID via Professional ID:', userByProf.id);
+                    userIdToSave = userByProf.id;
+                } else {
+                    // Talvez o ID passado JÁ SEJA um ID de usuário? (Fallback)
+                    const { data: userdById, error: userIdError } = await supabase
+                        .from('users')
+                        .select('id')
+                        .eq('id', data.doctorId)
+                        .single();
+
+                    if (userdById) {
+                        console.log('✅ The provided ID was already a User ID:', userdById.id);
+                        userIdToSave = userdById.id;
+                    }
+                }
+            }
+
+            // CASO 2: Se não achou ainda, tenta pelo usuário logado
+            if (!userIdToSave && profile?.email) {
+                console.log('🔍 Fallback: Searching for current user by email:', profile.email);
+                const { data: userData, error: userError } = await supabase
+                    .from('users')
+                    .select('id')
+                    .eq('email', profile.email)
+                    .single();
+
+                if (userData) {
+                    userIdToSave = userData.id;
+                    console.log('✅ Used current logged user ID:', userData.id);
+                }
+            }
+
+            if (userIdToSave) {
+                budgetPayload.doctor_id = userIdToSave;
+            } else {
+                console.error('❌ CRITICAL: Could not resolve a valid User ID for doctor_id field');
+                throw new Error('Erro: Não foi possível vincular um Usuário válido a este Profissional. Verifique o cadastro do profissional em Configurações > Usuários.');
+            }
 
             if (data.priceTableId) budgetPayload.price_table_id = data.priceTableId;
             if (data.paymentConfig) budgetPayload.payment_config = data.paymentConfig;

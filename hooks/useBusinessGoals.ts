@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 
 interface BusinessGoals {
     monthly_revenue: number;
@@ -24,23 +25,23 @@ const DEFAULT_GOALS: BusinessGoals = {
 export const useBusinessGoals = () => {
     const [goals, setGoals] = useState<BusinessGoals>(DEFAULT_GOALS);
     const [loading, setLoading] = useState(true);
+    const { profile } = useAuth();
 
     useEffect(() => {
-        loadGoals();
-    }, []);
+        if (profile?.clinic_id) {
+            loadGoals(profile.clinic_id);
+        } else if (profile === null) {
+            // If profile is explicitly null (loaded but not found/logged out), stop loading
+            setLoading(false);
+        }
+    }, [profile]);
 
-    const loadGoals = async () => {
+    const loadGoals = async (clinicId: string) => {
         try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) {
-                setLoading(false);
-                return;
-            }
-
             const { data, error } = await supabase
                 .from('clinics')
                 .select('goals')
-                .eq('id', user.user_metadata.clinic_id)
+                .eq('id', clinicId)
                 .single();
 
             if (error) throw error;

@@ -9,6 +9,17 @@ export enum LeadStatus {
   LOST = "Perdido",
 }
 
+// --- AUTH TYPES ---
+
+export type UserRole = 'ADMIN' | 'PROFESSIONAL' | 'RECEPTIONIST' | 'CRC';
+
+export const ROLE_LABELS: Record<UserRole, string> = {
+  ADMIN: 'Administrador (Sócio Estrategista)',
+  PROFESSIONAL: 'Profissional Clínico (Guardião da Técnica)',
+  RECEPTIONIST: 'Recepcionista (Mestre de Fluxo)',
+  CRC: 'Consultor de Vendas (Arquiteta de Conversão/CRC)'
+};
+
 export type InteractionType = "Note" | "Call" | "WhatsApp" | "Email" | "System";
 
 export interface Interaction {
@@ -92,6 +103,10 @@ export interface Budget {
     installments: number;
   };
   priceTableId?: string; // New: Link to used price table
+  categoryId?: 'Cirurgias Estéticas da Face' | 'Harmonização Facial' | 'Implantodontia' | 'Ortodontia' | 'Clínica Geral';
+  rejectionReason?: string;
+  lostAt?: string;
+  potentialMargin?: number;
 }
 
 export interface TreatmentItem {
@@ -128,6 +143,7 @@ export interface Patient {
   phone: string;
   email?: string;
   cpf: string;
+  rg?: string; // RG/Identidade
   birth_date?: string;
   gender?: string;
   address?: string;
@@ -139,11 +155,65 @@ export interface Patient {
   updated_at: string;
   clinic_id: string;
 
+  // Informações Pessoais Adicionais
+  civilStatus?: 'SINGLE' | 'MARRIED' | 'DIVORCED' | 'WIDOWED' | 'OTHER';
+  profession?: string;
+  contactPreference?: 'PHONE' | 'EMAIL' | 'WHATSAPP' | 'SMS';
+
+  // Endereço Detalhado
+  zipCode?: string;
+  street?: string;
+  number?: string;
+  complement?: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
+
+  // Convênio/Plano de Saúde
+  insurance?: string;
+  insuranceCardNumber?: string;
+
+  // Notas Clínicas
+  initialClinicalNotes?: string;
+  generalNotes?: string;
+
+  // Dossiê High-Ticket (CRM de Luxo)
+  nickname?: string; // Apelido/Como prefere ser chamado
+  occupation?: string; // Profissão
+  instagram_handle?: string; // Instagram
+  marital_status?: 'SINGLE' | 'MARRIED' | 'DIVORCED' | 'WIDOWED' | 'OTHER';
+  wedding_anniversary?: string; // Data de aniversário de casamento
+  vip_notes?: string; // Notas VIP de preferências
+
+  // Classificação ABC
+  patient_score?: 'DIAMOND' | 'GOLD' | 'STANDARD' | 'RISK' | 'BLACKLIST';
+  bad_debtor?: boolean;
+  sentiment_status?: 'VERY_HAPPY' | 'HAPPY' | 'NEUTRAL' | 'UNHAPPY' | 'COMPLAINING';
+
+  // Responsável Financeiro (Guarantor)
+  responsible_party_id?: string;
+  relationship_type?: 'SELF' | 'PARENT' | 'SPOUSE' | 'CHILD' | 'GUARDIAN' | 'OTHER';
+
+  // Programa de Indicação
+  indication_patient_id?: string;
+
+  // Galeria de Fotos
+  photo_profile_url?: string;
+  photo_smile_url?: string;
+  photo_frontal_url?: string;
+  photo_profile_side_url?: string;
+  photo_document_front_url?: string;
+  photo_document_back_url?: string;
+
   // Linked Data (for detailed queries)
   budgets?: Budget[];
   treatments?: TreatmentItem[];
   financials?: FinancialInstallment[];
   notes?: ClinicalNote[];
+  origin?: 'Instagram' | 'Google' | 'Indicação' | 'Facebook' | 'Orgânico' | 'WhatsApp';
+  acquisitionSourceId?: string;
+  lastAestheticEvaluation?: string; // Date string
+  patientRanking?: 'STANDARD' | 'VIP' | 'GOLD' | 'PLATINUM';
 }
 
 export interface Appointment {
@@ -169,6 +239,7 @@ export interface FinancialRecord {
   status: "Pago" | "Pendente";
   cashRegisterId?: string; // Links transaction to a specific daily register
   paymentMethod?: string;
+  categoryId?: string; // Links transaction to a budget category
 }
 
 export interface Expense {
@@ -182,6 +253,30 @@ export interface Expense {
   status: "Pendente" | "Pago" | "Atrasado" | "Pago Parcial";
   paymentMethod?: string;
   paymentHistory?: PaymentHistoryItem[];
+  isVariableCost?: boolean;
+}
+
+export interface ExpenseCategory {
+  id: string;
+  name: string;
+  isVariableCost: boolean;
+}
+
+export interface ProcedureCost {
+  procedureId: string;
+  materialCost: number;
+  professionalCost: number;
+  operationalOverhead: number;
+  taxPercent: number;
+  cardFeePercent: number;
+}
+
+export interface ProfessionalGoal {
+  id: string;
+  professionalId: string;
+  month: string; // YYYY-MM-DD (first day of month)
+  revenueGoal: number;
+  conversionGoal: number;
 }
 
 // --- FORT KNOX FINANCIAL TYPES ---

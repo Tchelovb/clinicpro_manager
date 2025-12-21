@@ -16,6 +16,7 @@ import {
   updatePassword,
   UserProfile as UserProfileType,
 } from "../src/services/userProfile";
+import { ROLE_LABELS, UserRole } from "../types";
 
 const UserProfile: React.FC = () => {
   const { user: authUser, profile, refreshProfile, signOut } = useAuth();
@@ -116,16 +117,6 @@ const UserProfile: React.FC = () => {
     } catch (err: any) {
       alert("Erro ao alterar senha: " + err.message);
     }
-  };
-
-  const getRoleLabel = (role: string) => {
-    const roles: Record<string, string> = {
-      ADMIN: "Administrador",
-      DENTIST: "Dentista",
-      RECEPTIONIST: "Recepcionista",
-      ASSISTANT: "Assistente",
-    };
-    return roles[role] || role;
   };
 
   if (loading) {
@@ -232,7 +223,7 @@ const UserProfile: React.FC = () => {
                   Função / Cargo
                 </label>
                 <p className="text-gray-700 text-sm bg-gray-50 p-2 rounded border border-gray-100 inline-block">
-                  {getRoleLabel(userProfile.role)}
+                  {ROLE_LABELS[userProfile.role as UserRole] || userProfile.role}
                 </p>
               </div>
               {isEditing && (

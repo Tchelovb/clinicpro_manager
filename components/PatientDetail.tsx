@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useData } from "../contexts/DataContext";
+import { useAuth } from "../contexts/AuthContext";
 import { supabase } from "../lib/supabase";
 import { formatPhoneNumber } from "../utils/utils";
 import PatientTreatments from "./PatientTreatments";
@@ -24,10 +25,13 @@ import {
   Trash2,
   Edit,
 } from "lucide-react";
+import { SocialDossier, MedicalAlertPopup, PatientScoreBadge } from "./patient";
+import { OrthoContractForm, OrthoContractList, AlignerTracker, OrthoTreatmentPlanForm } from "./ortho";
 
 const PatientDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { profile } = useAuth();
   const { patients, updatePatient, approveBudget, deleteBudget, documents } =
     useData();
 
@@ -41,12 +45,19 @@ const PatientDetail: React.FC = () => {
     | "tratamentos"
     | "financeiro"
     | "documentos"
+    | "ortodontia"
   >("cadastro");
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showDeleteBudgetModal, setShowDeleteBudgetModal] = useState(false);
   const [budgetToDelete, setBudgetToDelete] = useState<string | null>(null);
   const [openMenuBudgetId, setOpenMenuBudgetId] = useState<string | null>(null);
+  const [showAlertPopup, setShowAlertPopup] = useState(false);
+  const [medicalAlerts, setMedicalAlerts] = useState<any[]>([]);
+  const [showOrthoContractForm, setShowOrthoContractForm] = useState(false);
+  const [selectedOrthoContract, setSelectedOrthoContract] = useState<any | null>(null);
+  const [reloadOrthoContracts, setReloadOrthoContracts] = useState(0);
+  const [showOrthoTreatmentPlanForm, setShowOrthoTreatmentPlanForm] = useState(false);
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -56,6 +67,27 @@ const PatientDetail: React.FC = () => {
       return () => document.removeEventListener("click", handleClickOutside);
     }
   }, [openMenuBudgetId]);
+
+  // Buscar alertas médicos críticos
+  useEffect(() => {
+    const fetchMedicalAlerts = async () => {
+      if (!patient?.id) return;
+
+      const { data, error } = await supabase
+        .from('medical_alerts')
+        .select('*')
+        .eq('patient_id', patient.id)
+        .eq('is_active', true)
+        .in('severity', ['HIGH', 'CRITICAL']);
+
+      if (!error && data && data.length > 0) {
+        setMedicalAlerts(data);
+        setShowAlertPopup(true);
+      }
+    };
+
+    fetchMedicalAlerts();
+  }, [patient?.id]);
 
   if (!patient)
     return <div className="p-8 dark:text-white">Paciente não encontrado.</div>;
@@ -186,6 +218,7 @@ const PatientDetail: React.FC = () => {
     { id: "cadastro", label: "Cadastro", icon: User },
     { id: "orcamentos", label: "Orçamentos", icon: FileText },
     { id: "tratamentos", label: "Tratamentos", icon: Shield },
+    { id: "ortodontia", label: "Ortodontia", icon: Shield },
     { id: "financeiro", label: "Financeiro", icon: DollarSign },
     { id: "documentos", label: "Docs", icon: File },
     { id: "prontuario", label: "Evolução", icon: Activity },
@@ -830,6 +863,11 @@ const PatientDetail: React.FC = () => {
                     </div>
                   </div>
                 </div>
+
+                {/* DOSSIÊ HIGH-TICKET */}
+                <div className="mt-6">
+                  <SocialDossier patient={patient} />
+                </div>
               </div>
             )}
           </div>
@@ -1119,7 +1157,7 @@ const PatientDetail: React.FC = () => {
                     ))}
                   </div>
                 </div>
-                {(budget.status === "Em Análise" || budget.status === "EM ANÁLISE") && (
+                {["Em Análise", "EM ANÁLISE", "Enviado"].includes(budget.status as string) && (
                   <div className="p-3 bg-gray-50 dark:bg-gray-900/50 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2">
                     <button
                       onClick={() =>
@@ -1234,7 +1272,92 @@ const PatientDetail: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/* TAB: ORTODONTIA */}
+        {activeTab === "ortodontia" && (
+          <div className="max-w-6xl mx-auto animate-in fade-in">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                Ortodontia
+              </h2>
+              <button
+                onClick={() => setShowOrthoContractForm(true)}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-2 shadow-sm"
+              >
+                <Plus size={16} /> Novo Contrato
+              </button>
+            </div>
+
+            {/* Lista de Contratos */}
+            <div className="mb-8">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                Contratos Ortodônticos
+              </h3>
+              <OrthoContractList
+                patientId={patient.id}
+                onSelectContract={(contract) => setSelectedOrthoContract(contract)}
+                reload={reloadOrthoContracts}
+              />
+            </div>
+
+            {/* Rastreador de Alinhadores (se houver contrato selecionado) */}
+            {selectedOrthoContract && (
+              <div className="mt-8">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Progresso do Tratamento
+                  </h3>
+                  <button
+                    onClick={() => setShowOrthoTreatmentPlanForm(true)}
+                    className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 flex items-center gap-2"
+                  >
+                    <Plus size={16} /> Criar Plano de Tratamento
+                  </button>
+                </div>
+                <AlignerTracker
+                  contractId={selectedOrthoContract.id}
+                  patientName={patient.name}
+                />
+              </div>
+            )}
+          </div>
+        )}
       </div>
+
+      {/* MODAL: NOVO CONTRATO ORTODÔNTICO */}
+      {showOrthoContractForm && (
+        <OrthoContractForm
+          patientId={patient.id}
+          patientName={patient.name}
+          clinicId={profile?.clinic_id || ''}
+          onSuccess={() => {
+            setShowOrthoContractForm(false);
+            setReloadOrthoContracts(Date.now()); // Força reload da lista
+          }}
+          onCancel={() => setShowOrthoContractForm(false)}
+        />
+      )}
+
+      {/* MODAL: PLANO DE TRATAMENTO */}
+      {showOrthoTreatmentPlanForm && selectedOrthoContract && (
+        <OrthoTreatmentPlanForm
+          contractId={selectedOrthoContract.id}
+          onSuccess={() => {
+            setShowOrthoTreatmentPlanForm(false);
+            // Recarregar rastreador
+          }}
+          onCancel={() => setShowOrthoTreatmentPlanForm(false)}
+        />
+      )}
+
+      {/* MEDICAL ALERT POPUP (Bloqueante) */}
+      {showAlertPopup && medicalAlerts.length > 0 && (
+        <MedicalAlertPopup
+          alerts={medicalAlerts}
+          patientName={patient.name}
+          onClose={() => setShowAlertPopup(false)}
+        />
+      )}
     </div>
   );
 };

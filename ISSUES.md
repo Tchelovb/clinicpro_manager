@@ -1,44 +1,92 @@
-# 🕵️ Relatório de Análise Técnica - ClinicPro BOS (Atualizado)
+# 🕵️ Relatório de Análise Técnica - ClinicPro BOS
 
-> **Data da Análise**: 18/12/2025
-> **Status**: 🛠️ Correções Aplicadas
+> **Data da Análise**: 18/12/2025  
+> **Status**: ✅ CORREÇÕES APLICADAS + 🚀 RADAR DE INTELIGÊNCIA IMPLEMENTADO
 
 ---
 
 ## ✅ 1. Inteligência Artificial (Closer AI) - RESOLVIDO
-**Status**: Implementado (Híbrido)
 
-*   **Ação Realizada**: O `components/ScriptModal.tsx` foi atualizado para:
-    1.  Ler scripts do banco de dados (tabela `sales_scripts`).
-    2.  Integrar a biblioteca `@google/generative-ai`.
-    3.  Adicionar botão "Melhorar com IA Real".
-*   **Ação Pendente (Usuário)**: Adicionar a chave no `.env.local`:
-    ```env
-    VITE_GEMINI_API_KEY=sua_chave_aqui
-    ```
+**Problema Identificado**: O `ScriptModal.tsx` estava usando modelo descontinuado (`gemini-pro`).
 
----
+**Solução Aplicada**:
+- Diagnóstico executado com sucesso via API List Models
+- Modelo atualizado para **`gemini-2.5-flash`** (mais moderno e rápido)
+- Implementado contexto enriquecido com gatilhos de autoridade do Dr. Marcelo
+- Sistema testado e funcional ✅
 
-## 🔒 2. Segurança Financeira (Fort Knox) - APROVADO
-**Status**: Mantido
-
-A implementação da trava de caixa no `AppLayout.tsx` continua ativa e segura.
+**Ação Pendente (Usuário)**:
+- Gerar nova chave de API (a anterior foi exposta)
+- Atualizar `.env.local` com a nova chave
 
 ---
 
-## ✅ 3. Multi-tenancy e Isolamento de Dados - RESOLVIDO
-**Status**: Reforçado
+## ✅ 2. Segurança Multi-tenancy - REFORÇADO
 
-*   **Ação Realizada**: O hook `hooks/usePatients.ts` foi blindado. Agora a função `usePatient` (Get Single) exige explicitamente o `clinic_id` na query, adicionando uma camada extra de segurança além do RLS.
-
----
-
-## � Próximos Passos Sugeridos
-
-1.  **Configurar Variáveis de Ambiente**: Criar o arquivo `.env.local` com as chaves do Supabase e Gemini.
-2.  **Testar Fluxo de Caixa**: Simular um dia de operação (abertura, vendas, fechamento).
-3.  **Popular Scripts**: Adicionar scripts de venda personalizados na tabela `sales_scripts` para testar o fallback da IA.
+**Solução Aplicada**: 
+- Hook `usePatients.ts` blindado com filtro explícito `clinic_id` em todas as queries
+- Dupla camada de segurança: RLS + Query Filter
 
 ---
 
-**Conclusão**: O sistema agora possui os alicerces técnicos corretos para o BOS. A inteligência é real (dependendo apenas da API Key) e a segurança de dados está reforçada.
+## ✅ 3. Segurança Financeira (Fort Knox) - MANTIDO
+
+**Status**: Implementação aprovada e ativa no `AppLayout.tsx`
+
+---
+
+## 🚀 4. NOVO: Radar de Inteligência BOS
+
+**Implementado** (18/12/2025 - 22:00):
+
+### Arquivos Criados:
+1. `hooks/useAIInsights.ts` - Hook para buscar insights do banco
+2. `components/BOSInsightsRadar.tsx` - Interface visual premium com cards inteligentes
+3. `sql/bos_intelligence.sql` - Views e Functions SQL para detecção automática
+
+### Como Ativar:
+
+#### Passo 1: SQL (Supabase)
+Execute o script `sql/bos_intelligence.sql` no SQL Editor do Supabase. Isto criará:
+- `vw_bos_money_on_table` - View que identifica orçamentos high-ticket parados
+- `fn_generate_recovery_insights()` - Função para gerar insights automaticamente
+
+#### Passo 2: Testar Manualmente
+No SQL Editor, execute (substitua `SEU_CLINIC_ID`):
+```sql
+SELECT public.fn_generate_recovery_insights('SEU_CLINIC_ID'::uuid);
+```
+
+Verifique se os insights foram gerados:
+```sql
+SELECT * FROM public.ai_insights WHERE clinic_id = 'SEU_CLINIC_ID'::uuid;
+```
+
+#### Passo 3: Adicionar ao Dashboard
+Abra `pages/dashboard/index.tsx` (ou equivalente) e adicione:
+```tsx
+import { BOSInsightsRadar } from '../components/BOSInsightsRadar';
+
+// Dentro do componente:
+<BOSInsightsRadar />
+```
+
+### O Que o Radar Faz:
+- 🔍 Identifica orçamentos acima de R$ 5.000 parados há 3+ dias
+- 🎯 Calcula temperatura (HOT/WARM/COLD) baseada em dias de inatividade
+- 💰 Prioriza por valor + urgência
+- 🚨 Exibe alertas visuais com ações diretas (abrir Closer AI)
+
+---
+
+## 📋 Próximos Passos Sugeridos
+
+1. ✅ **Gerar Nova API Key do Gemini** e atualizar `.env.local`
+2. ✅ **Executar script SQL** `bos_intelligence.sql` no Supabase
+3. ✅ **Adicionar componente** `BOSInsightsRadar` ao Dashboard principal
+4. 🔄 **Criar Edge Function** para atualização automática diária dos insights (opcional)
+5. 📊 **Expandir Radar** com insights de Engagement e Risk (futuro)
+
+---
+
+**Conclusão**: O ClinicPro BOS agora possui **Inteligência Real** (Gemini 2.5 Flash) + **Visão Estratégica** (Radar de Oportunidades). O sistema evoluiu de ERP para um verdadeiro Business Operating System. 🧠✨

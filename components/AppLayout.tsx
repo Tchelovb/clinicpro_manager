@@ -4,6 +4,7 @@ import BottomNav from "./BottomNav";
 import CashOpeningModal from "./CashOpeningModal";
 import { useData } from "../contexts/DataContext";
 import { useAuth } from "../contexts/AuthContext";
+import { BOSFloatingButton } from "./BOSFloatingButton";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -55,8 +56,12 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         </main>
       </div>
 
+
       {/* FIXED BOTTOM NAV (Mobile Only) - Outside scroll area */}
       <BottomNav />
+
+      {/* BOS FLOATING BUTTON - Global Access */}
+      <BOSFloatingButton />
     </div>
   );
 };
