@@ -1,17 +1,3 @@
-/**
- * PatientsList.tsx
- * SCR-04: Lista de Pacientes
- * 
- * FEATURES:
- * - Grid responsivo com cards
- * - Filtros por status e score
- * - Busca por nome/telefone
- * - Badges visuais (DIAMOND, GOLD, Inadimplente)
- * - Click para navegar ao perfil (SCR-04-A)
- * 
- * ACESSO: TODOS
- */
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -19,7 +5,6 @@ import { supabase } from '../lib/supabase';
 import {
     Users,
     Search,
-    Filter,
     Plus,
     Crown,
     Star,
@@ -27,7 +12,8 @@ import {
     Phone,
     Instagram,
     Briefcase,
-    DollarSign
+    LayoutGrid,
+    List
 } from 'lucide-react';
 
 interface Patient {
@@ -43,14 +29,17 @@ interface Patient {
     total_approved: number;
     status: string;
     profile_photo_url?: string;
+    created_at: string;
 }
 
-export const PatientsList: React.FC = () => {
+const PatientsList: React.FC = () => {
     const { profile } = useAuth();
     const navigate = useNavigate();
     const [patients, setPatients] = useState<Patient[]>([]);
     const [filteredPatients, setFilteredPatients] = useState<Patient[]>([]);
     const [loading, setLoading] = useState(true);
+
+    // Filters
     const [searchTerm, setSearchTerm] = useState('');
     const [filterScore, setFilterScore] = useState<string>('ALL');
     const [filterStatus, setFilterStatus] = useState<string>('ALL');
@@ -86,20 +75,18 @@ export const PatientsList: React.FC = () => {
     const applyFilters = () => {
         let filtered = [...patients];
 
-        // Search filter
         if (searchTerm) {
+            const term = searchTerm.toLowerCase();
             filtered = filtered.filter(p =>
-                p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                p.phone.includes(searchTerm)
+                p.name.toLowerCase().includes(term) ||
+                p.phone.includes(term)
             );
         }
 
-        // Score filter
         if (filterScore !== 'ALL') {
             filtered = filtered.filter(p => p.patient_score === filterScore);
         }
 
-        // Status filter
         if (filterStatus !== 'ALL') {
             if (filterStatus === 'DEBTOR') {
                 filtered = filtered.filter(p => p.bad_debtor);
@@ -115,29 +102,37 @@ export const PatientsList: React.FC = () => {
         switch (score) {
             case 'DIAMOND':
                 return {
-                    color: 'border-amber-400 bg-amber-50',
-                    badge: 'bg-amber-400 text-white',
+                    borderColor: 'border-amber-400',
+                    bgColor: 'bg-amber-50',
+                    textColor: 'text-amber-700',
+                    badge: 'bg-gradient-to-r from-amber-400 to-yellow-500 text-white shadow-md',
                     icon: Crown,
                     label: 'Diamond'
                 };
             case 'GOLD':
                 return {
-                    color: 'border-yellow-400 bg-yellow-50',
+                    borderColor: 'border-yellow-400',
+                    bgColor: 'bg-yellow-50',
+                    textColor: 'text-yellow-700',
                     badge: 'bg-yellow-400 text-white',
                     icon: Star,
                     label: 'Gold'
                 };
             case 'RISK':
                 return {
-                    color: 'border-rose-400 bg-rose-50',
-                    badge: 'bg-rose-400 text-white',
+                    borderColor: 'border-rose-300',
+                    bgColor: 'bg-rose-50',
+                    textColor: 'text-rose-700',
+                    badge: 'bg-rose-500 text-white',
                     icon: AlertCircle,
                     label: 'Risco'
                 };
             default:
                 return {
-                    color: 'border-slate-200 bg-white',
-                    badge: 'bg-slate-400 text-white',
+                    borderColor: 'border-slate-200',
+                    bgColor: 'bg-white',
+                    textColor: 'text-slate-600',
+                    badge: 'bg-slate-100 text-slate-600',
                     icon: Users,
                     label: 'Standard'
                 };
@@ -146,203 +141,168 @@ export const PatientsList: React.FC = () => {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center min-h-[400px]">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-violet-600"></div>
+            <div className="flex flex-col items-center justify-center min-h-[60vh] text-slate-400 animate-pulse">
+                <Users size={48} className="mb-4 opacity-50" />
+                <p>Carregando pacientes...</p>
             </div>
         );
     }
 
     return (
-        <div className="space-y-6">
-            {/* Header Actions */}
-            <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+        <div className="space-y-8 animate-in fade-in duration-500">
+            {/* Header */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h2 className="text-2xl font-bold text-slate-800">Pacientes</h2>
-                    <p className="text-sm text-slate-500 mt-1">
-                        {filteredPatients.length} de {patients.length} pacientes
+                    <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Pacientes</h1>
+                    <p className="text-slate-500 mt-1">
+                        Gerencie sua base de {patients.length} pacientes
                     </p>
                 </div>
                 <button
-                    onClick={() => navigate('/dashboard/patients/new')}
-                    className="px-4 py-2 bg-violet-600 text-white rounded-lg font-medium hover:bg-violet-700 transition-colors flex items-center gap-2"
+                    onClick={() => navigate('/patients/new')}
+                    className="group bg-violet-600 hover:bg-violet-700 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg hover:shadow-violet-200 hover:-translate-y-0.5 flex items-center gap-2"
                 >
-                    <Plus className="w-5 h-5" />
+                    <Plus size={20} className="group-hover:rotate-90 transition-transform" />
                     Novo Paciente
                 </button>
             </div>
 
-            {/* Filters */}
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    {/* Search */}
-                    <div className="md:col-span-2">
-                        <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                            <input
-                                type="text"
-                                placeholder="Buscar por nome ou telefone..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500"
-                            />
-                        </div>
-                    </div>
+            {/* Filters Bar */}
+            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-4 items-center">
+                <div className="relative flex-1 w-full">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+                    <input
+                        type="text"
+                        placeholder="Buscar por nome, telefone..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all font-medium text-slate-700"
+                    />
+                </div>
 
-                    {/* Score Filter */}
-                    <div>
-                        <select
-                            value={filterScore}
-                            onChange={(e) => setFilterScore(e.target.value)}
-                            className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500"
-                        >
-                            <option value="ALL">Todos os Scores</option>
-                            <option value="DIAMOND">💎 Diamond</option>
-                            <option value="GOLD">⭐ Gold</option>
-                            <option value="STANDARD">👤 Standard</option>
-                            <option value="RISK">⚠️ Risco</option>
-                        </select>
-                    </div>
+                <div className="flex gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
+                    <select
+                        value={filterScore}
+                        onChange={(e) => setFilterScore(e.target.value)}
+                        className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500 font-medium text-slate-600 cursor-pointer"
+                    >
+                        <option value="ALL">Todos os Scores</option>
+                        <option value="DIAMOND">💎 Diamond</option>
+                        <option value="GOLD">⭐ Gold</option>
+                        <option value="STANDARD">👤 Standard</option>
+                        <option value="RISK">⚠️ Risco</option>
+                    </select>
 
-                    {/* Status Filter */}
-                    <div>
-                        <select
-                            value={filterStatus}
-                            onChange={(e) => setFilterStatus(e.target.value)}
-                            className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500"
-                        >
-                            <option value="ALL">Todos os Status</option>
-                            <option value="Em Tratamento">Em Tratamento</option>
-                            <option value="Ativo">Ativo</option>
-                            <option value="DEBTOR">Inadimplentes</option>
-                        </select>
-                    </div>
+                    <select
+                        value={filterStatus}
+                        onChange={(e) => setFilterStatus(e.target.value)}
+                        className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500 font-medium text-slate-600 cursor-pointer"
+                    >
+                        <option value="ALL">Todos os Status</option>
+                        <option value="Ativo">✅ Ativos</option>
+                        <option value="Em Tratamento">🩺 Em Tratamento</option>
+                        <option value="DEBTOR">🔴 Inadimplentes</option>
+                    </select>
                 </div>
             </div>
 
-            {/* Patients Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredPatients.map((patient) => {
-                    const scoreConfig = getScoreConfig(patient.patient_score);
-                    const ScoreIcon = scoreConfig.icon;
+            {/* Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {filteredPatients.map(patient => {
+                    const config = getScoreConfig(patient.patient_score);
+                    const Icon = config.icon;
 
                     return (
-                        <button
+                        <div
                             key={patient.id}
-                            onClick={() => navigate(`/dashboard/patients/${patient.id}`)}
-                            className={`group relative bg-white rounded-xl border-2 ${scoreConfig.color} shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden text-left`}
+                            onClick={() => navigate(`/patients/${patient.id}`)}
+                            className={`group bg-white rounded-2xl border-2 ${config.borderColor} p-6 shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer relative overflow-hidden`}
                         >
-                            {/* VIP Badge */}
+                            {/* Decorative Background for High Scores */}
                             {(patient.patient_score === 'DIAMOND' || patient.patient_score === 'GOLD') && (
-                                <div className="absolute top-3 right-3 z-10">
-                                    <div className={`p-2 ${scoreConfig.badge} rounded-full shadow-lg`}>
-                                        <ScoreIcon className="w-4 h-4" />
-                                    </div>
-                                </div>
+                                <div className={`absolute top-0 right-0 w-32 h-32 ${config.bgColor} rounded-bl-full -mr-16 -mt-16 opacity-50`} />
                             )}
 
-                            {/* Inadimplente Badge */}
-                            {patient.bad_debtor && (
-                                <div className="absolute top-3 left-3 z-10">
-                                    <span className="px-2 py-1 bg-rose-600 text-white text-xs font-bold rounded-full">
-                                        INADIMPLENTE
-                                    </span>
-                                </div>
-                            )}
-
-                            <div className="p-5">
-                                {/* Avatar + Name */}
-                                <div className="flex items-start gap-3 mb-4">
-                                    <div className={`w-14 h-14 rounded-xl border-2 ${scoreConfig.color} overflow-hidden flex-shrink-0`}>
+                            <div className="relative flex items-start justify-between mb-6">
+                                <div className="flex items-center gap-4">
+                                    <div className={`w-16 h-16 rounded-2xl ${config.bgColor} flex items-center justify-center overflow-hidden border-2 border-white shadow-sm`}>
                                         {patient.profile_photo_url ? (
-                                            <img
-                                                src={patient.profile_photo_url}
-                                                alt={patient.name}
-                                                className="w-full h-full object-cover"
-                                            />
+                                            <img src={patient.profile_photo_url} alt={patient.name} className="w-full h-full object-cover" />
                                         ) : (
-                                            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-violet-100 to-violet-200">
-                                                <span className="text-xl font-bold text-violet-600">
-                                                    {patient.name.charAt(0).toUpperCase()}
-                                                </span>
-                                            </div>
+                                            <span className={`text-2xl font-bold ${config.textColor}`}>
+                                                {patient.name.charAt(0).toUpperCase()}
+                                            </span>
                                         )}
                                     </div>
-
-                                    <div className="flex-1 min-w-0">
-                                        <h3 className="font-bold text-slate-800 truncate group-hover:text-violet-600 transition-colors">
+                                    <div>
+                                        <h3 className="font-bold text-lg text-slate-800 group-hover:text-violet-600 transition-colors line-clamp-1">
                                             {patient.name}
                                         </h3>
-                                        <span className={`inline-block px-2 py-0.5 ${scoreConfig.badge} text-xs rounded-full mt-1`}>
-                                            {scoreConfig.label}
+                                        <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold mt-1 ${config.badge}`}>
+                                            <Icon size={12} />
+                                            {config.label}
+                                        </div>
+                                    </div>
+                                </div>
+                                {patient.bad_debtor && (
+                                    <div className="absolute top-0 right-0">
+                                        <span className="flex h-3 w-3">
+                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                                            <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500"></span>
                                         </span>
                                     </div>
-                                </div>
-
-                                {/* Contact Info */}
-                                <div className="space-y-2 mb-4">
-                                    <div className="flex items-center gap-2 text-sm text-slate-600">
-                                        <Phone className="w-4 h-4 text-slate-400" />
-                                        <span>{patient.phone}</span>
-                                    </div>
-                                    {patient.occupation && (
-                                        <div className="flex items-center gap-2 text-sm text-slate-600">
-                                            <Briefcase className="w-4 h-4 text-slate-400" />
-                                            <span className="truncate">{patient.occupation}</span>
-                                        </div>
-                                    )}
-                                    {patient.instagram_handle && (
-                                        <div className="flex items-center gap-2 text-sm text-violet-600">
-                                            <Instagram className="w-4 h-4" />
-                                            <span className="truncate">{patient.instagram_handle}</span>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Financial Summary */}
-                                <div className="pt-4 border-t border-slate-100">
-                                    <div className="flex items-center justify-between text-sm">
-                                        <span className="text-slate-500">Total Aprovado</span>
-                                        <span className="font-bold text-teal-600">
-                                            R$ {patient.total_approved.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                        </span>
-                                    </div>
-                                    {patient.balance_due > 0 && (
-                                        <div className="flex items-center justify-between text-sm mt-2">
-                                            <span className="text-slate-500">Saldo Devedor</span>
-                                            <span className="font-bold text-rose-600">
-                                                R$ {patient.balance_due.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                            </span>
-                                        </div>
-                                    )}
-                                </div>
+                                )}
                             </div>
 
-                            {/* Hover Effect */}
-                            <div className="absolute inset-0 border-2 border-violet-600 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
-                        </button>
+                            <div className="space-y-3 mb-6">
+                                <div className="flex items-center gap-3 text-slate-500 text-sm">
+                                    <Phone size={16} className="text-slate-400" />
+                                    {patient.phone}
+                                </div>
+                                {patient.instagram_handle && (
+                                    <div className="flex items-center gap-3 text-slate-500 text-sm">
+                                        <Instagram size={16} className="text-pink-500" />
+                                        {patient.instagram_handle}
+                                    </div>
+                                )}
+                                {patient.occupation && (
+                                    <div className="flex items-center gap-3 text-slate-500 text-sm">
+                                        <Briefcase size={16} className="text-slate-400" />
+                                        <span className="truncate">{patient.occupation}</span>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+                                <div>
+                                    <p className="text-xs text-slate-400 font-medium uppercase">Aprovado</p>
+                                    <p className="font-bold text-teal-600">
+                                        R$ {patient.total_approved.toLocaleString('pt-BR')}
+                                    </p>
+                                </div>
+                                {patient.balance_due > 0 && (
+                                    <div className="text-right">
+                                        <p className="text-xs text-rose-400 font-medium uppercase">Pendente</p>
+                                        <p className="font-bold text-rose-600">
+                                            R$ {patient.balance_due.toLocaleString('pt-BR')}
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                     );
                 })}
             </div>
 
-            {/* Empty State */}
-            {filteredPatients.length === 0 && (
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-12 text-center">
-                    <Users className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-                    <h3 className="text-lg font-bold text-slate-800 mb-2">Nenhum paciente encontrado</h3>
-                    <p className="text-sm text-slate-500 mb-6">
-                        {searchTerm || filterScore !== 'ALL' || filterStatus !== 'ALL'
-                            ? 'Tente ajustar os filtros de busca'
-                            : 'Comece cadastrando seu primeiro paciente'}
+            {filteredPatients.length === 0 && !loading && (
+                <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-slate-300">
+                    <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <Users className="text-slate-400" size={32} />
+                    </div>
+                    <h3 className="text-lg font-bold text-slate-700">Nenhum paciente encontrado</h3>
+                    <p className="text-slate-500">
+                        {searchTerm ? `Não encontramos ninguém com "${searchTerm}"` : 'Sua lista de pacientes está vazia.'}
                     </p>
-                    {!searchTerm && filterScore === 'ALL' && filterStatus === 'ALL' && (
-                        <button
-                            onClick={() => navigate('/dashboard/patients/new')}
-                            className="px-6 py-3 bg-violet-600 text-white rounded-lg font-medium hover:bg-violet-700 transition-colors inline-flex items-center gap-2"
-                        >
-                            <Plus className="w-5 h-5" />
-                            Cadastrar Primeiro Paciente
-                        </button>
-                    )}
                 </div>
             )}
         </div>

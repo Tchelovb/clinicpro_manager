@@ -6,8 +6,8 @@ import {
     Wallet, FileText, TrendingUp, AlertTriangle, Lock, Unlock,
     Plus, Calendar, CreditCard, CheckCircle, Clock
 } from 'lucide-react';
-import CashClosingWizard from './CashClosingWizard';
-import SangriaSuprimentoModal from './SangriaSuprimentoModal';
+import CashClosingWizard from '../components/CashClosingWizard';
+import SangriaSuprimentoModal from '../components/SangriaSuprimentoModal';
 
 const Financial: React.FC = () => {
     const {

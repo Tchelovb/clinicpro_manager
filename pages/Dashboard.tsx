@@ -1,346 +1,383 @@
-import React, { useEffect, useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabase';
+import React, { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import {
-    TrendingUp,
-    Users,
-    DollarSign,
-    Target,
     Calendar,
-    AlertCircle,
     CheckCircle,
     Clock,
-    Sparkles
-} from 'lucide-react';
+    AlertCircle,
+    MessageCircle,
+    Phone,
+    User,
+    ArrowRight,
+    ListTodo,
+    Bell,
+    X,
+    AlertTriangle,
+    Target,
+    Sparkles,
+    TrendingUp,
+    Activity
+} from "lucide-react";
+import { useAuth } from "../contexts/AuthContext";
+import { useDashboardData } from "../hooks/useDashboardData";
+import { LeadStatus } from "../types";
+import AIInsightsFeed from "../components/dashboard/AIInsightsFeed";
+import ComplianceWidget from "../components/dashboard/ComplianceWidget";
 
-interface ClinicKPI {
-    total_revenue: number;
-    new_patients_count: number;
-    conversion_rate: number;
-    appointments_scheduled: number;
-    appointments_completed: number;
-    no_show_rate: number;
-    budgets_created_count: number;
-    budgets_approved_count: number;
-}
-
-interface ClinicGoals {
-    new_patients: number;
-    no_show_rate: number;
-    average_ticket: number;
-    occupancy_rate: number;
-    conversion_rate: number;
-    monthly_revenue: number;
-    monthly_net_result: number;
-}
-
-export const Dashboard: React.FC = () => {
+const Dashboard: React.FC = () => {
+    const navigate = useNavigate();
     const { profile } = useAuth();
-    const [kpis, setKpis] = useState<ClinicKPI | null>(null);
-    const [goals, setGoals] = useState<ClinicGoals | null>(null);
-    const [loading, setLoading] = useState(true);
+    const [showNotifications, setShowNotifications] = useState(false);
+    const [completedTasks, setCompletedTasks] = useState<string[]>([]);
 
-    useEffect(() => {
-        if (profile?.clinic_id) {
-            loadDashboardData();
-        }
-    }, [profile?.clinic_id]);
+    // Usar o hook personalizado para dados do dashboard
+    const {
+        appointments: todaysAppointments,
+        leads,
+        kpis,
+        reminders,
+        isLoading,
+        hasError,
+        appointmentsError,
+        leadsError,
+        patientsError,
+        refetch,
+    } = useDashboardData();
 
-    const loadDashboardData = async () => {
-        try {
-            setLoading(true);
+    // Filtrar leads prioritários
+    const priorityLeads = useMemo(
+        () =>
+            leads.filter(
+                (l) => l.status === LeadStatus.NEW || l.status === LeadStatus.CONTACT
+            ),
+        [leads]
+    );
 
-            // Load current month KPIs
-            const startOfMonth = new Date();
-            startOfMonth.setDate(1);
-            startOfMonth.setHours(0, 0, 0, 0);
+    // Componente de estado vazio
+    const EmptyState: React.FC<{
+        icon: React.ComponentType<any>;
+        title: string;
+        description: string;
+    }> = ({ icon: Icon, title, description }) => (
+        <div className="flex flex-col items-center justify-center text-slate-400 p-8 text-center bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
+            <Icon size={32} className="mb-3 opacity-50" />
+            <p className="text-sm font-semibold text-slate-600">{title}</p>
+            <p className="text-xs text-slate-500 mt-1 max-w-[200px]">{description}</p>
+        </div>
+    );
 
-            const endOfMonth = new Date();
-            endOfMonth.setMonth(endOfMonth.getMonth() + 1);
-            endOfMonth.setDate(0);
-            endOfMonth.setHours(23, 59, 59, 999);
-
-            const { data: kpiData } = await supabase
-                .from('clinic_kpis')
-                .select('*')
-                .eq('clinic_id', profile!.clinic_id)
-                .gte('period_start', startOfMonth.toISOString().split('T')[0])
-                .lte('period_end', endOfMonth.toISOString().split('T')[0])
-                .single();
-
-            // Load clinic goals
-            const { data: clinicData } = await supabase
-                .from('clinics')
-                .select('goals')
-                .eq('id', profile!.clinic_id)
-                .single();
-
-            setKpis(kpiData || {
-                total_revenue: 0,
-                new_patients_count: 0,
-                conversion_rate: 0,
-                appointments_scheduled: 0,
-                appointments_completed: 0,
-                no_show_rate: 0,
-                budgets_created_count: 0,
-                budgets_approved_count: 0
-            });
-
-            setGoals(clinicData?.goals || {
-                new_patients: 20,
-                no_show_rate: 5,
-                average_ticket: 2000,
-                occupancy_rate: 80,
-                conversion_rate: 30,
-                monthly_revenue: 50000,
-                monthly_net_result: 25000
-            });
-        } catch (error) {
-            console.error('Erro ao carregar dashboard:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const calculateProgress = (current: number, goal: number, inverse = false) => {
-        if (goal === 0) return 0;
-        const percentage = (current / goal) * 100;
-        return inverse ? 100 - Math.min(percentage, 100) : Math.min(percentage, 100);
-    };
-
-    const getProgressColor = (progress: number) => {
-        if (progress >= 90) return 'bg-teal-500';
-        if (progress >= 60) return 'bg-amber-400';
-        return 'bg-rose-600';
-    };
-
-    const getProgressTextColor = (progress: number) => {
-        if (progress >= 90) return 'text-teal-600';
-        if (progress >= 60) return 'text-amber-600';
-        return 'text-rose-600';
-    };
-
-    if (loading) {
+    // Estado de loading
+    if (isLoading) {
         return (
-            <div className="flex items-center justify-center min-h-[400px]">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-violet-600"></div>
+            <div className="flex flex-col items-center justify-center h-[calc(100vh-100px)] animate-pulse">
+                <div className="w-12 h-12 border-4 border-violet-200 border-t-violet-600 rounded-full animate-spin mb-4" />
+                <p className="text-slate-500 font-medium">Sincronizando dados da clínica...</p>
             </div>
         );
     }
 
-    const revenueProgress = calculateProgress(kpis?.total_revenue || 0, goals?.monthly_revenue || 50000);
-    const patientsProgress = calculateProgress(kpis?.new_patients_count || 0, goals?.new_patients || 20);
-    const conversionProgress = calculateProgress(kpis?.conversion_rate || 0, goals?.conversion_rate || 30);
-    const noShowProgress = calculateProgress(kpis?.no_show_rate || 0, goals?.no_show_rate || 5, true);
+    // Estado de erro geral
+    if (hasError) {
+        return (
+            <div className="p-6">
+                <div className="bg-rose-50 border border-rose-200 rounded-xl p-6 max-w-2xl mx-auto text-center">
+                    <div className="w-12 h-12 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <AlertTriangle size={24} />
+                    </div>
+                    <h3 className="text-lg font-bold text-rose-800 mb-2">Ops! Algo deu errado.</h3>
+                    <p className="text-sm text-rose-600 mb-6">
+                        Não conseguimos carregar todas as informações do dashboard.
+                    </p>
+
+                    <div className="text-left bg-white p-4 rounded-lg border border-rose-100 mb-6 text-xs text-rose-500 space-y-1">
+                        {appointmentsError && <p>• Agenda: {appointmentsError.message}</p>}
+                        {leadsError && <p>• CRM: {leadsError.message}</p>}
+                        {patientsError && <p>• Pacientes: {patientsError.message}</p>}
+                    </div>
+
+                    <button
+                        onClick={refetch}
+                        className="px-6 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-colors font-medium shadow-sm"
+                    >
+                        Tentar Novamente
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    // Funções auxiliares mantidas
+    const handleConfirmAppointment = (id: string) => {
+        console.log("Confirmar agendamento:", id);
+    };
+
+    const handleQuickLeadAction = (id: string) => {
+        navigate("/pipeline"); // Redireciona para o novo Pipeline
+    };
+
+    const handleCompleteTask = (id: string) => {
+        setCompletedTasks((prev) => [...prev, id]);
+    };
+
+    const getPatientPhone = (appointment: any) => {
+        return ""; // TODO: Implementar busca real
+    };
 
     return (
-        <div className="space-y-6">
-            {/* Header */}
-            <div className="bg-gradient-to-r from-violet-600 to-violet-700 rounded-xl p-6 text-white">
-                <div className="flex items-center gap-3 mb-2">
-                    <Target className="w-8 h-8" />
-                    <h1 className="text-3xl font-bold">Central de Metas</h1>
-                </div>
-                <p className="text-violet-100">
-                    Acompanhe o desempenho da clínica em tempo real
-                </p>
-            </div>
+        <div className="space-y-8 animate-in fade-in duration-500">
 
-            {/* KPI Cards - Top 3 */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* Faturamento */}
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-                    <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 bg-teal-50 rounded-xl flex items-center justify-center">
-                                <DollarSign className="w-6 h-6 text-teal-600" />
-                            </div>
-                            <div>
-                                <p className="text-sm text-slate-500">Faturamento</p>
-                                <p className="text-2xl font-bold text-slate-800">
-                                    R$ {(kpis?.total_revenue || 0).toLocaleString('pt-BR')}
-                                </p>
-                            </div>
+            {/* SECTION 1: HEADER & KPI CARDS */}
+            <div className="flex flex-col xl:flex-row gap-6 items-start justify-between">
+
+                {/* Welcome Block */}
+                <div className="flex-1 min-w-[300px]">
+                    <h1 className="text-3xl font-bold text-slate-800 tracking-tight">
+                        Olá, {profile?.name?.split(' ')[0] || 'Doutor'}! 👋
+                    </h1>
+                    <p className="text-slate-500 mt-2 flex items-center gap-2 text-sm">
+                        <Calendar size={14} className="text-violet-500" />
+                        <span className="capitalize">{new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}</span>
+                        <span className="w-1 h-1 bg-slate-300 rounded-full" />
+                        <span className="font-medium text-slate-700">{profile?.clinics?.name}</span>
+                    </p>
+                </div>
+
+                {/* Global KPIs Grid */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full xl:w-auto">
+                    {/* KPI 1: Atendimentos */}
+                    <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="flex justify-between items-start mb-2">
+                            <p className="text-xs font-bold text-slate-500 uppercase">Atendimentos</p>
+                            <Activity size={16} className="text-blue-500" />
                         </div>
-                    </div>
-                    <div className="space-y-2">
-                        <div className="flex items-center justify-between text-sm">
-                            <span className="text-slate-600">Meta: R$ {(goals?.monthly_revenue || 0).toLocaleString('pt-BR')}</span>
-                            <span className={`font-bold ${getProgressTextColor(revenueProgress)}`}>
-                                {revenueProgress.toFixed(0)}%
-                            </span>
+                        <div className="flex items-end gap-2">
+                            <span className="text-2xl font-bold text-slate-800">{kpis.confirmed}</span>
+                            <span className="text-xs text-slate-400 mb-1">/ {kpis.appointments}</span>
                         </div>
-                        <div className="w-full bg-slate-100 rounded-full h-2">
+                        <div className="w-full bg-slate-100 h-1.5 rounded-full mt-3 overflow-hidden">
                             <div
-                                className={`h-2 rounded-full transition-all duration-500 ${getProgressColor(revenueProgress)}`}
-                                style={{ width: `${revenueProgress}%` }}
+                                className="bg-blue-500 h-full rounded-full transition-all duration-1000"
+                                style={{ width: `${kpis.appointments > 0 ? (kpis.confirmed / kpis.appointments) * 100 : 0}%` }}
                             />
                         </div>
                     </div>
-                </div>
 
-                {/* Novos Pacientes */}
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-                    <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 bg-violet-50 rounded-xl flex items-center justify-center">
-                                <Users className="w-6 h-6 text-violet-600" />
-                            </div>
-                            <div>
-                                <p className="text-sm text-slate-500">Novos Pacientes</p>
-                                <p className="text-2xl font-bold text-slate-800">
-                                    {kpis?.new_patients_count || 0}
-                                </p>
-                            </div>
+                    {/* KPI 2: Oportunidades CRM */}
+                    <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="flex justify-between items-start mb-2">
+                            <p className="text-xs font-bold text-slate-500 uppercase">Novos Leads</p>
+                            <Target size={16} className="text-purple-500" />
                         </div>
+                        <div className="flex items-end gap-2">
+                            <span className="text-2xl font-bold text-purple-600">{kpis.pendingLeads}</span>
+                            <span className="text-xs text-purple-200 bg-purple-600 rounded px-1 mb-1 font-bold">HOT</span>
+                        </div>
+                        <p className="text-[10px] text-slate-400 mt-3 align-bottom">Oportunidades ativas</p>
                     </div>
-                    <div className="space-y-2">
-                        <div className="flex items-center justify-between text-sm">
-                            <span className="text-slate-600">Meta: {goals?.new_patients || 20}</span>
-                            <span className={`font-bold ${getProgressTextColor(patientsProgress)}`}>
-                                {patientsProgress.toFixed(0)}%
-                            </span>
-                        </div>
-                        <div className="w-full bg-slate-100 rounded-full h-2">
-                            <div
-                                className={`h-2 rounded-full transition-all duration-500 ${getProgressColor(patientsProgress)}`}
-                                style={{ width: `${patientsProgress}%` }}
-                            />
-                        </div>
-                    </div>
-                </div>
 
-                {/* Taxa de Conversão */}
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-                    <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center">
-                                <TrendingUp className="w-6 h-6 text-amber-600" />
-                            </div>
-                            <div>
-                                <p className="text-sm text-slate-500">Conversão</p>
-                                <p className="text-2xl font-bold text-slate-800">
-                                    {(kpis?.conversion_rate || 0).toFixed(1)}%
-                                </p>
-                            </div>
+                    {/* KPI 3: Lembretes */}
+                    <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="flex justify-between items-start mb-2">
+                            <p className="text-xs font-bold text-slate-500 uppercase">Pendências</p>
+                            <ListTodo size={16} className="text-orange-500" />
                         </div>
+                        <span className="text-2xl font-bold text-slate-800">{reminders.length}</span>
+                        <p className="text-[10px] text-orange-600 mt-3 font-medium">Requer atenção</p>
                     </div>
-                    <div className="space-y-2">
-                        <div className="flex items-center justify-between text-sm">
-                            <span className="text-slate-600">Meta: {goals?.conversion_rate || 30}%</span>
-                            <span className={`font-bold ${getProgressTextColor(conversionProgress)}`}>
-                                {conversionProgress.toFixed(0)}%
-                            </span>
+
+                    {/* KPI 4: Financeiro (Placeholder) */}
+                    <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group cursor-pointer" onClick={() => navigate('/financial')}>
+                        <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
+                            <TrendingUp size={48} className="text-green-600" />
                         </div>
-                        <div className="w-full bg-slate-100 rounded-full h-2">
-                            <div
-                                className={`h-2 rounded-full transition-all duration-500 ${getProgressColor(conversionProgress)}`}
-                                style={{ width: `${conversionProgress}%` }}
-                            />
+                        <div className="flex justify-between items-start mb-2">
+                            <p className="text-xs font-bold text-slate-500 uppercase">Faturamento</p>
                         </div>
+                        <span className="text-xl font-bold text-green-600">--</span>
+                        <p className="text-[10px] text-slate-400 mt-4 flex items-center gap-1">
+                            Ver detalhes <ArrowRight size={10} />
+                        </p>
                     </div>
                 </div>
             </div>
 
-            {/* Secondary Metrics */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* Orçamentos Criados */}
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-                    <div className="flex items-center gap-3 mb-2">
-                        <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
-                            <Sparkles className="w-5 h-5 text-blue-600" />
-                        </div>
-                        <div>
-                            <p className="text-xs text-slate-500">Orçamentos</p>
-                            <p className="text-xl font-bold text-slate-800">{kpis?.budgets_created_count || 0}</p>
-                        </div>
-                    </div>
-                    <p className="text-xs text-slate-600">
-                        {kpis?.budgets_approved_count || 0} aprovados
-                    </p>
-                </div>
+            {/* SECTION 2: AI INSIGHTS (BOS) */}
+            <div className="bg-gradient-to-br from-violet-600 to-indigo-700 rounded-2xl p-[1px] shadow-lg shadow-violet-200">
+                <div className="bg-white dark:bg-slate-800 rounded-[15px] p-6 lg:p-8 relative overflow-hidden">
+                    {/* Decorative Background Elements */}
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-violet-50 dark:bg-violet-900/20 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none" />
 
-                {/* Agendamentos */}
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-                    <div className="flex items-center gap-3 mb-2">
-                        <div className="w-10 h-10 bg-indigo-50 rounded-lg flex items-center justify-center">
-                            <Calendar className="w-5 h-5 text-indigo-600" />
-                        </div>
-                        <div>
-                            <p className="text-xs text-slate-500">Agendamentos</p>
-                            <p className="text-xl font-bold text-slate-800">{kpis?.appointments_scheduled || 0}</p>
-                        </div>
-                    </div>
-                    <p className="text-xs text-slate-600">
-                        {kpis?.appointments_completed || 0} realizados
-                    </p>
-                </div>
-
-                {/* No-Show */}
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-                    <div className="flex items-center gap-3 mb-2">
-                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${noShowProgress >= 90 ? 'bg-teal-50' : 'bg-rose-50'
-                            }`}>
-                            <Clock className={`w-5 h-5 ${noShowProgress >= 90 ? 'text-teal-600' : 'text-rose-600'
-                                }`} />
-                        </div>
-                        <div>
-                            <p className="text-xs text-slate-500">No-Show</p>
-                            <p className="text-xl font-bold text-slate-800">{(kpis?.no_show_rate || 0).toFixed(1)}%</p>
-                        </div>
-                    </div>
-                    <div className="w-full bg-slate-100 rounded-full h-1.5">
-                        <div
-                            className={`h-1.5 rounded-full transition-all duration-500 ${getProgressColor(noShowProgress)}`}
-                            style={{ width: `${noShowProgress}%` }}
-                        />
+                    <div className="relative z-10">
+                        <AIInsightsFeed />
                     </div>
                 </div>
+            </div>
 
-                {/* Status Geral */}
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-                    <div className="flex items-center gap-3 mb-2">
-                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${revenueProgress >= 90 ? 'bg-teal-50' : revenueProgress >= 60 ? 'bg-amber-50' : 'bg-rose-50'
-                            }`}>
-                            {revenueProgress >= 90 ? (
-                                <CheckCircle className="w-5 h-5 text-teal-600" />
+            {/* SECTION 3: MAIN GRID (AGENDA & TASKS) */}
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 items-start">
+
+                {/* COLUMN 1: AGENDA (Larger) */}
+                <div className="xl:col-span-1 space-y-6">
+                    <div className="flex items-center justify-between">
+                        <h3 className="font-bold text-slate-800 text-lg flex items-center gap-2">
+                            <Clock className="text-violet-600" size={20} />
+                            Agenda de Hoje
+                        </h3>
+                        <button onClick={() => navigate('/agenda')} className="text-sm font-medium text-violet-600 hover:text-violet-700 hover:underline">
+                            Ver Completa
+                        </button>
+                    </div>
+
+                    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col min-h-[400px]">
+                        {todaysAppointments.length > 0 ? (
+                            <div className="divide-y divide-slate-100">
+                                {todaysAppointments.map((apt) => (
+                                    <div key={apt.id} className="p-4 hover:bg-slate-50 transition-colors group">
+                                        <div className="flex gap-4">
+                                            <div className="flex flex-col items-center justify-center min-w-[50px] bg-slate-100/50 rounded-lg p-2 h-fit">
+                                                <span className="text-sm font-bold text-slate-900">{apt.time}</span>
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex justify-between items-start">
+                                                    <h4 className="font-bold text-slate-800 text-sm truncate">{apt.patientName}</h4>
+                                                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${apt.status === "Confirmado" ? "bg-green-100 text-green-700" :
+                                                        apt.status === "Pendente" ? "bg-amber-100 text-amber-700" :
+                                                            "bg-slate-100 text-slate-600"
+                                                        }`}>
+                                                        {apt.status}
+                                                    </span>
+                                                </div>
+                                                <p className="text-xs text-slate-500 mt-0.5">{apt.type} • {apt.doctorName}</p>
+
+                                                {/* Actions overlay for pending */}
+                                                {apt.status === "Pendente" && (
+                                                    <div className="flex gap-2 mt-3">
+                                                        <button onClick={() => handleConfirmAppointment(apt.id)} className="flex-1 bg-green-50 text-green-700 hover:bg-green-100 py-1.5 rounded text-xs font-bold flex items-center justify-center gap-1 transition-colors">
+                                                            <CheckCircle size={12} /> Confirmar
+                                                        </button>
+                                                        <button className="flex-1 bg-blue-50 text-blue-700 hover:bg-blue-100 py-1.5 rounded text-xs font-bold flex items-center justify-center gap-1 transition-colors">
+                                                            <MessageCircle size={12} /> WhatsApp
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="flex-1 flex flex-col items-center justify-center p-8">
+                                <EmptyState
+                                    icon={Calendar}
+                                    title="Agenda Livre"
+                                    description="Nenhum agendamento encontrado para hoje."
+                                />
+                                <button onClick={() => navigate('/agenda')} className="mt-4 px-4 py-2 bg-violet-50 text-violet-700 rounded-lg text-sm font-bold hover:bg-violet-100 transition-colors">
+                                    Agendar Paciente
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* COLUMN 2 & 3: OPERATIONAL & CRM (Combined Width) */}
+                <div className="xl:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-8">
+
+                    {/* TASKS / COMPLIANCE */}
+                    <div className="space-y-6">
+                        <h3 className="font-bold text-slate-800 text-lg flex items-center gap-2">
+                            <CheckCircle className="text-teal-500" size={20} />
+                            Lembretes & Compliance
+                        </h3>
+
+                        <ComplianceWidget />
+
+                        <div className="space-y-3">
+                            {reminders.length > 0 ? (
+                                reminders.map(item => (
+                                    <div key={item.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all relative group">
+                                        <div className={`absolute left-0 top-3 bottom-3 w-1 rounded-r-full ${item.type === 'urgent' ? 'bg-rose-500' : 'bg-blue-500'
+                                            }`} />
+
+                                        <div className="ml-3">
+                                            <div className="flex justify-between items-start mb-1">
+                                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${item.type === 'urgent' ? 'bg-rose-50 text-rose-600' : 'bg-blue-50 text-blue-600'
+                                                    }`}>
+                                                    {item.type === 'urgent' ? 'Prioridade' : 'Lembrete'}
+                                                </span>
+                                                <button onClick={() => handleCompleteTask(item.id)} className="text-slate-300 hover:text-teal-500 transition-colors">
+                                                    <CheckCircle size={18} />
+                                                </button>
+                                            </div>
+                                            <h4 className="font-bold text-slate-700 text-sm">{item.title}</h4>
+                                            <p className="text-xs text-slate-500 mt-1 line-clamp-2">{item.desc}</p>
+                                        </div>
+                                    </div>
+                                ))
                             ) : (
-                                <AlertCircle className={`w-5 h-5 ${revenueProgress >= 60 ? 'text-amber-600' : 'text-rose-600'}`} />
+                                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm border-dashed text-center">
+                                    <p className="text-sm text-slate-500">Nenhum lembrete pendente.</p>
+                                </div>
                             )}
                         </div>
-                        <div>
-                            <p className="text-xs text-slate-500">Status</p>
-                            <p className={`text-sm font-bold ${revenueProgress >= 90 ? 'text-teal-600' : revenueProgress >= 60 ? 'text-amber-600' : 'text-rose-600'
-                                }`}>
-                                {revenueProgress >= 90 ? 'Excelente' : revenueProgress >= 60 ? 'Atenção' : 'Crítico'}
-                            </p>
+                    </div>
+
+                    {/* CRM QUEUE */}
+                    <div className="space-y-6">
+                        <h3 className="font-bold text-slate-800 text-lg flex items-center gap-2">
+                            <User className="text-amber-500" size={20} />
+                            Fila de Oportunidades
+                        </h3>
+
+                        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-full max-h-[500px]">
+                            {priorityLeads.length > 0 ? (
+                                <div className="divide-y divide-slate-100 overflow-y-auto">
+                                    {priorityLeads.map((lead) => (
+                                        <div key={lead.id} className="p-4 hover:bg-amber-50/50 transition-colors">
+                                            <div className="flex items-start justify-between mb-2">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-xs text-slate-600">
+                                                        {lead.name.substring(0, 2).toUpperCase()}
+                                                    </div>
+                                                    <div>
+                                                        <h4 className="text-sm font-bold text-slate-800 leading-tight">{lead.name}</h4>
+                                                        <p className="text-[10px] text-slate-500 capitalize">{lead.source} • <span className="font-medium text-amber-600">{lead.status}</span></p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex gap-2 pl-10">
+                                                <button className="p-1.5 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors" title="WhatsApp">
+                                                    <MessageCircle size={14} />
+                                                </button>
+                                                <button className="p-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors" title="Ligar">
+                                                    <Phone size={14} />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleQuickLeadAction(lead.id)}
+                                                    className="ml-auto px-3 py-1.5 bg-slate-800 text-white rounded-lg text-[10px] font-bold hover:bg-slate-900 transition-colors flex items-center gap-1"
+                                                >
+                                                    Ver no Pipeline <ArrowRight size={10} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="p-8">
+                                    <EmptyState
+                                        icon={Sparkles}
+                                        title="Fila Limpa!"
+                                        description="Todas as oportunidades recentes foram processadas."
+                                    />
+                                </div>
+                            )}
                         </div>
                     </div>
-                    <p className="text-xs text-slate-600">
-                        Desempenho geral
-                    </p>
-                </div>
-            </div>
 
-            {/* Quick Actions */}
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-                <h3 className="text-lg font-bold text-slate-800 mb-4">Ações Rápidas</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <button className="px-4 py-3 bg-violet-50 text-violet-600 rounded-lg font-medium hover:bg-violet-100 transition-colors text-sm">
-                        Ver Relatórios
-                    </button>
-                    <button className="px-4 py-3 bg-teal-50 text-teal-600 rounded-lg font-medium hover:bg-teal-100 transition-colors text-sm">
-                        Ajustar Metas
-                    </button>
-                    <button className="px-4 py-3 bg-amber-50 text-amber-600 rounded-lg font-medium hover:bg-amber-100 transition-colors text-sm">
-                        Pipeline Vendas
-                    </button>
-                    <button className="px-4 py-3 bg-slate-50 text-slate-600 rounded-lg font-medium hover:bg-slate-100 transition-colors text-sm">
-                        Exportar Dados
-                    </button>
                 </div>
             </div>
-        </div>
+        </div >
     );
 };
 
