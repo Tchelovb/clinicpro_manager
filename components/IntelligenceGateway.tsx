@@ -12,7 +12,7 @@ export const IntelligenceGateway: React.FC = () => {
     const role = profile?.role as UserRole | undefined;
 
     // MASTER gets special Tycoon Hub (check before hooks)
-    if (role === 'MASTER') {
+    if (profile?.role === 'MASTER') {
         return <MasterGateway />;
     }
 
