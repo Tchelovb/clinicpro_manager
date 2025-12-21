@@ -18,7 +18,7 @@ import {
     MessageSquare,
     Users,
     Calendar,
-    Flask,
+    Beaker,
     Package,
     DollarSign,
     Wallet,
@@ -128,7 +128,7 @@ const MENU_ITEMS: MenuItem[] = [
         id: 'lab',
         screenId: 'SCR-07',
         label: 'Laboratório',
-        icon: Flask,
+        icon: Beaker,
         path: '/dashboard/lab',
         roles: ['MASTER', 'ADMIN', 'PROFESSIONAL', 'RECEPTIONIST'],
         description: 'Pedidos Lab'
@@ -232,8 +232,8 @@ export const AppLayout: React.FC = () => {
                                     key={item.id}
                                     onClick={() => navigate(item.path)}
                                     className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all group relative ${isActive
-                                            ? 'bg-violet-50 text-violet-600'
-                                            : 'text-slate-600 hover:bg-slate-50'
+                                        ? 'bg-violet-50 text-violet-600'
+                                        : 'text-slate-600 hover:bg-slate-50'
                                         }`}
                                     title={item.description}
                                 >
@@ -358,8 +358,8 @@ export const AppLayout: React.FC = () => {
                                             setMobileMenuOpen(false);
                                         }}
                                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive
-                                                ? 'bg-violet-50 text-violet-600'
-                                                : 'text-slate-600 hover:bg-slate-50'
+                                            ? 'bg-violet-50 text-violet-600'
+                                            : 'text-slate-600 hover:bg-slate-50'
                                             }`}
                                     >
                                         <Icon className="w-5 h-5" />
