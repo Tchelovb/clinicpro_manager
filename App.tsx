@@ -3,13 +3,15 @@ import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import BottomNav from "./components/BottomNav";
 import Dashboard from "./pages/Dashboard";
+import IntelligenceGateway from "./pages/IntelligenceGateway";
+import PatientsList from "./pages/PatientsList";
+import PatientDetail from "./pages/PatientDetail";
 import CommercialCentral from "./components/CommercialCentral";
 import { CRMForm, CRMDetail } from "./components/CRMPages";
 import Agenda from "./components/Agenda";
 import { AgendaForm, AgendaDetail } from "./components/AgendaPages";
 import Patients from "./components/Patients";
 import PatientForm from "./components/PatientForm";
-import PatientDetail from "./pages/PatientDetail";
 import {
   PatientNoteForm,
   PatientDocumentForm,
@@ -51,7 +53,7 @@ import { WarRoom } from "./components/WarRoom";
 import ChatBOSPage from "./components/ChatBOSPage";
 import BOSIntelligencePage from "./components/BOSIntelligencePage";
 import IntelligenceCenter from "./components/IntelligenceCenter";
-import IntelligenceGateway from "./components/IntelligenceGateway";
+// IntelligenceGateway agora vem de pages/IntelligenceGateway.tsx (refatorado)
 import ClinicHealthCenter from "./components/ClinicHealthCenter";
 import GamificationTestPage from "./components/GamificationTestPage";
 import TeamCommandCenter from "./components/TeamCommandCenter";
