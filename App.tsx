@@ -2,14 +2,14 @@ import React from "react";
 import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import BottomNav from "./components/BottomNav";
-import Dashboard from "./components/Dashboard";
+import Dashboard from "./pages/Dashboard";
 import CommercialCentral from "./components/CommercialCentral";
 import { CRMForm, CRMDetail } from "./components/CRMPages";
 import Agenda from "./components/Agenda";
 import { AgendaForm, AgendaDetail } from "./components/AgendaPages";
 import Patients from "./components/Patients";
 import PatientForm from "./components/PatientForm";
-import PatientDetail from "./components/PatientDetail";
+import PatientDetail from "./pages/PatientDetail";
 import {
   PatientNoteForm,
   PatientDocumentForm,
@@ -39,7 +39,7 @@ import ProfessionalsPage from "./components/ProfessionalsPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import MasterDashboard from "./components/master/MasterDashboard";
 import NewClinicForm from "./components/master/NewClinicForm";
-import AppLayout from "./components/AppLayout";
+import AppLayout from "./components/layout/AppLayout";
 import { DataProvider } from "./contexts/DataContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import { FinancialProvider } from "./contexts/FinancialContext";
