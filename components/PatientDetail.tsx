@@ -372,6 +372,23 @@ const PatientDetail: React.FC = () => {
                     <p className="text-slate-500 text-xs uppercase font-bold mb-1">Estado Civil</p>
                     <p className="text-slate-200">{patient.marital_status || 'Não informado'}</p>
                   </div>
+                  <div>
+                    <p className="text-slate-500 text-xs uppercase font-bold mb-1">Status de Sentimento</p>
+                    <p className="text-slate-200">
+                      {patient.sentiment_status === 'VERY_HAPPY' ? '😄 Muito Satisfeito' :
+                        patient.sentiment_status === 'HAPPY' ? '😊 Satisfeito' :
+                          patient.sentiment_status === 'NEUTRAL' ? '😐 Neutro' :
+                            patient.sentiment_status === 'UNHAPPY' ? '😟 Insatisfeito' :
+                              patient.sentiment_status === 'COMPLAINING' ? '😡 Reclamando' :
+                                'Não informado'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-slate-500 text-xs uppercase font-bold mb-1">Status do Cadastro</p>
+                    <p className="text-slate-200">
+                      {patient.is_active !== false ? '✅ Ativo' : '❌ Inativo'}
+                    </p>
+                  </div>
                 </div>
               </div>
 

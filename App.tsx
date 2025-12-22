@@ -17,6 +17,8 @@ import { queryClient } from "./lib/queryClient";
 // ============================================
 import AppLayout from "./components/layout/AppLayout";
 import ProtectedRoute from "./components/ProtectedRoute";
+import { DynamicRedirect } from "./components/DynamicRedirect";
+
 
 // ============================================
 // PAGES (Main Application Routes)
@@ -149,21 +151,21 @@ const App: React.FC = () => {
 
                   {/* Agenda Redirects */}
                   <Route path="/dashboard/agenda" element={<Navigate to="/agenda" replace />} />
-                  <Route path="/dashboard/agenda/:id" element={<Navigate to="/agenda/:id" replace />} />
+                  <Route path="/dashboard/agenda/:id" element={<DynamicRedirect to="/agenda/:id" />} />
                   <Route path="/dashboard/schedule" element={<Navigate to="/agenda" replace />} />
                   <Route path="/dashboard/schedule/new" element={<Navigate to="/agenda/new" replace />} />
-                  <Route path="/dashboard/schedule/:id" element={<Navigate to="/agenda/:id" replace />} />
+                  <Route path="/dashboard/schedule/:id" element={<DynamicRedirect to="/agenda/:id" />} />
 
                   {/* Patients Redirects */}
                   <Route path="/dashboard/pacientes" element={<Navigate to="/patients" replace />} />
-                  <Route path="/dashboard/pacientes/:id" element={<Navigate to="/patients/:id" replace />} />
-                  <Route path="/dashboard/patients/:id/edit" element={<Navigate to="/patients/:id/edit" replace />} />
+                  <Route path="/dashboard/pacientes/:id" element={<DynamicRedirect to="/patients/:id" />} />
+                  <Route path="/dashboard/patients/:id/edit" element={<DynamicRedirect to="/patients/:id/edit" />} />
 
                   {/* CRM/Pipeline Redirects */}
                   <Route path="/dashboard/orcamentos" element={<Navigate to="/budgets/new" replace />} />
                   <Route path="/dashboard/financeiro" element={<Navigate to="/financial" replace />} />
                   <Route path="/dashboard/crm" element={<Navigate to="/pipeline" replace />} />
-                  <Route path="/crm/:id" element={<Navigate to="/pipeline/leads/:id" replace />} />
+                  <Route path="/crm/:id" element={<DynamicRedirect to="/pipeline/leads/:id" />} />
 
                   {/* Settings Redirects */}
                   <Route path="/dashboard/configuracoes" element={<Navigate to="/settings" replace />} />

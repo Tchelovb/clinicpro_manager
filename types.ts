@@ -169,16 +169,21 @@ export interface Patient {
   // Informações Pessoais Adicionais
   civilStatus?: 'SINGLE' | 'MARRIED' | 'DIVORCED' | 'WIDOWED' | 'OTHER';
   profession?: string;
-  contactPreference?: 'PHONE' | 'EMAIL' | 'WHATSAPP' | 'SMS';
+  contact_preference?: string;
+  origin?: string;
 
   // Endereço Detalhado
-  zipCode?: string;
+  zip_code?: string;
   street?: string;
   number?: string;
   complement?: string;
   neighborhood?: string;
   city?: string;
   state?: string;
+
+  // Compatibilidade Legado (Mantendo opcionais)
+  zipCode?: string; // Mapeado para zip_code
+  contactPreference?: 'PHONE' | 'EMAIL' | 'WHATSAPP' | 'SMS'; // Mapeado para contact_preference
 
   // Convênio/Plano de Saúde
   insurance?: string;
@@ -200,6 +205,7 @@ export interface Patient {
   patient_score?: 'DIAMOND' | 'GOLD' | 'STANDARD' | 'RISK' | 'BLACKLIST';
   bad_debtor?: boolean;
   sentiment_status?: 'VERY_HAPPY' | 'HAPPY' | 'NEUTRAL' | 'UNHAPPY' | 'COMPLAINING';
+  is_active?: boolean; // Controla se o paciente está ativo no sistema
 
   // Responsável Financeiro (Guarantor)
   responsible_party_id?: string;
@@ -222,7 +228,6 @@ export interface Patient {
   treatments?: TreatmentItem[];
   financials?: FinancialInstallment[];
   notes?: ClinicalNote[];
-  origin?: 'Instagram' | 'Google' | 'Indicação' | 'Facebook' | 'Orgânico' | 'WhatsApp';
   acquisitionSourceId?: string;
   lastAestheticEvaluation?: string; // Date string
   patientRanking?: 'STANDARD' | 'VIP' | 'GOLD' | 'PLATINUM';

@@ -25,13 +25,17 @@ export const usePatients = () => {
           birth_date,
           gender,
           address,
-          status,
+          status:clinical_status,
           total_approved,
           total_paid,
           balance_due,
           created_at,
           updated_at,
-          clinic_id
+          clinic_id,
+          patient_score,
+          sentiment_status,
+          is_active,
+          bad_debtor
         `
         )
         .eq("clinic_id", clinicId)
