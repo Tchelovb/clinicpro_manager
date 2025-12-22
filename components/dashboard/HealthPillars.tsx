@@ -65,31 +65,47 @@ const PillarCard: React.FC<HealthPillarProps> = ({ title, score, icon: Icon, col
     );
 };
 
+
 export const HealthPillars: React.FC<{
     financialData: any;
     kpis: any;
-}> = ({ financialData, kpis }) => {
+    intelligenceMetrics?: any;
+}> = ({ financialData, kpis, intelligenceMetrics }) => {
 
-    // Cálculos Simulados de Score (Normalizar para 0-100)
+    let marketingScore = 0;
+    let salesScore = 0;
+    let clinicalScore = 85; // Default if missing
+    let operationalScore = 92; // Default if missing
+    let financialScore = 0;
 
-    // 1. Marketing: Baseado em Leads Novos. Meta: 30 leads/mês
-    const leadsRate = Math.min((kpis.pendingLeads / 30) * 100, 100);
-    const marketingScore = Math.round(leadsRate);
+    if (intelligenceMetrics) {
+        // 1. Marketing: Meta 30 leads
+        marketingScore = Math.min(Math.round((intelligenceMetrics.total_leads / 30) * 100), 100);
 
-    // 2. Vendas: Baseado em Conversão. Meta: 20%
-    const conversionRate = kpis.pendingLeads > 0
-        ? (kpis.confirmed / (kpis.pendingLeads + kpis.confirmed)) * 100
-        : 0;
-    const salesScore = Math.min(Math.round((conversionRate / 20) * 100), 100);
+        // 2. Vendas: Meta 20%
+        salesScore = Math.min(Math.round((intelligenceMetrics.taxa_conversao_orcamentos / 20) * 100), 100);
 
-    // 3. Clínico: Baseado em Recalls/Retorno (Simulado pois falta dados reais de recall no hook)
-    const clinicalScore = 85;
+        // 3. Clínico: Produção/Fidelização (Usando fidelização como proxy de qualidade)
+        clinicalScore = Math.round(intelligenceMetrics.taxa_fidelizacao || 85);
 
-    // 4. Operacional: Baseado em Agenda/No-Show (Simulado)
-    const operationalScore = 92;
+        // 4. Operacional: No-Show (Quanto menor melhor). 0% = 100, 20% = 0
+        const noShowPenalty = (intelligenceMetrics.taxa_no_show || 0) * 5;
+        operationalScore = Math.max(0, 100 - Math.round(noShowPenalty));
 
-    // 5. Financeiro: Baseado em Margem. Meta: 30%
-    const financialScore = Math.min(Math.round((financialData.profitMargin / 30) * 100), 100);
+        // 5. Financeiro: Margem EBITDA. Meta 30%
+        financialScore = Math.min(Math.round((intelligenceMetrics.margem_ebitda / 30) * 100), 100);
+    } else {
+        // Fallback Legado
+        const leadsRate = Math.min((kpis.pendingLeads / 30) * 100, 100);
+        marketingScore = Math.round(leadsRate);
+
+        const conversionRate = kpis.pendingLeads > 0
+            ? (kpis.confirmed / (kpis.pendingLeads + kpis.confirmed)) * 100
+            : 0;
+        salesScore = Math.min(Math.round((conversionRate / 20) * 100), 100);
+
+        financialScore = Math.min(Math.round((financialData.profitMargin / 30) * 100), 100);
+    }
 
     // IVC Geral
     const ivcScore = Math.round((marketingScore + salesScore + clinicalScore + operationalScore + financialScore) / 5);
@@ -116,8 +132,8 @@ export const HealthPillars: React.FC<{
                     color="blue"
                     status={marketingScore >= 70 ? 'healthy' : marketingScore >= 50 ? 'warning' : 'critical'}
                     metrics={[
-                        { label: 'Novos Leads', value: kpis.pendingLeads.toString() },
-                        { label: 'Custo/Lead', value: 'R$ 15,00' } // Mock
+                        { label: 'Leads', value: intelligenceMetrics ? intelligenceMetrics.total_leads.toString() : kpis.pendingLeads.toString() },
+                        { label: 'Qualif.', value: intelligenceMetrics ? `${intelligenceMetrics.taxa_qualificacao}%` : '-' }
                     ]}
                 />
 
@@ -128,8 +144,8 @@ export const HealthPillars: React.FC<{
                     color="violet"
                     status={salesScore >= 70 ? 'healthy' : salesScore >= 50 ? 'warning' : 'critical'}
                     metrics={[
-                        { label: 'Conversão', value: `${conversionRate.toFixed(1)}%` },
-                        { label: 'Pipeline', value: `R$ ${new Intl.NumberFormat('pt-BR', { notation: 'compact' }).format(kpis.pendingLeads * 500)}` } // Estimativa
+                        { label: 'Conversão', value: intelligenceMetrics ? `${intelligenceMetrics.taxa_conversao_orcamentos}%` : '-' },
+                        { label: 'Ticket', value: intelligenceMetrics ? `R$ ${intelligenceMetrics.ticket_medio}` : '-' }
                     ]}
                 />
 
@@ -140,8 +156,8 @@ export const HealthPillars: React.FC<{
                     color="emerald"
                     status={clinicalScore >= 70 ? 'healthy' : 'warning'}
                     metrics={[
-                        { label: 'Recalls', value: '12 Pend.' },
-                        { label: 'NPS', value: '92' }
+                        { label: 'Produção', value: intelligenceMetrics ? `R$ ${new Intl.NumberFormat('pt-BR', { notation: 'compact' }).format(intelligenceMetrics.valor_producao_total)}` : '-' },
+                        { label: 'Fideliz.', value: intelligenceMetrics ? `${intelligenceMetrics.taxa_fidelizacao}%` : '85%' }
                     ]}
                 />
 
@@ -152,8 +168,8 @@ export const HealthPillars: React.FC<{
                     color="amber"
                     status={operationalScore >= 70 ? 'healthy' : 'warning'}
                     metrics={[
-                        { label: 'Ocupação', value: '85%' },
-                        { label: 'No-Show', value: '4%' }
+                        { label: 'No-Show', value: intelligenceMetrics ? `${intelligenceMetrics.taxa_no_show}%` : '4%' },
+                        { label: 'Conclusão', value: intelligenceMetrics ? `${intelligenceMetrics.taxa_conclusao}%` : '-' }
                     ]}
                 />
 
@@ -164,8 +180,8 @@ export const HealthPillars: React.FC<{
                     color="rose"
                     status={financialScore >= 70 ? 'healthy' : financialScore >= 50 ? 'warning' : 'critical'}
                     metrics={[
-                        { label: 'Margem', value: `${financialData.profitMargin.toFixed(1)}%` },
-                        { label: 'Lucro Líq.', value: new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(financialData.profit) }
+                        { label: 'Margem', value: intelligenceMetrics ? `${intelligenceMetrics.margem_ebitda}%` : `${financialData.profitMargin.toFixed(1)}%` },
+                        { label: 'EBITDA', value: intelligenceMetrics ? `${intelligenceMetrics.margem_ebitda}%` : '-' }
                     ]}
                 />
             </div>

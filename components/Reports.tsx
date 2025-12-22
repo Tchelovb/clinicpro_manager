@@ -11,7 +11,7 @@ import * as XLSX from 'xlsx';
 
 // --- TYPES FOR RADAR 7.0 ---
 type EntityType = 'Pacientes' | 'Orçamentos' | 'Financeiro' | 'Leads' | 'Comissões' | 'Produção' | 'Operacional' | 'Todos';
-type CategoryType = 'all' | 'Cirurgias Estéticas da Face' | 'Harmonização Facial' | 'Implantodontia' | 'Ortodontia' | 'Clínica Geral';
+type CategoryType = 'all' | 'Cirurgias Estéticas da Face' | 'Harmonização Facial' | 'Implantodontia' | 'Ortodontia' | 'Clínica Geral' | 'Marketing' | 'Comercial' | 'Clínico' | 'Financeiro' | 'Operacional' | string;
 type OriginType = 'all' | 'Instagram' | 'Google Ads' | 'Indicação' | 'Facebook' | 'Orgânico' | 'WhatsApp';
 
 const Reports: React.FC = () => {

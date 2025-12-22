@@ -1,277 +1,48 @@
--- =====================================================
--- SCHEMA ATUALIZADO: ClinicPro Database
--- Data: 2024-12-21
--- Descrição: Schema completo refletindo o estado atual do banco
--- =====================================================
-
 -- WARNING: This schema is for context only and is not meant to be run.
 -- Table order and constraints may not be valid for execution.
 
--- =====================================================
--- ENUMS E TIPOS CUSTOMIZADOS
--- =====================================================
-
--- appointment_type
-CREATE TYPE appointment_type AS ENUM ('EVALUATION', 'PROCEDURE', 'FOLLOW_UP', 'EMERGENCY');
-
--- appointment_status  
-CREATE TYPE appointment_status AS ENUM ('PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED', 'NO_SHOW');
-
--- budget_status
-CREATE TYPE budget_status AS ENUM ('DRAFT', 'SENT', 'APPROVED', 'REJECTED', 'NEGOTIATING');
-
--- payment_status
-CREATE TYPE payment_status AS ENUM ('PENDING', 'PAID', 'OVERDUE', 'PARTIAL');
-
--- treatment_status
-CREATE TYPE treatment_status AS ENUM ('NOT_STARTED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED');
-
--- lead_status
-CREATE TYPE lead_status AS ENUM ('NEW', 'CONTACT', 'QUALIFICATION', 'SCHEDULED', 'PROPOSAL', 'NEGOTIATION', 'WON', 'LOST');
-
--- clinic_type
-CREATE TYPE clinic_type AS ENUM ('PRODUCTION', 'DEMO', 'TRIAL');
-
--- role
-CREATE TYPE role AS ENUM ('ADMIN', 'PROFESSIONAL', 'RECEPTIONIST', 'CRC', 'MASTER');
-
--- transaction_type
-CREATE TYPE transaction_type AS ENUM ('INCOME', 'EXPENSE');
-
--- document_type
-CREATE TYPE document_type AS ENUM ('CONTRACT', 'CONSENT', 'ANAMNESIS', 'CERTIFICATE', 'PRESCRIPTION', 'OTHER');
-
--- =====================================================
--- TABELAS PRINCIPAIS
--- =====================================================
-
--- Clínicas
-CREATE TABLE public.clinics (
+CREATE TABLE public.achievements (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
-  name text NOT NULL,
-  cnpj text,
-  address text,
-  phone text,
-  email text,
-  code text NOT NULL,
-  status text DEFAULT 'ACTIVE'::text CHECK (status = ANY (ARRAY['ACTIVE'::text, 'SUSPENDED'::text])),
-  type clinic_type DEFAULT 'PRODUCTION'::clinic_type,
-  
-  -- Horários
-  opening_time time without time zone,
-  closing_time time without time zone,
-  slot_duration integer DEFAULT 30,
-  working_days text[] DEFAULT ARRAY['monday'::text, 'tuesday'::text, 'wednesday'::text, 'thursday'::text, 'friday'::text],
-  
-  -- Branding
-  logo_light_url text,
-  logo_dark_url text,
-  favicon_url text,
-  primary_color varchar DEFAULT '#3B82F6'::varchar,
-  secondary_color varchar DEFAULT '#10B981'::varchar,
-  
-  -- Configurações
-  document_footer text DEFAULT '{{CLINIC_NAME}} - CNPJ: {{CNPJ}}
-{{ADDRESS}} - Tel: {{PHONE}}
-Responsável Técnico: {{RT_NAME}} - {{CRO}}'::text,
-  auto_logout_minutes integer DEFAULT 30,
-  require_password_on_unlock boolean DEFAULT true,
-  enable_audit_log boolean DEFAULT true,
-  max_failed_login_attempts integer DEFAULT 5,
-  lockout_duration_minutes integer DEFAULT 15,
-  
-  -- Regras de Negócio
-  block_debtors_scheduling boolean DEFAULT false,
-  debtor_block_days integer DEFAULT 30,
-  debtor_warning_message text DEFAULT 'Paciente possui débitos em atraso. Regularize os pagamentos antes de agendar.'::text,
-  max_discount_without_approval numeric DEFAULT 5.00,
-  require_manager_password_for_discount boolean DEFAULT true,
-  discount_approval_message text DEFAULT 'Desconto acima do limite permitido. Solicite aprovação do gestor.'::text,
-  
-  -- Backup
-  backup_frequency text DEFAULT 'WEEKLY'::text CHECK (backup_frequency = ANY (ARRAY['DAILY'::text, 'WEEKLY'::text, 'MONTHLY'::text, 'NEVER'::text])),
-  backup_email text,
-  last_backup_at timestamp with time zone,
-  
-  -- Metas
-  goals jsonb DEFAULT '{"new_patients": 20, "no_show_rate": 5, "average_ticket": 2000, "occupancy_rate": 80, "conversion_rate": 30, "monthly_revenue": 50000, "monthly_net_result": 25000}'::jsonb,
-  
-  created_at timestamp with time zone DEFAULT now(),
-  updated_at timestamp with time zone DEFAULT now(),
-  
-  CONSTRAINT clinics_pkey PRIMARY KEY (id)
-);
-
--- Usuários
-CREATE TABLE public.users (
-  id uuid NOT NULL DEFAULT uuid_generate_v4(),
-  clinic_id uuid NOT NULL,
-  email text NOT NULL UNIQUE,
-  name text NOT NULL,
-  phone text,
-  role role DEFAULT 'PROFESSIONAL'::role,
-  color text,
-  active boolean DEFAULT true,
-  professional_id uuid,
-  created_at timestamp with time zone DEFAULT now(),
-  updated_at timestamp with time zone DEFAULT now(),
-  
-  CONSTRAINT users_pkey PRIMARY KEY (id),
-  CONSTRAINT users_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id),
-  CONSTRAINT users_professional_id_fkey FOREIGN KEY (professional_id) REFERENCES public.professionals(id)
-);
-
--- Profissionais
-CREATE TABLE public.professionals (
-  id uuid NOT NULL DEFAULT uuid_generate_v4(),
-  clinic_id uuid NOT NULL,
-  name text NOT NULL,
-  crc text UNIQUE,
-  specialty text,
-  council text,
-  is_active boolean DEFAULT true,
-  photo_url text,
-  color text,
-  created_at timestamp with time zone DEFAULT now(),
-  updated_at timestamp with time zone DEFAULT now(),
-  
-  CONSTRAINT professionals_pkey PRIMARY KEY (id),
-  CONSTRAINT professionals_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id)
-);
-
--- Pacientes (COM CAMPOS HIGH-TICKET)
-CREATE TABLE public.patients (
-  id uuid NOT NULL DEFAULT uuid_generate_v4(),
-  clinic_id uuid NOT NULL,
-  name text NOT NULL,
-  cpf text,
-  phone text NOT NULL,
-  email text,
-  birth_date date,
-  gender text,
-  address text,
-  status text DEFAULT 'Em Tratamento'::text,
-  
-  -- Financeiro
-  total_approved numeric DEFAULT 0,
-  total_paid numeric DEFAULT 0,
-  balance_due numeric DEFAULT 0,
-  
-  -- Dossiê High-Ticket (CRM de Luxo)
-  nickname text,
-  occupation text,
-  instagram_handle text,
-  marital_status text CHECK (marital_status = ANY (ARRAY['SINGLE'::text, 'MARRIED'::text, 'DIVORCED'::text, 'WIDOWED'::text, 'OTHER'::text])),
-  wedding_anniversary date,
-  vip_notes text,
-  
-  -- Classificação ABC
-  patient_score text DEFAULT 'STANDARD'::text CHECK (patient_score = ANY (ARRAY['DIAMOND'::text, 'GOLD'::text, 'STANDARD'::text, 'RISK'::text, 'BLACKLIST'::text])),
-  bad_debtor boolean DEFAULT false,
-  sentiment_status text DEFAULT 'NEUTRAL'::text CHECK (sentiment_status = ANY (ARRAY['VERY_HAPPY'::text, 'HAPPY'::text, 'NEUTRAL'::text, 'UNHAPPY'::text, 'COMPLAINING'::text])),
-  
-  -- Responsável Financeiro (Guarantor)
-  responsible_party_id uuid,
-  relationship_type text CHECK (relationship_type = ANY (ARRAY['SELF'::text, 'PARENT'::text, 'SPOUSE'::text, 'GUARDIAN'::text, 'OTHER'::text])),
-  
-  -- Programa de Indicação
-  indication_patient_id uuid,
-  
-  -- Galeria de Fotos
-  profile_photo_url text,
-  photo_profile_url text,
-  photo_smile_url text,
-  photo_frontal_url text,
-  photo_profile_side_url text,
-  photo_document_front_url text,
-  photo_document_back_url text,
-  document_photo_front_url text,
-  document_photo_back_url text,
-  
-  -- Outros
-  acquisition_source_id uuid,
-  last_aesthetic_evaluation date,
-  patient_ranking text DEFAULT 'STANDARD'::text,
-  
-  created_at timestamp with time zone DEFAULT now(),
-  updated_at timestamp with time zone DEFAULT now(),
-  
-  CONSTRAINT patients_pkey PRIMARY KEY (id),
-  CONSTRAINT patients_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id),
-  CONSTRAINT patients_acquisition_source_id_fkey FOREIGN KEY (acquisition_source_id) REFERENCES public.lead_source(id),
-  CONSTRAINT patients_responsible_party_id_fkey FOREIGN KEY (responsible_party_id) REFERENCES public.patients(id),
-  CONSTRAINT patients_indication_patient_id_fkey FOREIGN KEY (indication_patient_id) REFERENCES public.patients(id)
-);
-
--- Alertas Médicos
-CREATE TABLE public.medical_alerts (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  patient_id uuid NOT NULL,
-  alert_type text NOT NULL CHECK (alert_type = ANY (ARRAY['ALLERGY'::text, 'CONDITION'::text, 'MEDICATION'::text, 'RISK'::text, 'CONTRAINDICATION'::text])),
-  description text NOT NULL,
-  severity text DEFAULT 'MEDIUM'::text CHECK (severity = ANY (ARRAY['LOW'::text, 'MEDIUM'::text, 'HIGH'::text, 'CRITICAL'::text])),
-  is_critical boolean DEFAULT false,
-  is_active boolean DEFAULT true,
-  created_by uuid,
-  created_at timestamp with time zone DEFAULT now(),
-  updated_at timestamp with time zone DEFAULT now(),
-  
-  CONSTRAINT medical_alerts_pkey PRIMARY KEY (id),
-  CONSTRAINT medical_alerts_patient_id_fkey FOREIGN KEY (patient_id) REFERENCES public.patients(id),
-  CONSTRAINT medical_alerts_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id)
-);
-
--- Recompensas de Indicação
-CREATE TABLE public.referral_rewards (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  clinic_id uuid NOT NULL,
-  patient_id uuid NOT NULL,
-  referred_patient_id uuid NOT NULL,
-  reward_type text NOT NULL CHECK (reward_type = ANY (ARRAY['CREDIT'::text, 'DISCOUNT'::text, 'GIFT'::text])),
-  reward_value numeric NOT NULL DEFAULT 0,
+  code text NOT NULL UNIQUE,
+  title text NOT NULL,
   description text,
-  status text NOT NULL DEFAULT 'PENDING'::text CHECK (status = ANY (ARRAY['PENDING'::text, 'REDEEMED'::text, 'EXPIRED'::text, 'CANCELED'::text])),
-  earned_date timestamp with time zone DEFAULT now(),
-  redeemed_date timestamp with time zone,
-  expiry_date timestamp with time zone,
+  icon text,
+  category text,
+  xp_reward integer DEFAULT 0,
+  rarity text DEFAULT 'common'::text CHECK (rarity = ANY (ARRAY['common'::text, 'rare'::text, 'epic'::text, 'legendary'::text])),
+  requirements jsonb DEFAULT '{}'::jsonb,
+  created_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT achievements_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.ai_insights (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  clinic_id uuid,
+  category text NOT NULL,
+  title text NOT NULL,
+  explanation text,
+  priority text CHECK (priority = ANY (ARRAY['high'::text, 'medium'::text, 'low'::text, 'critico'::text])),
+  action_label text,
+  action_type text,
+  related_entity_id uuid,
+  status text DEFAULT 'open'::text,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
-  
-  CONSTRAINT referral_rewards_pkey PRIMARY KEY (id),
-  CONSTRAINT referral_rewards_patient_fkey FOREIGN KEY (patient_id) REFERENCES public.patients(id),
-  CONSTRAINT referral_rewards_referred_fkey FOREIGN KEY (referred_patient_id) REFERENCES public.patients(id)
+  CONSTRAINT ai_insights_pkey PRIMARY KEY (id)
 );
-
--- Recalls de Pacientes
-CREATE TABLE public.patient_recalls (
+CREATE TABLE public.api_keys (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
-  clinic_id uuid NOT NULL,
-  patient_id uuid NOT NULL,
-  recall_type text NOT NULL CHECK (recall_type = ANY (ARRAY['PROPHYLAXIS'::text, 'PERIO'::text, 'BOTOX_RENEWAL'::text, 'FILLER_RENEWAL'::text, 'ORTHO_CHECK'::text, 'IMPLANT_MAINTENANCE'::text, 'CROWN_CHECK'::text, 'GENERAL_CHECKUP'::text, 'TREATMENT_CONTINUATION'::text, 'REACTIVATION'::text])),
-  due_date date NOT NULL,
-  created_date date DEFAULT CURRENT_DATE,
-  status text DEFAULT 'PENDING'::text CHECK (status = ANY (ARRAY['PENDING'::text, 'CONTACTED'::text, 'SCHEDULED'::text, 'OVERDUE'::text, 'LOST'::text, 'COMPLETED'::text])),
-  linked_appointment_id uuid,
-  original_treatment_id uuid,
-  last_contact_date timestamp with time zone,
-  contact_attempts integer DEFAULT 0,
-  contact_method text CHECK (contact_method = ANY (ARRAY['WHATSAPP'::text, 'SMS'::text, 'EMAIL'::text, 'PHONE'::text, 'IN_PERSON'::text])),
-  contact_notes text,
-  priority integer DEFAULT 50 CHECK (priority >= 0 AND priority <= 100),
-  notes text,
-  created_by uuid,
+  clinic_id uuid,
+  name text NOT NULL,
+  key_hash text NOT NULL,
+  prefix text NOT NULL,
+  scopes ARRAY DEFAULT ARRAY['read_only'::text],
+  last_used_at timestamp with time zone,
+  expires_at timestamp with time zone,
+  is_active boolean DEFAULT true,
   created_at timestamp with time zone DEFAULT now(),
-  updated_at timestamp with time zone DEFAULT now(),
-  
-  CONSTRAINT patient_recalls_pkey PRIMARY KEY (id),
-  CONSTRAINT patient_recalls_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id),
-  CONSTRAINT patient_recalls_patient_id_fkey FOREIGN KEY (patient_id) REFERENCES public.patients(id),
-  CONSTRAINT patient_recalls_linked_appointment_id_fkey FOREIGN KEY (linked_appointment_id) REFERENCES public.appointments(id),
-  CONSTRAINT patient_recalls_original_treatment_id_fkey FOREIGN KEY (original_treatment_id) REFERENCES public.treatment_items(id),
-  CONSTRAINT patient_recalls_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id)
+  CONSTRAINT api_keys_pkey PRIMARY KEY (id),
+  CONSTRAINT api_keys_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id)
 );
-
--- Confirmações de Consultas
 CREATE TABLE public.appointment_confirmations (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   appointment_id uuid NOT NULL UNIQUE,
@@ -292,14 +63,508 @@ CREATE TABLE public.appointment_confirmations (
   auto_reminder_2h_sent_at timestamp with time zone,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
-  
   CONSTRAINT appointment_confirmations_pkey PRIMARY KEY (id),
   CONSTRAINT appointment_confirmations_appointment_id_fkey FOREIGN KEY (appointment_id) REFERENCES public.appointments(id),
   CONSTRAINT appointment_confirmations_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id),
   CONSTRAINT appointment_confirmations_rescheduled_to_fkey FOREIGN KEY (rescheduled_to) REFERENCES public.appointments(id)
 );
+CREATE TABLE public.appointments (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  clinic_id uuid NOT NULL,
+  patient_id uuid NOT NULL,
+  doctor_id uuid NOT NULL,
+  date timestamp with time zone NOT NULL,
+  duration integer NOT NULL,
+  type USER-DEFINED DEFAULT 'EVALUATION'::appointment_type,
+  status USER-DEFINED DEFAULT 'PENDING'::appointment_status,
+  notes text,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT appointments_pkey PRIMARY KEY (id),
+  CONSTRAINT appointments_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id),
+  CONSTRAINT appointments_patient_id_fkey FOREIGN KEY (patient_id) REFERENCES public.patients(id),
+  CONSTRAINT appointments_doctor_id_fkey FOREIGN KEY (doctor_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.budget_items (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  budget_id uuid NOT NULL,
+  procedure_id uuid,
+  procedure_name text NOT NULL,
+  region text,
+  quantity integer DEFAULT 1,
+  unit_value numeric NOT NULL,
+  total_value numeric NOT NULL,
+  amount_paid numeric,
+  payment_date date,
+  payment_method text,
+  payment_notes text,
+  face text,
+  tooth_number integer,
+  CONSTRAINT budget_items_pkey PRIMARY KEY (id),
+  CONSTRAINT budget_items_budget_id_fkey FOREIGN KEY (budget_id) REFERENCES public.budgets(id),
+  CONSTRAINT budget_items_procedure_id_fkey FOREIGN KEY (procedure_id) REFERENCES public.procedure(id)
+);
+CREATE TABLE public.budget_negotiation_logs (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  budget_id uuid,
+  previous_status text,
+  new_status text,
+  notes text,
+  changed_by uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT budget_negotiation_logs_pkey PRIMARY KEY (id),
+  CONSTRAINT budget_negotiation_logs_budget_id_fkey FOREIGN KEY (budget_id) REFERENCES public.budgets(id),
+  CONSTRAINT budget_negotiation_logs_changed_by_fkey FOREIGN KEY (changed_by) REFERENCES public.users(id)
+);
+CREATE TABLE public.budget_payment_simulations (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  budget_id uuid,
+  label text,
+  total_value numeric,
+  down_payment numeric,
+  installments integer,
+  installment_value numeric,
+  is_selected boolean DEFAULT false,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT budget_payment_simulations_pkey PRIMARY KEY (id),
+  CONSTRAINT budget_payment_simulations_budget_id_fkey FOREIGN KEY (budget_id) REFERENCES public.budgets(id)
+);
+CREATE TABLE public.budgets (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  patient_id uuid NOT NULL,
+  doctor_id uuid,
+  price_table_id uuid,
+  status USER-DEFINED DEFAULT 'DRAFT'::budget_status,
+  total_value numeric NOT NULL,
+  discount numeric DEFAULT 0,
+  final_value numeric NOT NULL,
+  payment_config jsonb,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  clinic_id uuid,
+  rejection_reason text,
+  lost_at timestamp with time zone,
+  potential_margin numeric,
+  expires_at timestamp with time zone,
+  option_group_id uuid,
+  option_label text,
+  last_follow_up_at timestamp with time zone,
+  follow_up_count integer DEFAULT 0,
+  discount_type text DEFAULT 'PERCENTAGE'::text,
+  discount_value numeric DEFAULT 0,
+  down_payment_value numeric DEFAULT 0,
+  installments_count integer DEFAULT 1,
+  payment_method_id uuid,
+  CONSTRAINT budgets_pkey PRIMARY KEY (id),
+  CONSTRAINT budgets_patient_id_fkey FOREIGN KEY (patient_id) REFERENCES public.patients(id),
+  CONSTRAINT budgets_doctor_id_fkey FOREIGN KEY (doctor_id) REFERENCES public.users(id),
+  CONSTRAINT budgets_price_table_id_fkey FOREIGN KEY (price_table_id) REFERENCES public.price_tables(id),
+  CONSTRAINT budgets_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id)
+);
+CREATE TABLE public.business_goals (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  clinic_id uuid NOT NULL,
+  title text NOT NULL,
+  category text NOT NULL CHECK (category = ANY (ARRAY['REVENUE'::text, 'PATIENTS'::text, 'PROCEDURES'::text, 'CONVERSION'::text])),
+  target_value numeric NOT NULL,
+  current_value numeric DEFAULT 0,
+  deadline date NOT NULL,
+  status text DEFAULT 'ACTIVE'::text CHECK (status = ANY (ARRAY['ACTIVE'::text, 'COMPLETED'::text, 'CANCELLED'::text])),
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT business_goals_pkey PRIMARY KEY (id),
+  CONSTRAINT business_goals_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id)
+);
+CREATE TABLE public.cash_registers (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  clinic_id uuid NOT NULL,
+  user_id uuid NOT NULL,
+  opened_at timestamp with time zone DEFAULT now(),
+  closed_at timestamp with time zone,
+  opening_balance numeric NOT NULL,
+  closing_balance numeric,
+  calculated_balance numeric NOT NULL,
+  status text NOT NULL CHECK (status = ANY (ARRAY['OPEN'::text, 'CLOSED'::text, 'AUDIT_PENDING'::text])),
+  observations text,
+  declared_balance numeric,
+  difference_amount numeric,
+  difference_reason text,
+  CONSTRAINT cash_registers_pkey PRIMARY KEY (id),
+  CONSTRAINT cash_registers_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id),
+  CONSTRAINT cash_registers_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.clinic_financial_settings (
+  clinic_id uuid NOT NULL,
+  force_cash_opening boolean DEFAULT true,
+  force_daily_closing boolean DEFAULT true,
+  allow_negative_balance boolean DEFAULT false,
+  blind_closing boolean DEFAULT true,
+  default_change_fund numeric DEFAULT 100.00,
+  max_difference_without_approval numeric DEFAULT 50.00,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT clinic_financial_settings_pkey PRIMARY KEY (clinic_id),
+  CONSTRAINT clinic_financial_settings_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id)
+);
+CREATE TABLE public.clinic_kpis (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  clinic_id uuid NOT NULL,
+  period_start date NOT NULL,
+  period_end date NOT NULL,
+  total_revenue numeric DEFAULT 0,
+  total_expenses numeric DEFAULT 0,
+  net_profit numeric DEFAULT 0,
+  new_patients_count integer DEFAULT 0,
+  returning_patients_count integer DEFAULT 0,
+  lost_patients_count integer DEFAULT 0,
+  budgets_created_count integer DEFAULT 0,
+  budgets_approved_count integer DEFAULT 0,
+  conversion_rate numeric DEFAULT 0,
+  appointments_scheduled integer DEFAULT 0,
+  appointments_completed integer DEFAULT 0,
+  no_show_rate numeric DEFAULT 0,
+  average_budget_value numeric DEFAULT 0,
+  average_treatment_value numeric DEFAULT 0,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT clinic_kpis_pkey PRIMARY KEY (id),
+  CONSTRAINT clinic_kpis_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id)
+);
 
--- Pedidos Laboratoriais
+CREATE TABLE public.clinical_form_responses (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  clinic_id uuid,
+  template_id uuid,
+  patient_id uuid,
+  responses jsonb NOT NULL DEFAULT '{}'::jsonb,
+  filled_by uuid,
+  filled_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  patient_signature_url text,
+  professional_signature_url text,
+  CONSTRAINT clinical_form_responses_pkey PRIMARY KEY (id),
+  CONSTRAINT clinical_form_responses_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id),
+  CONSTRAINT clinical_form_responses_template_id_fkey FOREIGN KEY (template_id) REFERENCES public.clinical_form_templates(id),
+  CONSTRAINT clinical_form_responses_patient_id_fkey FOREIGN KEY (patient_id) REFERENCES public.patients(id),
+  CONSTRAINT clinical_form_responses_filled_by_fkey FOREIGN KEY (filled_by) REFERENCES public.users(id)
+);
+CREATE TABLE public.clinical_form_templates (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  clinic_id uuid,
+  name text NOT NULL,
+  description text,
+  category text DEFAULT 'ANAMNESIS'::text CHECK (category = ANY (ARRAY['ANAMNESIS'::text, 'CONSENT'::text, 'EVALUATION'::text, 'FOLLOW_UP'::text, 'OTHER'::text])),
+  fields jsonb NOT NULL DEFAULT '[]'::jsonb,
+  is_default boolean DEFAULT false,
+  is_active boolean DEFAULT true,
+  required_for_first_appointment boolean DEFAULT false,
+  created_by uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT clinical_form_templates_pkey PRIMARY KEY (id),
+  CONSTRAINT clinical_form_templates_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id),
+  CONSTRAINT clinical_form_templates_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id)
+);
+CREATE TABLE public.clinical_images (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  patient_id uuid NOT NULL,
+  clinic_id uuid NOT NULL,
+  image_type text NOT NULL CHECK (image_type = ANY (ARRAY['XRAY_PERIAPICAL'::text, 'XRAY_PANORAMIC'::text, 'XRAY_BITEWING'::text, 'CBCT'::text, 'INTRAORAL_PHOTO'::text, 'EXTRAORAL_PHOTO'::text, 'SMILE_PHOTO'::text, 'SCAN_3D'::text, 'OTHER'::text])),
+  file_url text NOT NULL,
+  thumbnail_url text,
+  file_size_kb integer,
+  tooth_number integer,
+  region text,
+  capture_date timestamp with time zone DEFAULT now(),
+  notes text,
+  tags ARRAY,
+  treatment_item_id uuid,
+  budget_id uuid,
+  is_before_treatment boolean DEFAULT true,
+  is_public boolean DEFAULT false,
+  patient_consent_signed boolean DEFAULT false,
+  uploaded_by uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT clinical_images_pkey PRIMARY KEY (id),
+  CONSTRAINT clinical_images_patient_id_fkey FOREIGN KEY (patient_id) REFERENCES public.patients(id),
+  CONSTRAINT clinical_images_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id),
+  CONSTRAINT clinical_images_treatment_item_id_fkey FOREIGN KEY (treatment_item_id) REFERENCES public.treatment_items(id),
+  CONSTRAINT clinical_images_budget_id_fkey FOREIGN KEY (budget_id) REFERENCES public.budgets(id),
+  CONSTRAINT clinical_images_uploaded_by_fkey FOREIGN KEY (uploaded_by) REFERENCES public.users(id)
+);
+CREATE TABLE public.clinical_notes (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  patient_id uuid NOT NULL,
+  doctor_id uuid NOT NULL,
+  type text NOT NULL,
+  content text NOT NULL,
+  date date DEFAULT CURRENT_DATE,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT clinical_notes_pkey PRIMARY KEY (id),
+  CONSTRAINT clinical_notes_patient_id_fkey FOREIGN KEY (patient_id) REFERENCES public.patients(id),
+  CONSTRAINT clinical_notes_doctor_id_fkey FOREIGN KEY (doctor_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.clinics (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  name text NOT NULL,
+  cnpj text,
+  address text,
+  phone text,
+  email text,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  code text NOT NULL,
+  opening_time time without time zone,
+  closing_time time without time zone,
+  slot_duration integer DEFAULT 30,
+  working_days ARRAY DEFAULT ARRAY['monday'::text, 'tuesday'::text, 'wednesday'::text, 'thursday'::text, 'friday'::text],
+  status text DEFAULT 'ACTIVE'::text CHECK (status = ANY (ARRAY['ACTIVE'::text, 'SUSPENDED'::text])),
+  logo_light_url text,
+  logo_dark_url text,
+  favicon_url text,
+  primary_color character varying DEFAULT '#3B82F6'::character varying,
+  secondary_color character varying DEFAULT '#10B981'::character varying,
+  document_footer text DEFAULT '{{CLINIC_NAME}} - CNPJ: {{CNPJ}}
+{{ADDRESS}} - Tel: {{PHONE}}
+Respons�vel T�cnico: {{RT_NAME}} - {{CRO}}'::text,
+  auto_logout_minutes integer DEFAULT 30,
+  require_password_on_unlock boolean DEFAULT true,
+  enable_audit_log boolean DEFAULT true,
+  max_failed_login_attempts integer DEFAULT 5,
+  lockout_duration_minutes integer DEFAULT 15,
+  block_debtors_scheduling boolean DEFAULT false,
+  debtor_block_days integer DEFAULT 30,
+  debtor_warning_message text DEFAULT 'Paciente possui d�bitos em atraso. Regularize os pagamentos antes de agendar.'::text,
+  max_discount_without_approval numeric DEFAULT 5.00,
+  require_manager_password_for_discount boolean DEFAULT true,
+  discount_approval_message text DEFAULT 'Desconto acima do limite permitido. Solicite aprova��o do gestor.'::text,
+  backup_frequency text DEFAULT 'WEEKLY'::text CHECK (backup_frequency = ANY (ARRAY['DAILY'::text, 'WEEKLY'::text, 'MONTHLY'::text, 'NEVER'::text])),
+  backup_email text,
+  last_backup_at timestamp with time zone,
+  goals jsonb DEFAULT '{"new_patients": 20, "no_show_rate": 5, "average_ticket": 2000, "occupancy_rate": 80, "conversion_rate": 30, "monthly_revenue": 50000, "monthly_net_result": 25000}'::jsonb,
+  type USER-DEFINED DEFAULT 'PRODUCTION'::clinic_type,
+  CONSTRAINT clinics_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.commission_payments (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  clinic_id uuid,
+  professional_id uuid,
+  period_start date NOT NULL,
+  period_end date NOT NULL,
+  total_procedures_value numeric DEFAULT 0,
+  commission_value numeric DEFAULT 0,
+  procedures_count integer DEFAULT 0,
+  details jsonb,
+  status text DEFAULT 'PENDING'::text CHECK (status = ANY (ARRAY['PENDING'::text, 'PAID'::text, 'CANCELLED'::text])),
+  paid_at timestamp with time zone,
+  paid_by uuid,
+  payment_method text,
+  notes text,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT commission_payments_pkey PRIMARY KEY (id),
+  CONSTRAINT commission_payments_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id),
+  CONSTRAINT commission_payments_professional_id_fkey FOREIGN KEY (professional_id) REFERENCES public.professionals(id),
+  CONSTRAINT commission_payments_paid_by_fkey FOREIGN KEY (paid_by) REFERENCES public.users(id)
+);
+CREATE TABLE public.conventions (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  clinic_id uuid,
+  name text NOT NULL,
+  code text,
+  price_table_id uuid,
+  status text NOT NULL DEFAULT 'Ativo'::text,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT conventions_pkey PRIMARY KEY (id),
+  CONSTRAINT conventions_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id),
+  CONSTRAINT conventions_price_table_id_fkey FOREIGN KEY (price_table_id) REFERENCES public.price_tables(id)
+);
+
+CREATE TABLE public.custom_lead_status (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  clinic_id uuid NOT NULL,
+  name text NOT NULL,
+  status_order integer NOT NULL,
+  active boolean NOT NULL DEFAULT true,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT custom_lead_status_pkey PRIMARY KEY (id),
+  CONSTRAINT custom_lead_status_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id)
+);
+CREATE TABLE public.dental_charting (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  patient_id uuid NOT NULL,
+  tooth_number integer NOT NULL CHECK (tooth_number >= 11 AND tooth_number <= 85),
+  status_code text CHECK (status_code = ANY (ARRAY['SOUND'::text, 'DECAYED'::text, 'FILLED'::text, 'MISSING'::text, 'IMPLANT'::text, 'CROWN'::text, 'VENEER'::text, 'ENDODONTIC'::text, 'FRACTURED'::text, 'EXTRACTED'::text])),
+  surfaces jsonb,
+  existing_material text,
+  condition_notes text,
+  last_update timestamp with time zone DEFAULT now(),
+  updated_by uuid,
+  CONSTRAINT dental_charting_pkey PRIMARY KEY (id),
+  CONSTRAINT dental_charting_patient_id_fkey FOREIGN KEY (patient_id) REFERENCES public.patients(id),
+  CONSTRAINT dental_charting_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES public.users(id)
+);
+CREATE TABLE public.document_templates (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  clinic_id uuid,
+  name text NOT NULL,
+  document_type text NOT NULL CHECK (document_type = ANY (ARRAY['PRESCRIPTION'::text, 'CERTIFICATE'::text, 'DECLARATION'::text, 'TREATMENT_PLAN'::text, 'BUDGET'::text, 'OTHER'::text])),
+  content text NOT NULL,
+  is_default boolean DEFAULT false,
+  is_active boolean DEFAULT true,
+  created_by uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT document_templates_pkey PRIMARY KEY (id),
+  CONSTRAINT document_templates_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id),
+  CONSTRAINT document_templates_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id)
+);
+CREATE TABLE public.expense_category (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  clinic_id uuid NOT NULL,
+  name text NOT NULL,
+  active boolean NOT NULL DEFAULT true,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  is_variable_cost boolean DEFAULT false,
+  CONSTRAINT expense_category_pkey PRIMARY KEY (id),
+  CONSTRAINT expense_category_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id)
+);
+CREATE TABLE public.expenses (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  clinic_id uuid NOT NULL,
+  description text NOT NULL,
+  category text NOT NULL,
+  provider text,
+  amount numeric NOT NULL,
+  amount_paid numeric DEFAULT 0,
+  due_date date NOT NULL,
+  status USER-DEFINED DEFAULT 'PENDING'::payment_status,
+  created_at timestamp with time zone DEFAULT now(),
+  payment_date date,
+  payment_method text,
+  payment_notes text,
+  CONSTRAINT expenses_pkey PRIMARY KEY (id),
+  CONSTRAINT expenses_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id)
+);
+CREATE TABLE public.financial_installments (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  patient_id uuid NOT NULL,
+  clinic_id uuid NOT NULL,
+  description text NOT NULL,
+  due_date date NOT NULL,
+  amount numeric NOT NULL,
+  amount_paid numeric DEFAULT 0,
+  status USER-DEFINED DEFAULT 'PENDING'::payment_status,
+  payment_method text,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT financial_installments_pkey PRIMARY KEY (id),
+  CONSTRAINT financial_installments_patient_id_fkey FOREIGN KEY (patient_id) REFERENCES public.patients(id),
+  CONSTRAINT financial_installments_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id)
+);
+CREATE TABLE public.gamification_rules (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  clinic_id uuid NOT NULL UNIQUE,
+  xp_appointment_completed integer DEFAULT 10,
+  xp_budget_approved integer DEFAULT 50,
+  xp_patient_referral integer DEFAULT 100,
+  xp_review_received integer DEFAULT 25,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT gamification_rules_pkey PRIMARY KEY (id),
+  CONSTRAINT gamification_rules_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id)
+);
+CREATE TABLE public.health_events (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  clinic_id uuid,
+  event_type text NOT NULL,
+  impact integer NOT NULL,
+  pillar text CHECK (pillar = ANY (ARRAY['marketing'::text, 'sales'::text, 'clinical'::text, 'operational'::text, 'financial'::text, 'overall'::text])),
+  title text,
+  description text,
+  metadata jsonb DEFAULT '{}'::jsonb,
+  created_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT health_events_pkey PRIMARY KEY (id),
+  CONSTRAINT health_events_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id)
+);
+CREATE TABLE public.insurance_plans (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  clinic_id uuid,
+  price_table_id uuid NOT NULL,
+  name text NOT NULL,
+  code text,
+  active boolean DEFAULT true,
+  CONSTRAINT insurance_plans_pkey PRIMARY KEY (id),
+  CONSTRAINT insurance_plans_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id),
+  CONSTRAINT insurance_plans_price_table_id_fkey FOREIGN KEY (price_table_id) REFERENCES public.price_tables(id)
+);
+CREATE TABLE public.integration_logs (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  clinic_id uuid,
+  integration_type text CHECK (integration_type = ANY (ARRAY['WEBHOOK'::text, 'API'::text, 'BACKUP'::text])),
+  status text CHECK (status = ANY (ARRAY['SUCCESS'::text, 'FAILURE'::text])),
+  details jsonb,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT integration_logs_pkey PRIMARY KEY (id),
+  CONSTRAINT integration_logs_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id)
+);
+CREATE TABLE public.inventory_categories (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  clinic_id uuid NOT NULL,
+  name text NOT NULL,
+  description text,
+  is_active boolean DEFAULT true,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT inventory_categories_pkey PRIMARY KEY (id),
+  CONSTRAINT inventory_categories_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id)
+);
+CREATE TABLE public.inventory_items (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  clinic_id uuid NOT NULL,
+  category_id uuid,
+  name text NOT NULL,
+  description text,
+  sku text,
+  barcode text,
+  unit_of_measure text DEFAULT 'UNIT'::text CHECK (unit_of_measure = ANY (ARRAY['UNIT'::text, 'BOX'::text, 'KG'::text, 'G'::text, 'ML'::text, 'L'::text, 'METER'::text, 'OTHER'::text])),
+  current_stock numeric DEFAULT 0 CHECK (current_stock >= 0::numeric),
+  minimum_stock numeric DEFAULT 0,
+  maximum_stock numeric,
+  unit_cost numeric DEFAULT 0,
+  selling_price numeric DEFAULT 0,
+  supplier_name text,
+  supplier_contact text,
+  is_active boolean DEFAULT true,
+  requires_prescription boolean DEFAULT false,
+  is_controlled boolean DEFAULT false,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT inventory_items_pkey PRIMARY KEY (id),
+  CONSTRAINT inventory_items_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id),
+  CONSTRAINT inventory_items_category_id_fkey FOREIGN KEY (category_id) REFERENCES public.inventory_categories(id)
+);
+CREATE TABLE public.inventory_movements (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  clinic_id uuid NOT NULL,
+  inventory_item_id uuid NOT NULL,
+  movement_type text NOT NULL CHECK (movement_type = ANY (ARRAY['IN'::text, 'OUT'::text, 'ADJUSTMENT'::text, 'TRANSFER'::text, 'LOSS'::text, 'RETURN'::text])),
+  quantity numeric NOT NULL,
+  unit_cost numeric DEFAULT 0,
+  total_cost numeric DEFAULT 0,
+  reference_type text CHECK (reference_type = ANY (ARRAY['PURCHASE'::text, 'SALE'::text, 'PROCEDURE'::text, 'ADJUSTMENT'::text, 'OTHER'::text])),
+  reference_id uuid,
+  reason text,
+  notes text,
+  stock_before numeric,
+  stock_after numeric,
+  performed_by uuid,
+  performed_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT inventory_movements_pkey PRIMARY KEY (id),
+  CONSTRAINT inventory_movements_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id),
+  CONSTRAINT inventory_movements_inventory_item_id_fkey FOREIGN KEY (inventory_item_id) REFERENCES public.inventory_items(id),
+  CONSTRAINT inventory_movements_performed_by_fkey FOREIGN KEY (performed_by) REFERENCES public.users(id)
+);
+
 CREATE TABLE public.lab_orders (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   clinic_id uuid NOT NULL,
@@ -334,7 +599,6 @@ CREATE TABLE public.lab_orders (
   created_by uuid,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
-  
   CONSTRAINT lab_orders_pkey PRIMARY KEY (id),
   CONSTRAINT lab_orders_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id),
   CONSTRAINT lab_orders_patient_id_fkey FOREIGN KEY (patient_id) REFERENCES public.patients(id),
@@ -343,148 +607,466 @@ CREATE TABLE public.lab_orders (
   CONSTRAINT lab_orders_budget_id_fkey FOREIGN KEY (budget_id) REFERENCES public.budgets(id),
   CONSTRAINT lab_orders_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id)
 );
+CREATE TABLE public.lead_interactions (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  lead_id uuid NOT NULL,
+  user_id uuid NOT NULL,
+  type text NOT NULL,
+  content text NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT lead_interactions_pkey PRIMARY KEY (id),
+  CONSTRAINT lead_interactions_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES public.leads(id),
+  CONSTRAINT lead_interactions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.lead_source (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  clinic_id uuid NOT NULL,
+  name text NOT NULL,
+  active boolean NOT NULL DEFAULT true,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT lead_source_pkey PRIMARY KEY (id),
+  CONSTRAINT lead_source_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id)
+);
+CREATE TABLE public.lead_tasks (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  lead_id uuid NOT NULL,
+  title text NOT NULL,
+  due_date date NOT NULL,
+  completed boolean DEFAULT false,
+  CONSTRAINT lead_tasks_pkey PRIMARY KEY (id),
+  CONSTRAINT lead_tasks_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES public.leads(id)
+);
+CREATE TABLE public.leads (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  clinic_id uuid NOT NULL,
+  name text NOT NULL,
+  phone text NOT NULL,
+  email text,
+  source text NOT NULL,
+  status USER-DEFINED DEFAULT 'NEW'::lead_status,
+  interest text,
+  value numeric,
+  patient_id uuid,
+  budget_id text,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  last_interaction timestamp with time zone DEFAULT now(),
+  campaign_id uuid,
+  lead_score integer DEFAULT 0,
+  priority text DEFAULT 'MEDIUM'::text CHECK (priority = ANY (ARRAY['HIGH'::text, 'MEDIUM'::text, 'LOW'::text])),
+  desired_treatment text,
+  CONSTRAINT leads_pkey PRIMARY KEY (id),
+  CONSTRAINT leads_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id),
+  CONSTRAINT leads_patient_id_fkey FOREIGN KEY (patient_id) REFERENCES public.patients(id),
+  CONSTRAINT leads_campaign_id_fkey FOREIGN KEY (campaign_id) REFERENCES public.marketing_campaigns(id)
+);
+CREATE TABLE public.marketing_campaigns (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  clinic_id uuid,
+  name text NOT NULL,
+  channel text NOT NULL,
+  status text DEFAULT 'ACTIVE'::text CHECK (status = ANY (ARRAY['ACTIVE'::text, 'PAUSED'::text, 'COMPLETED'::text])),
+  budget numeric DEFAULT 0,
+  start_date date DEFAULT CURRENT_DATE,
+  end_date date,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT marketing_campaigns_pkey PRIMARY KEY (id),
+  CONSTRAINT marketing_campaigns_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id)
+);
+CREATE TABLE public.medical_alerts (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  patient_id uuid NOT NULL,
+  alert_type text NOT NULL CHECK (alert_type = ANY (ARRAY['ALLERGY'::text, 'CONDITION'::text, 'MEDICATION'::text, 'RISK'::text, 'CONTRAINDICATION'::text])),
+  description text NOT NULL,
+  severity text DEFAULT 'MEDIUM'::text CHECK (severity = ANY (ARRAY['LOW'::text, 'MEDIUM'::text, 'HIGH'::text, 'CRITICAL'::text])),
+  is_critical boolean DEFAULT false,
+  is_active boolean DEFAULT true,
+  created_by uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT medical_alerts_pkey PRIMARY KEY (id),
+  CONSTRAINT medical_alerts_patient_id_fkey FOREIGN KEY (patient_id) REFERENCES public.patients(id),
+  CONSTRAINT medical_alerts_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id)
+);
+CREATE TABLE public.medical_certificates (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  patient_id uuid NOT NULL,
+  clinic_id uuid NOT NULL,
+  professional_id uuid NOT NULL,
+  certificate_type text CHECK (certificate_type = ANY (ARRAY['ABSENCE'::text, 'COMPANION'::text, 'FITNESS'::text, 'PROCEDURE'::text, 'OTHER'::text])),
+  days_off integer,
+  start_date date NOT NULL,
+  end_date date NOT NULL,
+  reason text,
+  cid_code text,
+  content text NOT NULL,
+  digital_signature_url text,
+  signed_at timestamp with time zone,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT medical_certificates_pkey PRIMARY KEY (id),
+  CONSTRAINT medical_certificates_patient_id_fkey FOREIGN KEY (patient_id) REFERENCES public.patients(id),
+  CONSTRAINT medical_certificates_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id),
+  CONSTRAINT medical_certificates_professional_id_fkey FOREIGN KEY (professional_id) REFERENCES public.professionals(id)
+);
+CREATE TABLE public.medication_library (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  clinic_id uuid,
+  name text NOT NULL,
+  active_ingredient text,
+  dosage text,
+  form text CHECK (form = ANY (ARRAY['TABLET'::text, 'CAPSULE'::text, 'SYRUP'::text, 'OINTMENT'::text, 'INJECTION'::text, 'DROPS'::text, 'OTHER'::text])),
+  is_controlled boolean DEFAULT false,
+  requires_special_prescription boolean DEFAULT false,
+  common_usage text,
+  common_dosage_instructions text,
+  is_active boolean DEFAULT true,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT medication_library_pkey PRIMARY KEY (id),
+  CONSTRAINT medication_library_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id)
+);
+CREATE TABLE public.notification_channels (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  clinic_id uuid,
+  channel_type text NOT NULL CHECK (channel_type = ANY (ARRAY['WHATSAPP'::text, 'EMAIL'::text, 'SMS'::text])),
+  provider_name text,
+  api_key text,
+  api_secret text,
+  sender_id text,
+  is_active boolean DEFAULT false,
+  daily_limit integer DEFAULT 100,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT notification_channels_pkey PRIMARY KEY (id),
+  CONSTRAINT notification_channels_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id)
+);
+CREATE TABLE public.notification_logs (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  clinic_id uuid,
+  patient_id uuid,
+  recipient_contact text NOT NULL,
+  channel_type text NOT NULL,
+  template_id uuid,
+  content_sent text,
+  status text DEFAULT 'PENDING'::text CHECK (status = ANY (ARRAY['PENDING'::text, 'SENT'::text, 'DELIVERED'::text, 'READ'::text, 'FAILED'::text])),
+  error_message text,
+  sent_at timestamp with time zone DEFAULT now(),
+  metadata jsonb,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT notification_logs_pkey PRIMARY KEY (id),
+  CONSTRAINT notification_logs_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id),
+  CONSTRAINT notification_logs_patient_id_fkey FOREIGN KEY (patient_id) REFERENCES public.patients(id),
+  CONSTRAINT notification_logs_template_id_fkey FOREIGN KEY (template_id) REFERENCES public.notification_templates(id)
+);
+CREATE TABLE public.notification_templates (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  clinic_id uuid,
+  name text NOT NULL,
+  trigger_event text NOT NULL CHECK (trigger_event = ANY (ARRAY['APPOINTMENT_CREATED'::text, 'APPOINTMENT_REMINDER'::text, 'APPOINTMENT_MISSED'::text, 'BIRTHDAY'::text, 'RECALL_6_MONTHS'::text, 'PAYMENT_DUE'::text, 'CUSTOM'::text])),
+  channel_type text DEFAULT 'WHATSAPP'::text CHECK (channel_type = ANY (ARRAY['WHATSAPP'::text, 'EMAIL'::text, 'SMS'::text])),
+  content text NOT NULL,
+  schedule_offset_minutes integer DEFAULT 0,
+  is_active boolean DEFAULT true,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT notification_templates_pkey PRIMARY KEY (id),
+  CONSTRAINT notification_templates_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id)
+);
+CREATE TABLE public.ortho_aligner_stock (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  treatment_plan_id uuid NOT NULL,
+  aligner_number integer NOT NULL,
+  arch text NOT NULL CHECK (arch = ANY (ARRAY['UPPER'::text, 'LOWER'::text])),
+  status text DEFAULT 'ORDERED'::text CHECK (status = ANY (ARRAY['ORDERED'::text, 'RECEIVED'::text, 'DELIVERED'::text, 'IN_USE'::text, 'COMPLETED'::text, 'LOST'::text, 'DAMAGED'::text])),
+  ordered_date date,
+  received_date date,
+  delivered_date date,
+  expected_start_date date,
+  actual_start_date date,
+  expected_end_date date,
+  actual_end_date date,
+  notes text,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT ortho_aligner_stock_pkey PRIMARY KEY (id),
+  CONSTRAINT ortho_aligner_stock_treatment_plan_id_fkey FOREIGN KEY (treatment_plan_id) REFERENCES public.ortho_treatment_plans(id)
+);
+CREATE TABLE public.ortho_appointments (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  appointment_id uuid NOT NULL,
+  treatment_plan_id uuid NOT NULL,
+  appointment_type text CHECK (appointment_type = ANY (ARRAY['INSTALLATION'::text, 'MAINTENANCE'::text, 'ADJUSTMENT'::text, 'EMERGENCY'::text, 'REMOVAL'::text, 'RETENTION_CHECK'::text])),
+  archwire_upper text,
+  elastics_upper text,
+  chain_upper text,
+  archwire_lower text,
+  elastics_lower text,
+  chain_lower text,
+  aligners_delivered_from integer,
+  aligners_delivered_to integer,
+  aligners_stock_given integer,
+  ipr_performed boolean DEFAULT false,
+  ipr_teeth text,
+  attachments_placed boolean DEFAULT false,
+  attachments_removed boolean DEFAULT false,
+  attachments_list text,
+  bracket_broken ARRAY,
+  bracket_replaced ARRAY,
+  band_loose ARRAY,
+  wire_broken boolean DEFAULT false,
+  hygiene_score integer CHECK (hygiene_score >= 1 AND hygiene_score <= 5),
+  compliance_score integer CHECK (compliance_score >= 1 AND compliance_score <= 5),
+  cooperation_notes text,
+  next_visit_plan text,
+  next_visit_interval_days integer DEFAULT 30,
+  extra_charge_reason text,
+  extra_charge_value numeric DEFAULT 0,
+  notes text,
+  photos_urls ARRAY,
+  created_by uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT ortho_appointments_pkey PRIMARY KEY (id),
+  CONSTRAINT ortho_appointments_appointment_id_fkey FOREIGN KEY (appointment_id) REFERENCES public.appointments(id),
+  CONSTRAINT ortho_appointments_treatment_plan_id_fkey FOREIGN KEY (treatment_plan_id) REFERENCES public.ortho_treatment_plans(id),
+  CONSTRAINT ortho_appointments_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id)
+);
+CREATE TABLE public.ortho_contracts (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  clinic_id uuid NOT NULL,
+  patient_id uuid NOT NULL,
+  budget_id uuid,
+  professional_id uuid,
+  contract_type text NOT NULL CHECK (contract_type = ANY (ARRAY['FIXED_BRACES'::text, 'ALIGNERS'::text, 'ORTHOPEDIC'::text, 'LINGUAL'::text, 'CERAMIC'::text])),
+  total_value numeric NOT NULL CHECK (total_value > 0::numeric),
+  down_payment numeric DEFAULT 0 CHECK (down_payment >= 0::numeric),
+  monthly_payment numeric NOT NULL CHECK (monthly_payment > 0::numeric),
+  number_of_months integer NOT NULL CHECK (number_of_months > 0),
+  billing_day integer NOT NULL CHECK (billing_day >= 1 AND billing_day <= 31),
+  start_date date NOT NULL,
+  estimated_end_date date,
+  actual_end_date date,
+  status text DEFAULT 'ACTIVE'::text CHECK (status = ANY (ARRAY['ACTIVE'::text, 'SUSPENDED'::text, 'COMPLETED'::text, 'CANCELLED'::text])),
+  suspension_reason text,
+  suspended_at timestamp with time zone,
+  auto_charge boolean DEFAULT false,
+  block_scheduling_if_overdue boolean DEFAULT true,
+  overdue_tolerance_days integer DEFAULT 10,
+  notes text,
+  created_by uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT ortho_contracts_pkey PRIMARY KEY (id),
+  CONSTRAINT ortho_contracts_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id),
+  CONSTRAINT ortho_contracts_patient_id_fkey FOREIGN KEY (patient_id) REFERENCES public.patients(id),
+  CONSTRAINT ortho_contracts_budget_id_fkey FOREIGN KEY (budget_id) REFERENCES public.budgets(id),
+  CONSTRAINT ortho_contracts_professional_id_fkey FOREIGN KEY (professional_id) REFERENCES public.professionals(id),
+  CONSTRAINT ortho_contracts_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id)
+);
+CREATE TABLE public.ortho_treatment_plans (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  contract_id uuid NOT NULL,
+  total_aligners_upper integer DEFAULT 0 CHECK (total_aligners_upper >= 0),
+  total_aligners_lower integer DEFAULT 0 CHECK (total_aligners_lower >= 0),
+  current_aligner_upper integer DEFAULT 0 CHECK (current_aligner_upper >= 0),
+  current_aligner_lower integer DEFAULT 0 CHECK (current_aligner_lower >= 0),
+  change_frequency_days integer DEFAULT 14 CHECK (change_frequency_days > 0),
+  last_aligner_change_date date,
+  next_aligner_change_date date,
+  installation_date date,
+  bracket_type text CHECK (bracket_type = ANY (ARRAY['METAL'::text, 'CERAMIC'::text, 'SAPPHIRE'::text, 'LINGUAL'::text, 'SELF_LIGATING'::text])),
+  current_phase text DEFAULT 'DIAGNOSIS'::text CHECK (current_phase = ANY (ARRAY['DIAGNOSIS'::text, 'LEVELING'::text, 'ALIGNMENT'::text, 'WORKING'::text, 'SPACE_CLOSURE'::text, 'FINISHING'::text, 'RETENTION'::text])),
+  phase_started_at date,
+  treatment_goals text,
+  extractions_planned ARRAY,
+  extractions_completed ARRAY,
+  ipr_planned jsonb DEFAULT '[]'::jsonb,
+  attachments_planned ARRAY,
+  attachments_placed ARRAY,
+  notes text,
+  updated_by uuid,
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT ortho_treatment_plans_pkey PRIMARY KEY (id),
+  CONSTRAINT ortho_treatment_plans_contract_id_fkey FOREIGN KEY (contract_id) REFERENCES public.ortho_contracts(id),
+  CONSTRAINT ortho_treatment_plans_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES public.users(id)
+);
+CREATE TABLE public.patient_anamnesis (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  patient_id uuid NOT NULL UNIQUE,
+  clinic_id uuid NOT NULL,
+  has_allergies boolean DEFAULT false,
+  allergies_list ARRAY,
+  has_chronic_diseases boolean DEFAULT false,
+  chronic_diseases ARRAY,
+  current_medications ARRAY,
+  previous_surgeries ARRAY,
+  last_surgery_date date,
+  is_pregnant boolean DEFAULT false,
+  is_breastfeeding boolean DEFAULT false,
+  has_pacemaker boolean DEFAULT false,
+  has_bleeding_disorder boolean DEFAULT false,
+  has_diabetes boolean DEFAULT false,
+  has_hypertension boolean DEFAULT false,
+  is_smoker boolean DEFAULT false,
+  alcohol_consumption text CHECK (alcohol_consumption = ANY (ARRAY['NONE'::text, 'OCCASIONAL'::text, 'MODERATE'::text, 'HEAVY'::text])),
+  last_dental_visit date,
+  brushing_frequency integer DEFAULT 2,
+  uses_floss boolean DEFAULT false,
+  has_dental_sensitivity boolean DEFAULT false,
+  previous_aesthetic_procedures ARRAY,
+  aesthetic_goals text,
+  filled_by uuid,
+  filled_at timestamp with time zone DEFAULT now(),
+  patient_signature_url text,
+  patient_signature_date timestamp with time zone,
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT patient_anamnesis_pkey PRIMARY KEY (id),
+  CONSTRAINT patient_anamnesis_patient_id_fkey FOREIGN KEY (patient_id) REFERENCES public.patients(id),
+  CONSTRAINT patient_anamnesis_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id),
+  CONSTRAINT patient_anamnesis_filled_by_fkey FOREIGN KEY (filled_by) REFERENCES public.users(id)
+);
+CREATE TABLE public.patient_documents (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  patient_id uuid NOT NULL,
+  template_id uuid,
+  title text NOT NULL,
+  type USER-DEFINED NOT NULL,
+  content text NOT NULL,
+  status text DEFAULT 'DRAFT'::text,
+  created_at timestamp with time zone DEFAULT now(),
+  signed_at timestamp with time zone,
+  clinic_id uuid,
+  print_status text DEFAULT 'PENDING'::text CHECK (print_status = ANY (ARRAY['PENDING'::text, 'PRINTED'::text, 'SIGNED'::text, 'ARCHIVED'::text])),
+  generated_from_budget_id uuid,
+  CONSTRAINT patient_documents_pkey PRIMARY KEY (id),
+  CONSTRAINT patient_documents_patient_id_fkey FOREIGN KEY (patient_id) REFERENCES public.patients(id),
+  CONSTRAINT patient_documents_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id),
+  CONSTRAINT patient_documents_generated_from_budget_id_fkey FOREIGN KEY (generated_from_budget_id) REFERENCES public.budgets(id)
+);
 
--- [CONTINUA COM TODAS AS OUTRAS TABELAS DO SCHEMA FORNECIDO...]
--- (Por questões de espaço, incluí as principais. O arquivo completo terá TODAS as tabelas)
-
--- =====================================================
--- VIEWS
--- =====================================================
-
--- View: Pacientes com Alertas Críticos
-CREATE OR REPLACE VIEW patients_with_critical_alerts AS
-SELECT 
-  p.id as patient_id,
-  p.name as patient_name,
-  p.phone,
-  p.patient_score,
-  COUNT(ma.id) as critical_alerts_count,
-  ARRAY_AGG(ma.description) as alert_descriptions,
-  ARRAY_AGG(ma.severity) as alert_severities
-FROM public.patients p
-JOIN public.medical_alerts ma ON p.id = ma.patient_id
-WHERE ma.is_active = true AND ma.is_critical = true
-GROUP BY p.id, p.name, p.phone, p.patient_score;
-
--- View: Estatísticas de Indicação
-CREATE OR REPLACE VIEW patient_referral_stats AS
-SELECT 
-  p.id as referrer_patient_id,
-  p.name as referrer_name,
-  COUNT(referred.id) as total_referrals,
-  SUM(referred.total_approved) as total_revenue_from_referrals,
-  ARRAY_AGG(referred.id) as referred_patients
-FROM public.patients p
-LEFT JOIN public.patients referred ON referred.indication_patient_id = p.id
-GROUP BY p.id, p.name
-HAVING COUNT(referred.id) > 0;
-
--- View: Saldo de Recompensas
-CREATE OR REPLACE VIEW patient_rewards_balance AS
-SELECT 
-  patient_id,
-  SUM(reward_value) FILTER (WHERE status = 'PENDING') as pending_balance,
-  SUM(reward_value) FILTER (WHERE status = 'REDEEMED') as redeemed_total,
-  COUNT(id) as total_rewards_earned
-FROM public.referral_rewards
-GROUP BY patient_id;
-
--- =====================================================
--- TRIGGERS
--- =====================================================
-
--- Trigger: Auto-atualizar Patient Score
-CREATE OR REPLACE FUNCTION public.auto_update_patient_score()
-RETURNS TRIGGER AS $$
-BEGIN
-  IF NEW.bad_debtor = true THEN
-    NEW.patient_score := 'BLACKLIST';
-  ELSIF NEW.total_approved >= 50000 THEN
-    NEW.patient_score := 'DIAMOND';
-  ELSIF NEW.total_approved >= 20000 THEN
-    NEW.patient_score := 'GOLD';
-  ELSIF NEW.balance_due > 5000 AND (NEW.balance_due::float / NULLIF(NEW.total_approved, 0)) > 0.5 THEN
-    NEW.patient_score := 'RISK';
-  ELSE
-    NEW.patient_score := 'STANDARD';
-  END IF;
-  
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER trg_auto_update_patient_score
-  BEFORE INSERT OR UPDATE OF total_approved, total_paid, balance_due, bad_debtor
-  ON public.patients
-  FOR EACH ROW
-  EXECUTE FUNCTION public.auto_update_patient_score();
-
--- Trigger: Gerar Recompensa Automática
-CREATE OR REPLACE FUNCTION public.check_referral_reward()
-RETURNS TRIGGER AS $$
-DECLARE
-  referrer_id uuid;
-  existing_reward uuid;
-  min_value_for_reward numeric := 500.00;
-  reward_amount numeric := 50.00;
-BEGIN
-  IF NEW.indication_patient_id IS NOT NULL THEN
-    referrer_id := NEW.indication_patient_id;
-    
-    IF NEW.total_paid >= min_value_for_reward THEN
-      SELECT id INTO existing_reward 
-      FROM public.referral_rewards 
-      WHERE patient_id = referrer_id AND referred_patient_id = NEW.id;
-      
-      IF existing_reward IS NULL THEN
-        INSERT INTO public.referral_rewards (
-          clinic_id,
-          patient_id,
-          referred_patient_id,
-          reward_type,
-          reward_value,
-          description,
-          status,
-          expiry_date
-        ) VALUES (
-          NEW.clinic_id,
-          referrer_id,
-          NEW.id,
-          'CREDIT',
-          reward_amount,
-          'Bônus por indicação de ' || NEW.name,
-          'PENDING',
-          now() + interval '90 days'
-        );
-      END IF;
-    END IF;
-  END IF;
-
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER trg_check_referral_reward
-  AFTER UPDATE OF total_paid ON public.patients
-  FOR EACH ROW
-  EXECUTE FUNCTION public.check_referral_reward();
-
--- =====================================================
--- ÍNDICES
--- =====================================================
-
-CREATE INDEX IF NOT EXISTS idx_patients_clinic ON public.patients(clinic_id);
-CREATE INDEX IF NOT EXISTS idx_patients_score ON public.patients(patient_score);
-CREATE INDEX IF NOT EXISTS idx_patients_indication ON public.patients(indication_patient_id);
-CREATE INDEX IF NOT EXISTS idx_medical_alerts_patient ON public.medical_alerts(patient_id);
-CREATE INDEX IF NOT EXISTS idx_medical_alerts_critical ON public.medical_alerts(is_critical, is_active);
-CREATE INDEX IF NOT EXISTS idx_referral_rewards_patient ON public.referral_rewards(patient_id);
-CREATE INDEX IF NOT EXISTS idx_referral_rewards_clinic ON public.referral_rewards(clinic_id);
-CREATE INDEX IF NOT EXISTS idx_patient_recalls_clinic ON public.patient_recalls(clinic_id);
-CREATE INDEX IF NOT EXISTS idx_patient_recalls_status ON public.patient_recalls(status);
-CREATE INDEX IF NOT EXISTS idx_appointment_confirmations_status ON public.appointment_confirmations(confirmation_status);
-CREATE INDEX IF NOT EXISTS idx_lab_orders_status ON public.lab_orders(status);
-
--- =====================================================
--- FIM DO SCHEMA
--- =====================================================
+CREATE TABLE public.patient_recalls (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  clinic_id uuid NOT NULL,
+  patient_id uuid NOT NULL,
+  recall_type text NOT NULL CHECK (recall_type = ANY (ARRAY['PROPHYLAXIS'::text, 'PERIO'::text, 'BOTOX_RENEWAL'::text, 'FILLER_RENEWAL'::text, 'ORTHO_CHECK'::text, 'IMPLANT_MAINTENANCE'::text, 'CROWN_CHECK'::text, 'GENERAL_CHECKUP'::text, 'TREATMENT_CONTINUATION'::text, 'REACTIVATION'::text])),
+  due_date date NOT NULL,
+  created_date date DEFAULT CURRENT_DATE,
+  status text DEFAULT 'PENDING'::text CHECK (status = ANY (ARRAY['PENDING'::text, 'CONTACTED'::text, 'SCHEDULED'::text, 'OVERDUE'::text, 'LOST'::text, 'COMPLETED'::text])),
+  linked_appointment_id uuid,
+  original_treatment_id uuid,
+  last_contact_date timestamp with time zone,
+  contact_attempts integer DEFAULT 0,
+  contact_method text CHECK (contact_method = ANY (ARRAY['WHATSAPP'::text, 'SMS'::text, 'EMAIL'::text, 'PHONE'::text, 'IN_PERSON'::text])),
+  contact_notes text,
+  priority integer DEFAULT 50 CHECK (priority >= 0 AND priority <= 100),
+  notes text,
+  created_by uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT patient_recalls_pkey PRIMARY KEY (id),
+  CONSTRAINT patient_recalls_linked_appointment_id_fkey FOREIGN KEY (linked_appointment_id) REFERENCES public.appointments(id),
+  CONSTRAINT patient_recalls_original_treatment_id_fkey FOREIGN KEY (original_treatment_id) REFERENCES public.treatment_items(id),
+  CONSTRAINT patient_recalls_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id),
+  CONSTRAINT patient_recalls_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id),
+  CONSTRAINT patient_recalls_patient_id_fkey FOREIGN KEY (patient_id) REFERENCES public.patients(id)
+);
+CREATE TABLE public.patients (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  clinic_id uuid NOT NULL,
+  name text NOT NULL,
+  cpf text,
+  phone text NOT NULL,
+  email text,
+  birth_date date,
+  gender text,
+  address text,
+  clinical_status text DEFAULT 'Em Tratamento'::text,
+  total_approved numeric DEFAULT 0,
+  total_paid numeric DEFAULT 0,
+  balance_due numeric DEFAULT 0,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  acquisition_source_id uuid,
+  last_aesthetic_evaluation date,
+  patient_ranking text DEFAULT 'STANDARD'::text,
+  responsible_party_id uuid,
+  relationship_type text CHECK (relationship_type = ANY (ARRAY['SELF'::text, 'PARENT'::text, 'SPOUSE'::text, 'GUARDIAN'::text, 'OTHER'::text])),
+  profile_photo_url text,
+  document_photo_front_url text,
+  document_photo_back_url text,
+  nickname text,
+  occupation text,
+  instagram_handle text,
+  marital_status text CHECK (marital_status = ANY (ARRAY['SINGLE'::text, 'MARRIED'::text, 'DIVORCED'::text, 'WIDOWED'::text, 'OTHER'::text])),
+  wedding_anniversary date,
+  indication_patient_id uuid,
+  vip_notes text,
+  patient_score text DEFAULT 'STANDARD'::text CHECK (patient_score = ANY (ARRAY['DIAMOND'::text, 'GOLD'::text, 'STANDARD'::text, 'RISK'::text, 'BLACKLIST'::text])),
+  bad_debtor boolean DEFAULT false,
+  sentiment_status text DEFAULT 'NEUTRAL'::text CHECK (sentiment_status = ANY (ARRAY['VERY_HAPPY'::text, 'HAPPY'::text, 'NEUTRAL'::text, 'UNHAPPY'::text, 'COMPLAINING'::text])),
+  photo_profile_url text,
+  photo_smile_url text,
+  photo_frontal_url text,
+  photo_profile_side_url text,
+  photo_document_front_url text,
+  photo_document_back_url text,
+  is_active boolean DEFAULT true,
+  tags ARRAY DEFAULT '{}'::text[],
+  CONSTRAINT patients_pkey PRIMARY KEY (id),
+  CONSTRAINT patients_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id),
+  CONSTRAINT patients_acquisition_source_id_fkey FOREIGN KEY (acquisition_source_id) REFERENCES public.lead_source(id),
+  CONSTRAINT patients_responsible_party_id_fkey FOREIGN KEY (responsible_party_id) REFERENCES public.patients(id),
+  CONSTRAINT patients_indication_patient_id_fkey FOREIGN KEY (indication_patient_id) REFERENCES public.patients(id)
+);
+CREATE TABLE public.payment_history (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  installment_id uuid NOT NULL,
+  amount numeric NOT NULL,
+  date date NOT NULL,
+  method text NOT NULL,
+  notes text,
+  transaction_id uuid UNIQUE,
+  CONSTRAINT payment_history_pkey PRIMARY KEY (id),
+  CONSTRAINT payment_history_installment_id_fkey FOREIGN KEY (installment_id) REFERENCES public.financial_installments(id),
+  CONSTRAINT fk_payment_transaction FOREIGN KEY (transaction_id) REFERENCES public.transactions(id)
+);
+CREATE TABLE public.payment_method (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  clinic_id uuid NOT NULL,
+  name text NOT NULL,
+  active boolean NOT NULL DEFAULT true,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT payment_method_pkey PRIMARY KEY (id),
+  CONSTRAINT payment_method_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id)
+);
+CREATE TABLE public.payment_method_fees (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  clinic_id uuid,
+  payment_method_name text NOT NULL,
+  payment_type text DEFAULT 'CREDIT'::text CHECK (payment_type = ANY (ARRAY['CREDIT'::text, 'DEBIT'::text, 'PIX'::text, 'BOLETO'::text, 'CASH'::text, 'OTHER'::text])),
+  fee_type text DEFAULT 'PERCENTAGE'::text CHECK (fee_type = ANY (ARRAY['PERCENTAGE'::text, 'FIXED'::text])),
+  fee_percent numeric DEFAULT 0,
+  fee_fixed_amount numeric DEFAULT 0,
+  installments_allowed boolean DEFAULT false,
+  max_installments integer DEFAULT 1,
+  min_installment_value numeric DEFAULT 0,
+  active boolean DEFAULT true,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT payment_method_fees_pkey PRIMARY KEY (id),
+  CONSTRAINT payment_method_fees_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id)
+);
+CREATE TABLE public.prescription_items (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  prescription_id uuid NOT NULL,
+  medication_id uuid,
+  medication_name text NOT NULL,
+  dosage text NOT NULL,
+  frequency text NOT NULL,
+  duration text NOT NULL,
+  quantity text,
+  instructions text,
+  CONSTRAINT prescription_items_pkey PRIMARY KEY (id),
+  CONSTRAINT prescription_items_prescription_id_fkey FOREIGN KEY (prescription_id) REFERENCES public.prescriptions(id),
+  CONSTRAINT prescription_items_medication_id_fkey FOREIGN KEY (medication_id) REFERENCES public.medication_library(id)
+);

@@ -1,5 +1,6 @@
 import React from "react";
-import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
+import { HashRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
+import "./index.css"; // Import CSS globally
 
 // ============================================
 // PROVIDERS (Global State Management)
@@ -34,6 +35,7 @@ import Reports from "./pages/Reports";
 import Lab from "./pages/Lab";
 import Inventory from "./pages/Inventory";
 import Settings from "./pages/Settings";
+import Profile from "./pages/Profile";
 
 // ============================================
 // FORMS
@@ -53,7 +55,13 @@ import ReceivePayment from "./pages/financial/ReceivePayment";
 import Goals from "./pages/intelligence/Goals";
 import BOSIntelligence from "./pages/intelligence/BOSIntelligence";
 import ClinicHealth from "./pages/intelligence/ClinicHealth";
-import Profile from "./pages/Profile";
+
+// Wrapper to adapt AppLayout for Router Outlet
+const LayoutWrapper = () => (
+  <AppLayout>
+    <Outlet />
+  </AppLayout>
+);
 
 // ============================================
 // MAIN APP COMPONENT
@@ -74,7 +82,11 @@ const App: React.FC = () => {
                   <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
                   {/* PROTECTED ROUTES (Wrapped in AppLayout) */}
-                  <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
+                  <Route element={
+                    <ProtectedRoute>
+                      <LayoutWrapper />
+                    </ProtectedRoute>
+                  }>
 
                     {/* --- CORE MODULES --- */}
                     <Route path="/intelligence" element={<IntelligenceGateway />} />

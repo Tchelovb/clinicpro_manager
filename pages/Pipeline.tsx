@@ -8,6 +8,10 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { highTicketService, HighTicketLead, PipelineStats } from '../services/highTicketService';
+import { Button } from "../components/ui/button";
+import { Badge } from "../components/ui/badge";
+import { Card, CardContent } from "../components/ui/card";
+import { cn } from "../lib/utils";
 
 // Status Columns Configuration (High-Ticket Flow)
 const COLUMNS = [
@@ -20,7 +24,7 @@ const COLUMNS = [
         description: 'Leads recém-capturados'
     },
     {
-        id: 'CONTACTED',
+        id: 'CONTACT',
         label: 'Em Contato',
         color: 'border-violet-500',
         bg: 'bg-violet-50',
@@ -36,7 +40,7 @@ const COLUMNS = [
         description: 'Consulta marcada'
     },
     {
-        id: 'BUDGET_CREATED',
+        id: 'PROPOSAL',
         label: 'Orçamento Enviado',
         color: 'border-amber-500',
         bg: 'bg-amber-50',
@@ -172,13 +176,13 @@ export const PipelinePage: React.FC = () => {
                     </h1>
                     <p className="text-slate-500 mt-2">Funil de conversão de procedimentos premium</p>
                 </div>
-                <button
-                    className="flex items-center gap-2 px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors font-medium shadow-sm"
+                <Button
                     onClick={() => navigate('/pipeline/leads/new')}
+                    className="bg-violet-600 hover:bg-violet-700 text-white shadow-sm"
                 >
-                    <Plus size={18} />
+                    <Plus size={18} className="mr-2" />
                     Novo Lead
-                </button>
+                </Button>
             </div>
 
             {/* ============================================ */}
@@ -199,17 +203,19 @@ export const PipelinePage: React.FC = () => {
                 </div>
 
                 {/* Leads Quentes */}
-                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-                    <div className="flex items-center gap-3 mb-2">
-                        <div className="p-2 bg-rose-50 rounded-lg">
-                            <Zap className="text-rose-600" size={20} />
+                <Card className="hover:shadow-md transition-shadow">
+                    <CardContent className="p-4 flex items-center justify-between">
+                        <div>
+                            <div className="flex items-center gap-2 mb-2">
+                                <span className="p-1.5 bg-rose-50 rounded text-rose-600">
+                                    <Zap size={16} />
+                                </span>
+                                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Leads Quentes</span>
+                            </div>
+                            <p className="text-2xl font-bold text-rose-600">{stats?.hotLeads || 0}</p>
                         </div>
-                        <p className="text-xs font-bold text-slate-500 uppercase">Leads Quentes</p>
-                    </div>
-                    <p className="text-2xl font-bold text-rose-600">
-                        {stats?.hotLeads || 0}
-                    </p>
-                </div>
+                    </CardContent>
+                </Card>
 
                 {/* Taxa de Conversão */}
                 <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
@@ -245,8 +251,8 @@ export const PipelinePage: React.FC = () => {
                 <button
                     onClick={() => setFilterPriority('ALL')}
                     className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${filterPriority === 'ALL'
-                            ? 'bg-violet-50 text-violet-700 shadow-sm'
-                            : 'text-slate-500 hover:text-slate-700'
+                        ? 'bg-violet-50 text-violet-700 shadow-sm'
+                        : 'text-slate-500 hover:text-slate-700'
                         }`}
                 >
                     Todos
@@ -254,8 +260,8 @@ export const PipelinePage: React.FC = () => {
                 <button
                     onClick={() => setFilterPriority('HIGH')}
                     className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${filterPriority === 'HIGH'
-                            ? 'bg-rose-50 text-rose-700 shadow-sm'
-                            : 'text-slate-500 hover:text-rose-600'
+                        ? 'bg-rose-50 text-rose-700 shadow-sm'
+                        : 'text-slate-500 hover:text-rose-600'
                         }`}
                 >
                     Alta 🔥
@@ -263,8 +269,8 @@ export const PipelinePage: React.FC = () => {
                 <button
                     onClick={() => setFilterPriority('MEDIUM')}
                     className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${filterPriority === 'MEDIUM'
-                            ? 'bg-amber-50 text-amber-700 shadow-sm'
-                            : 'text-slate-500 hover:text-amber-600'
+                        ? 'bg-amber-50 text-amber-700 shadow-sm'
+                        : 'text-slate-500 hover:text-amber-600'
                         }`}
                 >
                     Média ⚡
@@ -331,12 +337,12 @@ export const PipelinePage: React.FC = () => {
                                                     {/* Value & Tier Badge */}
                                                     {lead.value && valueTier && (
                                                         <div className="flex items-center gap-2 mb-3">
-                                                            <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-bold ${valueTier.bg} ${valueTier.color} border border-${valueTier.color.replace('text-', '')}-200`}>
-                                                                {TierIcon && <TierIcon size={12} />}
+                                                            <Badge variant="outline" className={`gap-1 ${valueTier.bg} ${valueTier.color} border-${valueTier.color.replace('text-', '')}-200`}>
+                                                                {TierIcon && <TierIcon size={10} />}
                                                                 {valueTier.label}
-                                                            </div>
+                                                            </Badge>
                                                             <div className="flex items-center text-teal-600 text-sm font-bold">
-                                                                <DollarSign size={14} className="mr-0.5" />
+                                                                <DollarSign size={12} className="mr-0.5" />
                                                                 {lead.value.toLocaleString('pt-BR')}
                                                             </div>
                                                         </div>

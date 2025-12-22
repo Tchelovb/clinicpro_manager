@@ -62,13 +62,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar }) => {
         { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
         // INTELLIGENCE SECTION (PRIORITY)
         {
-            path: "/dashboard/intelligence-gateway",
-            label: "BOS Intelligence",
-            icon: Brain,
-            highlight: true
-        },
-        {
-            path: "/dashboard/chatbos",
+            path: "/chat-bos",
             label: "ChatBOS",
             icon: Sparkles,
             highlight: true
@@ -96,11 +90,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar }) => {
     // =====================================================
     const MASTER_ITEMS = [
         {
-            path: "/dashboard/intelligence-gateway",
-            label: "Intelligence Gateway",
-            icon: Brain,
+            path: "/chat-bos",
+            label: "ChatBOS",
+            icon: Sparkles,
             highlight: true,
-            desc: "Painel principal consolidado"
+            desc: "Assistente IA Executivo"
         },
         {
             path: "/dashboard/network",
@@ -115,12 +109,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar }) => {
             icon: Gamepad2,
             highlight: true,
             desc: "Simuladores e cenários"
-        },
-        {
-            path: "/dashboard/chatbos",
-            label: "ChatBOS",
-            icon: Sparkles,
-            highlight: true
         },
         {
             path: "/settings",
@@ -195,35 +183,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar }) => {
                 ))}
             </nav>
 
-            {/* ChatBOS Quick Access */}
-            <div className="px-3 py-4 border-t border-b border-gray-100 dark:border-gray-800">
-                <NavLink
-                    to="/bos-intelligence"
-                    className={({ isActive }) => `group relative w-full flex items-center ${isCollapsed ? 'justify-center' : 'justify-start'
-                        } gap-3 px-3 py-3 rounded-lg ${isActive
-                            ? 'bg-gradient-to-r from-purple-700 to-blue-700 text-white shadow-xl'
-                            : 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white'
-                        } transition-all duration-200 shadow-lg hover:shadow-xl`}
-                >
-                    <Brain
-                        size={20}
-                        className={`shrink-0 animate-pulse ${isCollapsed ? 'mx-auto' : ''}`}
-                    />
-                    {!isCollapsed && (
-                        <div className="flex flex-col items-start">
-                            <span className="text-sm font-bold">BOS Intelligence</span>
-                            <span className="text-xs opacity-90">Comando Executivo</span>
-                        </div>
-                    )}
 
-                    {/* Tooltip for collapsed state */}
-                    {isCollapsed && (
-                        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-opacity">
-                            BOS Intelligence - Comando Executivo
-                        </div>
-                    )}
-                </NavLink>
-            </div>
 
             {/* MASTER ONLY: Expandir Rede Button */}
             {profile?.role === 'MASTER' && !isCollapsed && (

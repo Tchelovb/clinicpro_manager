@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Settings as SettingsIcon, Building2, Trophy, Users, Zap, Save, Loader2, Edit2, Plus } from 'lucide-react';
+import { Settings as SettingsIcon, Building2, Trophy, Users, Zap, Save, Loader2, Edit2, Plus, Stethoscope } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
+import ProceduresSettings from '../components/settings/ProceduresSettings';
 
 const Settings: React.FC = () => {
     const navigate = useNavigate();
@@ -11,7 +12,7 @@ const Settings: React.FC = () => {
 
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [activeTab, setActiveTab] = useState<'clinic' | 'gamification' | 'users' | 'integrations'>('clinic');
+    const [activeTab, setActiveTab] = useState<'clinic' | 'gamification' | 'users' | 'procedures' | 'integrations'>('clinic');
 
     const [clinicData, setClinicData] = useState({
         name: '',
@@ -33,12 +34,22 @@ const Settings: React.FC = () => {
     const [users, setUsers] = useState<any[]>([]);
 
     useEffect(() => {
-        loadSettings();
-    }, []);
+        if (profile?.clinic_id) {
+            loadSettings();
+        }
+    }, [profile?.clinic_id]);
 
     const loadSettings = async () => {
         try {
             setLoading(true);
+
+            // Verificar se o profile está carregado
+            if (!profile?.clinic_id) {
+                console.warn('Profile ou clinic_id não disponível ainda');
+                setLoading(false);
+                return;
+            }
+
 
             // Load clinic data
             const { data: clinicInfo, error: clinicError } = await supabase
@@ -181,8 +192,8 @@ const Settings: React.FC = () => {
                         <button
                             onClick={() => setActiveTab('clinic')}
                             className={`w-full px-4 py-3 rounded-lg text-left text-sm font-medium transition-colors flex items-center gap-3 ${activeTab === 'clinic'
-                                    ? 'bg-violet-50 text-violet-700'
-                                    : 'text-slate-600 hover:bg-slate-50'
+                                ? 'bg-violet-50 text-violet-700'
+                                : 'text-slate-600 hover:bg-slate-50'
                                 }`}
                         >
                             <Building2 size={18} />
@@ -191,8 +202,8 @@ const Settings: React.FC = () => {
                         <button
                             onClick={() => setActiveTab('gamification')}
                             className={`w-full px-4 py-3 rounded-lg text-left text-sm font-medium transition-colors flex items-center gap-3 ${activeTab === 'gamification'
-                                    ? 'bg-violet-50 text-violet-700'
-                                    : 'text-slate-600 hover:bg-slate-50'
+                                ? 'bg-violet-50 text-violet-700'
+                                : 'text-slate-600 hover:bg-slate-50'
                                 }`}
                         >
                             <Trophy size={18} />
@@ -201,18 +212,28 @@ const Settings: React.FC = () => {
                         <button
                             onClick={() => setActiveTab('users')}
                             className={`w-full px-4 py-3 rounded-lg text-left text-sm font-medium transition-colors flex items-center gap-3 ${activeTab === 'users'
-                                    ? 'bg-violet-50 text-violet-700'
-                                    : 'text-slate-600 hover:bg-slate-50'
+                                ? 'bg-violet-50 text-violet-700'
+                                : 'text-slate-600 hover:bg-slate-50'
                                 }`}
                         >
                             <Users size={18} />
                             Usuários
                         </button>
                         <button
+                            onClick={() => setActiveTab('procedures')}
+                            className={`w-full px-4 py-3 rounded-lg text-left text-sm font-medium transition-colors flex items-center gap-3 ${activeTab === 'procedures'
+                                ? 'bg-violet-50 text-violet-700'
+                                : 'text-slate-600 hover:bg-slate-50'
+                                }`}
+                        >
+                            <Stethoscope size={18} />
+                            Procedimentos
+                        </button>
+                        <button
                             onClick={() => setActiveTab('integrations')}
                             className={`w-full px-4 py-3 rounded-lg text-left text-sm font-medium transition-colors flex items-center gap-3 ${activeTab === 'integrations'
-                                    ? 'bg-violet-50 text-violet-700'
-                                    : 'text-slate-600 hover:bg-slate-50'
+                                ? 'bg-violet-50 text-violet-700'
+                                : 'text-slate-600 hover:bg-slate-50'
                                 }`}
                         >
                             <Zap size={18} />
@@ -448,6 +469,13 @@ const Settings: React.FC = () => {
                                     </div>
                                 ))}
                             </div>
+                        </div>
+                    )}
+
+                    {/* Procedures Tab */}
+                    {activeTab === 'procedures' && (
+                        <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
+                            <ProceduresSettings />
                         </div>
                     )}
 

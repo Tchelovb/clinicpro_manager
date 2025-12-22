@@ -1,89 +1,73 @@
 import React, { useState, useMemo } from 'react';
 import { useData } from '../contexts/DataContext';
 import {
-    ChevronLeft, ChevronRight, Plus, CheckCircle, Activity,
-    UserX, Filter, Calendar as CalendarIcon, Clock, AlertTriangle,
-    BriefcaseMedical, Zap, Repeat, MoreVertical, Edit2, X,
-    MessageCircle
+    ChevronLeft, ChevronRight, Plus, Users, Stethoscope,
+    Calendar as CalendarIcon, Clock, CheckCircle, Activity, UserX
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Appointment } from '../types';
 import { supabase } from '../lib/supabase';
 import { useDragAndDrop } from '../hooks/useDragAndDrop';
 
-// Styles for event types
-// Styles for event types
-const getTypeStyle = (type: string) => {
-    switch (type) {
-        case 'Consulta':
-        case 'Avaliação': return {
-            bg: 'bg-violet-50 dark:bg-violet-900/20',
-            border: 'border-violet-200 dark:border-violet-800',
-            text: 'text-violet-700 dark:text-violet-300',
-            icon: CalendarIcon,
-            indicator: 'bg-violet-500'
-        };
-        case 'Procedimento': return {
-            bg: 'bg-teal-50 dark:bg-teal-900/20',
-            border: 'border-teal-200 dark:border-teal-800',
-            text: 'text-teal-700 dark:text-teal-300',
-            icon: BriefcaseMedical,
-            indicator: 'bg-teal-500'
-        };
-        case 'Retorno': return {
-            bg: 'bg-blue-50 dark:bg-blue-900/20',
-            border: 'border-blue-200 dark:border-blue-800',
-            text: 'text-blue-700 dark:text-blue-300',
-            icon: Repeat,
+// Specialty Colors (CEO Standard)
+const getSpecialtyStyle = (type: string) => {
+    const typeUpper = type.toUpperCase();
+
+    // CIRURGIAS (HIGH-TICKET) - Royal Blue
+    if (typeUpper.includes('CIRURG') || typeUpper.includes('LIFTING') || typeUpper.includes('CERVICO')) {
+        return {
+            bg: 'bg-blue-900/30 dark:bg-blue-900/20',
+            border: 'border-blue-600 dark:border-blue-500',
+            text: 'text-blue-100 dark:text-blue-200',
             indicator: 'bg-blue-500'
         };
-        case 'Urgência': return {
-            bg: 'bg-rose-50 dark:bg-rose-900/20',
-            border: 'border-rose-200 dark:border-rose-800',
-            text: 'text-rose-700 dark:text-rose-300',
-            icon: Zap,
-            indicator: 'bg-rose-500'
+    }
+
+    // HOF (Harmonização Orofacial) - Purple
+    if (typeUpper.includes('HOF') || typeUpper.includes('HARMON') || typeUpper.includes('BOTOX') || typeUpper.includes('PREENCH')) {
+        return {
+            bg: 'bg-purple-900/30 dark:bg-purple-900/20',
+            border: 'border-purple-600 dark:border-purple-500',
+            text: 'text-purple-100 dark:text-purple-200',
+            indicator: 'bg-purple-500'
         };
-        default: return {
-            bg: 'bg-slate-50 dark:bg-slate-800',
-            border: 'border-slate-200 dark:border-slate-700',
-            text: 'text-slate-600 dark:text-slate-400',
-            icon: Clock,
-            indicator: 'bg-slate-400'
-        };
+    }
+
+    // CLÍNICA GERAL - Emerald Green
+    return {
+        bg: 'bg-emerald-900/30 dark:bg-emerald-900/20',
+        border: 'border-emerald-600 dark:border-emerald-500',
+        text: 'text-emerald-100 dark:text-emerald-200',
+        indicator: 'bg-emerald-500'
+    };
+};
+
+// Status Indicators
+const getStatusIndicator = (status: string) => {
+    switch (status) {
+        case 'Confirmado': return { color: 'bg-teal-500', label: '✓' };
+        case 'Em Atendimento': return { color: 'bg-blue-500 animate-pulse', label: '●' };
+        case 'Finalizado': return { color: 'bg-slate-500', label: '✓' };
+        case 'Falta': return { color: 'bg-rose-500', label: '✗' };
+        default: return { color: 'bg-amber-500', label: '?' };
     }
 };
 
 const Agenda: React.FC = () => {
     const navigate = useNavigate();
     const { appointments, professionals, agendaConfig } = useData();
-    // Assuming refreshAppointments might not be available or handled differently
-    // If it is available in useData return type, we can ignore the lint if it complains, or handle it safely.
-    // For now, I'll rely on real-time subscriptions or manual refresh if implemented in DataContext.
-
-    const professionalNames = useMemo(() => professionals.filter(p => p.active).map(p => p.name), [professionals]);
 
     const [currentDate, setCurrentDate] = useState(new Date());
-    const [view, setView] = useState<'day' | 'week' | 'month'>('week');
+    const [view, setView] = useState<'day' | 'week'>('week');
+    const [selectedProfessional, setSelectedProfessional] = useState<string>('all');
 
-    // Filters
-    const [selectedProfessionals, setSelectedProfessionals] = useState<string[]>([]);
-
-    // Initialize selected professionals
-    React.useEffect(() => {
-        if (professionals.length > 0 && selectedProfessionals.length === 0) {
-            setSelectedProfessionals(professionals.filter(p => p.active).map(p => p.name));
-        }
-    }, [professionals]);
-
-    // Helpers
     const formatDate = (date: Date) => date.toISOString().split('T')[0];
 
     const getWeekDates = (baseDate: Date) => {
         const dates = [];
         const start = new Date(baseDate);
         const day = start.getDay();
-        const diff = start.getDate() - day + (day === 0 ? -6 : 1); // Adjust when day is sunday
+        const diff = start.getDate() - day + (day === 0 ? -6 : 1);
         const monday = new Date(start.setDate(diff));
 
         for (let i = 0; i < 7; i++) {
@@ -112,20 +96,22 @@ const Agenda: React.FC = () => {
         return slots;
     }, [agendaConfig]);
 
-    // Filter Logic
+    const activeProfessionals = useMemo(() =>
+        professionals.filter(p => p.active),
+        [professionals]
+    );
+
     const filteredAppointments = useMemo(() => {
         return appointments.filter(apt =>
-            selectedProfessionals.includes(apt.doctorName) &&
-            apt.status !== 'Cancelado' // Optionally hide cancelled or include based on filter
+            (selectedProfessional === 'all' || apt.doctorName === selectedProfessional) &&
+            apt.status !== 'Cancelado'
         );
-    }, [appointments, selectedProfessionals]);
+    }, [appointments, selectedProfessional]);
 
-    // Navigation
     const handlePrev = () => {
         const newDate = new Date(currentDate);
         if (view === 'day') newDate.setDate(currentDate.getDate() - 1);
         if (view === 'week') newDate.setDate(currentDate.getDate() - 7);
-        if (view === 'month') newDate.setMonth(currentDate.getMonth() - 1);
         setCurrentDate(newDate);
     };
 
@@ -133,173 +119,158 @@ const Agenda: React.FC = () => {
         const newDate = new Date(currentDate);
         if (view === 'day') newDate.setDate(currentDate.getDate() + 1);
         if (view === 'week') newDate.setDate(currentDate.getDate() + 7);
-        if (view === 'month') newDate.setMonth(currentDate.getMonth() + 1);
         setCurrentDate(newDate);
     };
 
-    // Actions
     const handleNewAppointment = (date?: string, time?: string) => {
-        // Here we would navigate to a dedicated route instead of a modal
-        // Passing state via location state or query params
         const params = new URLSearchParams();
         if (date) params.append('date', date);
         if (time) params.append('time', time);
         navigate(`/dashboard/schedule/new?${params.toString()}`);
     };
 
-    // Drag & Drop
     const handleReschedule = async (aptId: string, newDate: string, newTime: string, newProfessional: string) => {
         try {
             await supabase
                 .from('appointments')
-                .update({
-                    date: newDate,
-                    time: newTime,
-                    doctorName: newProfessional
-                })
+                .update({ date: newDate, time: newTime, doctorName: newProfessional })
                 .eq('id', aptId);
-
-            // Optimistic update or refresh would happen here via DataContext subscription
         } catch (error) {
             console.error('Erro ao reagendar:', error);
-            alert('Erro ao reagendar');
         }
     };
 
-    const {
-        handleDragStart,
-        handleDragOver,
-        handleDragEnd,
-        handleDragLeave,
-        isDragOverSlot,
-    } = useDragAndDrop(handleReschedule);
+    const { handleDragStart, handleDragOver, handleDragEnd, handleDragLeave, isDragOverSlot } = useDragAndDrop(handleReschedule);
+
+    // Professionals to display in columns (for multiprofessional view)
+    const displayProfessionals = selectedProfessional === 'all' ? activeProfessionals.map(p => p.name) : [selectedProfessional];
 
     return (
-        <div className="flex flex-col h-[calc(100vh-theme(spacing.20))]">
-            {/* Header Controls */}
-            <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+        <div className="flex flex-col h-[calc(100vh-theme(spacing.20))] bg-slate-950">
+            {/* HEADER - DARK MODE */}
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-4 bg-slate-900 p-4 rounded-xl border border-slate-800 shadow-lg">
 
                 {/* Date Navigation */}
                 <div className="flex items-center gap-4">
-                    <div className="flex items-center bg-slate-100 rounded-lg p-1">
-                        <button onClick={handlePrev} className="p-1 hover:bg-white rounded-md shadow-sm transition text-slate-600">
+                    <div className="flex items-center bg-slate-800 rounded-lg p-1">
+                        <button onClick={handlePrev} className="p-1.5 hover:bg-slate-700 rounded-md transition text-slate-300">
                             <ChevronLeft size={20} />
                         </button>
-                        <button onClick={() => setCurrentDate(new Date())} className="px-4 py-1 text-sm font-medium text-slate-600 hover:text-violet-600 transition-colors">
+                        <button onClick={() => setCurrentDate(new Date())} className="px-4 py-1.5 text-sm font-medium text-slate-300 hover:text-blue-400 transition-colors">
                             Hoje
                         </button>
-                        <button onClick={handleNext} className="p-1 hover:bg-white rounded-md shadow-sm transition text-slate-600">
+                        <button onClick={handleNext} className="p-1.5 hover:bg-slate-700 rounded-md transition text-slate-300">
                             <ChevronRight size={20} />
                         </button>
                     </div>
-                    <h2 className="text-xl font-bold text-slate-800 capitalize w-40 text-center">
+                    <h2 className="text-xl font-bold text-white capitalize w-48 text-center">
                         {currentDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
                     </h2>
                 </div>
 
+                {/* Professional Selector (MULTIPROFESSIONAL) */}
+                <div className="flex items-center gap-2">
+                    <Users size={18} className="text-slate-400" />
+                    <select
+                        value={selectedProfessional}
+                        onChange={(e) => setSelectedProfessional(e.target.value)}
+                        className="bg-slate-800 border border-slate-700 text-slate-200 rounded-lg px-4 py-2 text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none"
+                    >
+                        <option value="all">Todos os Profissionais</option>
+                        {activeProfessionals.map(prof => (
+                            <option key={prof.id} value={prof.name}>{prof.name}</option>
+                        ))}
+                    </select>
+                </div>
+
                 {/* View Switcher */}
-                <div className="flex bg-slate-100 p-1 rounded-lg">
-                    {(['day', 'week', 'month'] as const).map((v) => (
+                <div className="flex bg-slate-800 p-1 rounded-lg">
+                    {(['day', 'week'] as const).map((v) => (
                         <button
                             key={v}
                             onClick={() => setView(v)}
                             className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${view === v
-                                ? 'bg-white text-violet-600 shadow-sm'
-                                : 'text-slate-500 hover:text-slate-800'
+                                    ? 'bg-blue-600 text-white shadow-md'
+                                    : 'text-slate-400 hover:text-slate-200'
                                 }`}
                         >
-                            {{ day: 'Dia', week: 'Semana', month: 'Mês' }[v]}
+                            {{ day: 'Dia', week: 'Semana' }[v]}
                         </button>
                     ))}
                 </div>
 
-                {/* Actions */}
-                <div className="flex gap-2">
-                    <button
-                        onClick={() => navigate('/dashboard/schedule/new')}
-                        className="flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-lg transition-colors font-medium shadow-sm"
-                    >
-                        <Plus size={18} />
-                        <span>Novo Agendamento</span>
-                    </button>
-                </div>
+                {/* New Appointment Button */}
+                <button
+                    onClick={() => navigate('/dashboard/schedule/new')}
+                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors font-medium shadow-lg"
+                >
+                    <Plus size={18} />
+                    <span>Novo Agendamento</span>
+                </button>
             </div>
 
-            {/* Calendar Grid */}
-            <div className="flex-1 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+            {/* CALENDAR GRID - DARK MODE */}
+            <div className="flex-1 bg-slate-900 rounded-xl border border-slate-800 shadow-lg overflow-hidden flex flex-col">
 
                 {/* Week View Header */}
                 {view === 'week' && (
-                    <div className="grid grid-cols-[60px_1fr] border-b border-slate-200">
-                        <div className="p-4 bg-slate-50 border-r border-slate-200"></div>
-                        <div className="grid grid-cols-7">
-                            {getWeekDates(currentDate).map((date, idx) => {
-                                const isToday = date.toDateString() === new Date().toDateString();
-                                return (
-                                    <div key={idx} className={`py-4 text-center border-r border-slate-100 last:border-r-0 ${isToday ? 'bg-violet-50' : ''}`}>
-                                        <p className={`text-xs uppercase font-bold mb-1 ${isToday ? 'text-violet-600' : 'text-slate-400'}`}>
-                                            {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][date.getDay()]}
-                                        </p>
-                                        <div className={`w-8 h-8 flex items-center justify-center rounded-full mx-auto text-sm font-bold ${isToday ? 'bg-violet-600 text-white' : 'text-slate-700'
-                                            }`}>
-                                            {date.getDate()}
-                                        </div>
+                    <div className="grid border-b border-slate-800" style={{ gridTemplateColumns: `80px repeat(${displayProfessionals.length > 1 ? 7 : 7}, 1fr)` }}>
+                        <div className="p-4 bg-slate-950 border-r border-slate-800"></div>
+                        {getWeekDates(currentDate).map((date, idx) => {
+                            const isToday = date.toDateString() === new Date().toDateString();
+                            return (
+                                <div key={idx} className={`py-4 text-center border-r border-slate-800 last:border-r-0 ${isToday ? 'bg-blue-900/20' : ''}`}>
+                                    <p className={`text-xs uppercase font-bold mb-1 ${isToday ? 'text-blue-400' : 'text-slate-500'}`}>
+                                        {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][date.getDay()]}
+                                    </p>
+                                    <div className={`w-8 h-8 flex items-center justify-center rounded-full mx-auto text-sm font-bold ${isToday ? 'bg-blue-600 text-white' : 'text-slate-300'
+                                        }`}>
+                                        {date.getDate()}
                                     </div>
-                                );
-                            })}
-                        </div>
+                                </div>
+                            );
+                        })}
                     </div>
                 )}
 
                 {/* Time Slots Area */}
                 <div className="flex-1 overflow-y-auto">
                     {timeSlots.map((time) => (
-                        <div key={time} className="grid grid-cols-[60px_1fr] min-h-[50px] border-b border-slate-50 last:border-b-0 hover:bg-slate-50/30 transition-colors">
-                            <div className="flex items-center justify-center text-xs font-medium text-slate-400 border-r border-slate-100 bg-slate-50/50">
+                        <div key={time} className="grid min-h-[60px] border-b border-slate-800 last:border-b-0 hover:bg-slate-800/30 transition-colors" style={{ gridTemplateColumns: view === 'week' ? `80px repeat(7, 1fr)` : `80px repeat(${displayProfessionals.length}, 1fr)` }}>
+                            <div className="flex items-center justify-center text-xs font-medium text-slate-500 border-r border-slate-800 bg-slate-950">
                                 {time}
                             </div>
 
                             {view === 'week' && (
-                                <div className="grid grid-cols-7">
+                                <>
                                     {getWeekDates(currentDate).map((date) => {
                                         const dateStr = formatDate(date);
                                         const slotApts = filteredAppointments.filter(
                                             a => a.date === dateStr && a.time === time
                                         );
-                                        const isOver = isDragOverSlot(dateStr, time, selectedProfessionals[0] || '');
 
                                         return (
                                             <div
                                                 key={`${dateStr}-${time}`}
-                                                className={`
-                                                    border-r border-slate-100 last:border-r-0 relative p-1 transition-colors
-                                                    ${isOver ? 'bg-violet-50 ring-2 ring-violet-200 ring-inset z-10' : ''}
-                                                `}
-                                                onDragOver={(e) => { e.preventDefault(); handleDragOver(dateStr, time, selectedProfessionals[0] || ''); }}
-                                                onDragLeave={handleDragLeave}
-                                                onDrop={(e) => { e.preventDefault(); handleDragEnd(); }}
+                                                className="border-r border-slate-800 last:border-r-0 relative p-1 transition-colors cursor-pointer"
                                                 onClick={() => slotApts.length === 0 && handleNewAppointment(dateStr, time)}
                                             >
                                                 {slotApts.map(apt => {
-                                                    const style = getTypeStyle(apt.type);
+                                                    const style = getSpecialtyStyle(apt.type);
+                                                    const status = getStatusIndicator(apt.status);
                                                     return (
                                                         <div
                                                             key={apt.id}
-                                                            draggable
-                                                            onDragStart={(e) => { e.stopPropagation(); handleDragStart(apt); }}
                                                             onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/schedule/${apt.id}`); }}
-                                                            className={`
-                                                                rounded-md p-1.5 text-xs mb-1 cursor-pointer shadow-sm border-l-4
-                                                                hover:shadow-md transition-all group
-                                                                ${style.bg} ${style.border} ${style.text}
-                                                                ${apt.status === 'Confirmado' ? 'border-l-teal-500' : ''}
-                                                            `}
-                                                            style={{ borderLeftColor: apt.status === 'Confirmado' ? undefined : '' }} // Override if needed
+                                                            className={`rounded-md p-2 text-xs mb-1 cursor-pointer shadow-md border-l-4 hover:shadow-lg transition-all ${style.bg} ${style.border} ${style.text}`}
                                                         >
-                                                            <div className="font-bold truncate">{apt.patientName}</div>
-                                                            <div className="flex justify-between items-center opacity-70 mt-0.5">
-                                                                <span>{apt.type}</span>
-                                                                <style.icon size={10} />
+                                                            <div className="flex items-center justify-between mb-1">
+                                                                <span className="font-bold truncate">{apt.patientName}</span>
+                                                                <span className={`w-2 h-2 rounded-full ${status.color}`} title={apt.status}></span>
+                                                            </div>
+                                                            <div className="flex items-center gap-1 opacity-80">
+                                                                <Stethoscope size={10} />
+                                                                <span className="truncate">{apt.type}</span>
                                                             </div>
                                                         </div>
                                                     );
@@ -307,45 +278,33 @@ const Agenda: React.FC = () => {
                                             </div>
                                         );
                                     })}
-                                </div>
+                                </>
                             )}
 
                             {view === 'day' && (
-                                <div className="grid" style={{ gridTemplateColumns: `repeat(${Math.max(1, selectedProfessionals.length)}, 1fr)` }}>
-                                    {selectedProfessionals.map(prof => {
+                                <>
+                                    {displayProfessionals.map(prof => {
                                         const dateStr = formatDate(currentDate);
                                         const slotApt = filteredAppointments.find(
                                             a => a.date === dateStr && a.time === time && a.doctorName === prof
                                         );
-                                        const isOver = isDragOverSlot(dateStr, time, prof);
 
                                         return (
                                             <div
                                                 key={`${prof}-${time}`}
-                                                className={`
-                                                    border-r border-slate-100 last:border-r-0 relative p-1 transition-colors min-h-[60px]
-                                                    ${isOver ? 'bg-violet-50 ring-2 ring-violet-200 ring-inset' : ''}
-                                                `}
-                                                onDragOver={(e) => { e.preventDefault(); handleDragOver(dateStr, time, prof); }}
-                                                onDragLeave={handleDragLeave}
-                                                onDrop={(e) => { e.preventDefault(); handleDragEnd(); }}
+                                                className="border-r border-slate-800 last:border-r-0 relative p-2 transition-colors min-h-[70px] cursor-pointer"
                                                 onClick={() => !slotApt && handleNewAppointment(dateStr, time)}
                                             >
                                                 {slotApt && (
                                                     <div
-                                                        draggable
-                                                        onDragStart={(e) => { e.stopPropagation(); handleDragStart(slotApt); }}
                                                         onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/schedule/${slotApt.id}`); }}
-                                                        className={`
-                                                            h-full rounded-md p-2 text-xs cursor-pointer shadow-sm border-l-4
-                                                            hover:shadow-md transition-all
-                                                            ${getTypeStyle(slotApt.type).bg} 
-                                                            ${getTypeStyle(slotApt.type).text}
-                                                            ${slotApt.status === 'Confirmado' ? 'border-l-teal-500' : 'border-l-slate-300'}
-                                                        `}
+                                                        className={`h-full rounded-md p-3 text-sm cursor-pointer shadow-md border-l-4 hover:shadow-lg transition-all ${getSpecialtyStyle(slotApt.type).bg} ${getSpecialtyStyle(slotApt.type).border} ${getSpecialtyStyle(slotApt.type).text}`}
                                                     >
-                                                        <div className="font-bold text-sm">{slotApt.patientName}</div>
-                                                        <div className="flex items-center gap-1 mt-1 opacity-80">
+                                                        <div className="flex items-center justify-between mb-2">
+                                                            <span className="font-bold">{slotApt.patientName}</span>
+                                                            <span className={`w-3 h-3 rounded-full ${getStatusIndicator(slotApt.status).color}`}></span>
+                                                        </div>
+                                                        <div className="flex items-center gap-1 opacity-80 text-xs">
                                                             <Clock size={12} />
                                                             <span>{slotApt.time} - {slotApt.type}</span>
                                                         </div>
@@ -354,7 +313,7 @@ const Agenda: React.FC = () => {
                                             </div>
                                         );
                                     })}
-                                </div>
+                                </>
                             )}
                         </div>
                     ))}

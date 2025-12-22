@@ -69,7 +69,7 @@ const PatientForm: React.FC = () => {
       birth_date: formData.birthDate || null,
       gender: formData.gender || null,
       address: compositeAddress || null,
-      status: "Em Tratamento",
+      clinical_status: "Em Tratamento",
       total_approved: 0,
       total_paid: 0,
       balance_due: 0,
@@ -83,8 +83,13 @@ const PatientForm: React.FC = () => {
       vip_notes: formData.vip_notes || null,
     };
 
+    setError("");
     createPatient(newPatient);
-    navigate("/patients");
+
+    // Navigate after a short delay to allow mutation to complete
+    setTimeout(() => {
+      navigate("/patients");
+    }, 500);
   };
 
   // Dense Input Styles - Updated for Mobile Touch Target

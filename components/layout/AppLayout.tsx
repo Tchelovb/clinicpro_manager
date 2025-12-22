@@ -33,10 +33,10 @@ interface MenuItem {
 
 const MENU_ITEMS: MenuItem[] = [
     {
-        path: '/intelligence',
-        label: 'Intelligence',
-        icon: Brain,
-        roles: ['MASTER', 'ADMIN'],
+        path: '/chat-bos',
+        label: 'ChatBOS',
+        icon: Sparkles,
+        roles: ['MASTER', 'ADMIN', 'PROFESSIONAL'],
         color: 'text-violet-600'
     },
     {
@@ -93,13 +93,6 @@ const MENU_ITEMS: MenuItem[] = [
         label: 'Relatórios',
         icon: BarChart3,
         roles: ['MASTER', 'ADMIN'],
-        color: 'text-violet-600'
-    },
-    {
-        path: '/chat-bos',
-        label: 'ChatBOS',
-        icon: MessageSquare,
-        roles: ['MASTER', 'ADMIN', 'PROFESSIONAL'],
         color: 'text-violet-600'
     },
     {

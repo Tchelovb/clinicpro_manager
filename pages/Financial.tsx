@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import {
     ArrowUpCircle, ArrowDownCircle, DollarSign, Download, Filter,
     Wallet, FileText, TrendingUp, AlertTriangle, Lock, Unlock,
-    Plus, Calendar, CreditCard, CheckCircle, Clock
+    Plus, Calendar, CreditCard, CheckCircle, Clock, Search, X
 } from 'lucide-react';
 import CashClosingWizard from '../components/CashClosingWizard';
 import SangriaSuprimentoModal from '../components/SangriaSuprimentoModal';
@@ -19,6 +19,48 @@ const Financial: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'dashboard' | 'caixa' | 'pagar' | 'receber'>('dashboard');
     const [showClosingWizard, setShowClosingWizard] = useState(false);
     const [showSangriaModal, setShowSangriaModal] = useState<{ open: boolean; type: 'sangria' | 'suprimento' }>({ open: false, type: 'suprimento' });
+
+    // Filter States
+    const [receivableFilters, setReceivableFilters] = useState({
+        startDate: '',
+        endDate: '',
+        description: '',
+        patient: ''
+    });
+
+    const [payableFilters, setPayableFilters] = useState({
+        startDate: '',
+        endDate: '',
+        description: '',
+        provider: ''
+    });
+
+    // Helper functions for dates
+    const parseDate = (dateStr: string) => {
+        if (!dateStr) return null;
+        const [day, month, year] = dateStr.split('/');
+        return new Date(Number(year), Number(month) - 1, Number(day));
+    };
+
+    const checkDateRange = (itemDate: string, startDate: string, endDate: string) => {
+        if (!startDate && !endDate) return true;
+
+        const date = parseDate(itemDate);
+        if (!date) return true;
+
+        const start = startDate ? new Date(startDate) : null;
+        const end = endDate ? new Date(endDate) : null;
+
+        // Reset hours for fair comparison
+        date.setHours(0, 0, 0, 0);
+        if (start) start.setHours(0, 0, 0, 0);
+        if (end) end.setHours(0, 0, 0, 0);
+
+        if (start && date < start) return false;
+        if (end && date > end) return false;
+
+        return true;
+    };
 
     const DashboardView = () => {
         const today = new Date().toLocaleDateString('pt-BR');
@@ -198,6 +240,54 @@ const Financial: React.FC = () => {
                     </button>
                 </div>
 
+                {/* Filters */}
+                <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div>
+                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Vencimento (De)</label>
+                        <input
+                            type="date"
+                            className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-sm dark:text-white"
+                            value={payableFilters.startDate}
+                            onChange={e => setPayableFilters(prev => ({ ...prev, startDate: e.target.value }))}
+                        />
+                    </div>
+                    <div>
+                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Vencimento (Até)</label>
+                        <input
+                            type="date"
+                            className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-sm dark:text-white"
+                            value={payableFilters.endDate}
+                            onChange={e => setPayableFilters(prev => ({ ...prev, endDate: e.target.value }))}
+                        />
+                    </div>
+                    <div>
+                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Descrição</label>
+                        <div className="relative">
+                            <Search className="absolute left-3 top-2.5 text-gray-400" size={16} />
+                            <input
+                                type="text"
+                                className="w-full pl-9 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm dark:text-white"
+                                placeholder="Filtrar descrição..."
+                                value={payableFilters.description}
+                                onChange={e => setPayableFilters(prev => ({ ...prev, description: e.target.value }))}
+                            />
+                        </div>
+                    </div>
+                    <div>
+                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Fornecedor</label>
+                        <div className="relative">
+                            <Search className="absolute left-3 top-2.5 text-gray-400" size={16} />
+                            <input
+                                type="text"
+                                className="w-full pl-9 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm dark:text-white"
+                                placeholder="Filtrar fornecedor..."
+                                value={payableFilters.provider}
+                                onChange={e => setPayableFilters(prev => ({ ...prev, provider: e.target.value }))}
+                            />
+                        </div>
+                    </div>
+                </div>
+
                 <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
                     {/* Desktop Table */}
                     <div className="hidden md:block">
@@ -214,7 +304,12 @@ const Financial: React.FC = () => {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                                {expenses.map(expense => (
+                                {expenses.filter(expense => {
+                                    const matchesDate = checkDateRange(expense.dueDate, payableFilters.startDate, payableFilters.endDate);
+                                    const matchesDesc = expense.description.toLowerCase().includes(payableFilters.description.toLowerCase());
+                                    const matchesProv = expense.provider.toLowerCase().includes(payableFilters.provider.toLowerCase());
+                                    return matchesDate && matchesDesc && matchesProv;
+                                }).map(expense => (
                                     <tr key={expense.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                                         <td className="px-6 py-4 font-mono text-gray-600 dark:text-gray-400">{expense.dueDate}</td>
                                         <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">{expense.description}</td>
@@ -241,7 +336,12 @@ const Financial: React.FC = () => {
 
                     {/* Mobile Card List */}
                     <div className="md:hidden divide-y divide-gray-100 dark:divide-gray-700">
-                        {expenses.map(expense => (
+                        {expenses.filter(expense => {
+                            const matchesDate = checkDateRange(expense.dueDate, payableFilters.startDate, payableFilters.endDate);
+                            const matchesDesc = expense.description.toLowerCase().includes(payableFilters.description.toLowerCase());
+                            const matchesProv = expense.provider.toLowerCase().includes(payableFilters.provider.toLowerCase());
+                            return matchesDate && matchesDesc && matchesProv;
+                        }).map(expense => (
                             <div key={expense.id} className="p-4 flex flex-col gap-3 relative border-l-4 border-transparent hover:border-red-500 transition-all">
                                 <div className="flex justify-between items-start">
                                     <div className="flex-1 min-w-0 pr-2">
@@ -274,7 +374,7 @@ const Financial: React.FC = () => {
 
                     {expenses.length === 0 && <div className="p-8 text-center text-gray-400">Nenhuma despesa registrada.</div>}
                 </div>
-            </div>
+            </div >
         );
     };
 
@@ -286,6 +386,55 @@ const Financial: React.FC = () => {
         return (
             <div className="space-y-4 md:space-y-6 animate-in fade-in">
                 <h3 className="font-bold text-gray-700 dark:text-gray-200 text-lg">Contas a Receber</h3>
+
+                {/* Filters */}
+                <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div>
+                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Vencimento (De)</label>
+                        <input
+                            type="date"
+                            className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-sm dark:text-white"
+                            value={receivableFilters.startDate}
+                            onChange={e => setReceivableFilters(prev => ({ ...prev, startDate: e.target.value }))}
+                        />
+                    </div>
+                    <div>
+                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Vencimento (Até)</label>
+                        <input
+                            type="date"
+                            className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-sm dark:text-white"
+                            value={receivableFilters.endDate}
+                            onChange={e => setReceivableFilters(prev => ({ ...prev, endDate: e.target.value }))}
+                        />
+                    </div>
+                    <div>
+                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Descrição</label>
+                        <div className="relative">
+                            <Search className="absolute left-3 top-2.5 text-gray-400" size={16} />
+                            <input
+                                type="text"
+                                className="w-full pl-9 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm dark:text-white"
+                                placeholder="Filtrar descrição..."
+                                value={receivableFilters.description}
+                                onChange={e => setReceivableFilters(prev => ({ ...prev, description: e.target.value }))}
+                            />
+                        </div>
+                    </div>
+                    <div>
+                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Paciente</label>
+                        <div className="relative">
+                            <Search className="absolute left-3 top-2.5 text-gray-400" size={16} />
+                            <input
+                                type="text"
+                                className="w-full pl-9 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm dark:text-white"
+                                placeholder="Filtrar paciente..."
+                                value={receivableFilters.patient}
+                                onChange={e => setReceivableFilters(prev => ({ ...prev, patient: e.target.value }))}
+                            />
+                        </div>
+                    </div>
+                </div>
+
                 <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
 
                     {/* Desktop Table */}
@@ -303,7 +452,12 @@ const Financial: React.FC = () => {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                                {allReceivables.map((item, idx) => (
+                                {allReceivables.filter(item => {
+                                    const matchesDate = checkDateRange(item.dueDate, receivableFilters.startDate, receivableFilters.endDate);
+                                    const matchesDesc = item.description.toLowerCase().includes(receivableFilters.description.toLowerCase());
+                                    const matchesPatient = item.patientName.toLowerCase().includes(receivableFilters.patient.toLowerCase());
+                                    return matchesDate && matchesDesc && matchesPatient;
+                                }).map((item, idx) => (
                                     <tr key={`${item.id}-${idx}`} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                                         <td className="px-6 py-4 font-mono text-gray-600 dark:text-gray-400">{item.dueDate}</td>
                                         <td className="px-6 py-4 font-medium text-blue-600 dark:text-blue-400">{item.patientName}</td>
@@ -328,7 +482,12 @@ const Financial: React.FC = () => {
 
                     {/* Mobile Card List */}
                     <div className="md:hidden divide-y divide-gray-100 dark:divide-gray-700">
-                        {allReceivables.map((item, idx) => (
+                        {allReceivables.filter(item => {
+                            const matchesDate = checkDateRange(item.dueDate, receivableFilters.startDate, receivableFilters.endDate);
+                            const matchesDesc = item.description.toLowerCase().includes(receivableFilters.description.toLowerCase());
+                            const matchesPatient = item.patientName.toLowerCase().includes(receivableFilters.patient.toLowerCase());
+                            return matchesDate && matchesDesc && matchesPatient;
+                        }).map((item, idx) => (
                             <div key={`${item.id}-${idx}`} className="p-4 flex flex-col gap-3 relative border-l-4 border-transparent hover:border-green-500 transition-all">
                                 <div className="flex justify-between items-start">
                                     <div className="flex-1 min-w-0 pr-2">

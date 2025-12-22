@@ -9,6 +9,8 @@ export interface HighTicketLead {
     status: string;
     value?: number;
     desired_treatment?: string;
+    interest?: string;
+    patient_id?: string;
     created_at: string;
     last_interaction: string;
     lead_score: number;
@@ -56,7 +58,7 @@ export const highTicketService = {
             .from('leads')
             .select('*')
             .eq('clinic_id', clinicId)
-            .in('status', ['NEW', 'CONTACTED', 'SCHEDULED'])
+            .in('status', ['NEW', 'CONTACT', 'SCHEDULED', 'PROPOSAL', 'NEGOTIATION', 'WON', 'LOST'])
             .order('lead_score', { ascending: false })
             .order('created_at', { ascending: false });
 

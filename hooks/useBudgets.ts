@@ -96,6 +96,11 @@ export const useBudgetOperations = () => {
         mutationFn: async ({ patientId, data }: { patientId: string, data: any }) => {
             console.log('🔵 Creating budget with data:', { patientId, clinicId, data });
 
+            if (!clinicId) {
+                console.error('❌ CRITICAL: clinicId is missing. Profile might not be loaded.');
+                throw new Error('Erro: Identificação da clínica não encontrada. Tente recarregar a página.');
+            }
+
             // 1. Create Budget with minimal required fields first
             const budgetPayload: any = {
                 patient_id: patientId,

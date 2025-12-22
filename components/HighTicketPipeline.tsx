@@ -72,7 +72,7 @@ export const HighTicketPipeline: React.FC = () => {
             } else if (action === 'convert') {
                 const lead = leads.find(l => l.id === leadId);
                 if (lead?.patient_id) {
-                    navigate(`/dashboard/budgets/new?patient=${lead.patient_id}`);
+                    navigate(`/budgets/new?patient=${lead.patient_id}`);
                 }
             }
             loadData();
@@ -167,8 +167,8 @@ export const HighTicketPipeline: React.FC = () => {
                     <button
                         onClick={() => setActiveTab('leads')}
                         className={`px-6 py-3 rounded-lg font-bold transition-all ${activeTab === 'leads'
-                                ? 'bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-lg'
-                                : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                            ? 'bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-lg'
+                            : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
                             }`}
                     >
                         <div className="flex items-center gap-2">
@@ -180,8 +180,8 @@ export const HighTicketPipeline: React.FC = () => {
                     <button
                         onClick={() => setActiveTab('budgets')}
                         className={`px-6 py-3 rounded-lg font-bold transition-all ${activeTab === 'budgets'
-                                ? 'bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-lg'
-                                : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                            ? 'bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-lg'
+                            : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
                             }`}
                     >
                         <div className="flex items-center gap-2">
@@ -213,10 +213,10 @@ export const HighTicketPipeline: React.FC = () => {
                                             <div className="flex items-center gap-3 mb-2">
                                                 <h3 className="text-white text-xl font-bold">{lead.name}</h3>
                                                 <span className={`px-3 py-1 rounded-full text-xs font-bold ${lead.priority === 'HIGH'
-                                                        ? 'bg-red-500/20 text-red-300'
-                                                        : lead.priority === 'MEDIUM'
-                                                            ? 'bg-yellow-500/20 text-yellow-300'
-                                                            : 'bg-blue-500/20 text-blue-300'
+                                                    ? 'bg-red-500/20 text-red-300'
+                                                    : lead.priority === 'MEDIUM'
+                                                        ? 'bg-yellow-500/20 text-yellow-300'
+                                                        : 'bg-blue-500/20 text-blue-300'
                                                     }`}>
                                                     {lead.priority === 'HIGH' ? '🔥 QUENTE' : lead.priority === 'MEDIUM' ? '⚡ MORNO' : '❄️ FRIO'}
                                                 </span>
@@ -309,10 +309,10 @@ export const HighTicketPipeline: React.FC = () => {
                                             <div className="flex items-center gap-3 mb-2">
                                                 <h3 className="text-white text-xl font-bold">{budget.patient_name}</h3>
                                                 <span className={`px-3 py-1 rounded-full text-xs font-bold ${budget.status === 'APPROVED'
-                                                        ? 'bg-green-500/20 text-green-300'
-                                                        : budget.status === 'SENT'
-                                                            ? 'bg-blue-500/20 text-blue-300'
-                                                            : 'bg-gray-500/20 text-gray-300'
+                                                    ? 'bg-green-500/20 text-green-300'
+                                                    : budget.status === 'SENT'
+                                                        ? 'bg-blue-500/20 text-blue-300'
+                                                        : 'bg-gray-500/20 text-gray-300'
                                                     }`}>
                                                     {budget.status === 'APPROVED' ? '✅ APROVADO' :
                                                         budget.status === 'SENT' ? '📧 ENVIADO' :

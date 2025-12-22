@@ -16,12 +16,17 @@ import {
   AlertTriangle,
   DollarSign,
   Target,
+  Brain,
+  Activity,
+  Sparkles,
+  TrendingUp,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { useDashboardData } from "../hooks/useDashboardData";
 import { LeadStatus } from "../types";
 import AIInsightsFeed from "./dashboard/AIInsightsFeed";
 import ComplianceWidget from "./dashboard/ComplianceWidget";
+import { WarRoomCard } from "./WarRoomCard";
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -348,8 +353,105 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* AI INSIGHTS WIDGET (BOS LAYER) */}
-      <AIInsightsFeed />
+      {/* --- INTELLIGENCE MODULES (NEW) --- */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 w-full mb-8">
+
+        {/* 1. CENTRAL DE METAS (WAR ROOM) */}
+        <WarRoomCard />
+
+        {/* 2. BOS INTELLIGENCE CARD */}
+        <div
+          onClick={() => navigate('/dashboard/bos-intelligence')}
+          className="relative bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-6 shadow-xl border border-gray-700 overflow-hidden cursor-pointer group hover:scale-[1.02] transition-all"
+        >
+          <div className="absolute inset-0 opacity-10">
+            <div className="absolute top-0 right-0 w-32 h-32">
+              <Brain size={128} className="text-white" />
+            </div>
+          </div>
+
+          <div className="relative z-10">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-3 bg-red-500/20 rounded-xl backdrop-blur-sm">
+                <Brain size={24} className="text-red-400" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-white">BOS Intelligence</h2>
+                <p className="text-red-200 text-xs">SCR-01-B</p>
+              </div>
+              <ArrowRight className="ml-auto text-gray-500 group-hover:text-white transition-colors" size={20} />
+            </div>
+
+            <p className="text-gray-400 text-sm mb-6 h-10">
+              Alertas críticos e insights proativos para maximizar resultados.
+            </p>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between bg-white/5 p-3 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <AlertCircle size={16} className="text-red-400" />
+                  <span className="text-gray-300 text-sm font-medium">Alertas Críticos</span>
+                </div>
+                <span className="text-white font-bold">3</span>
+              </div>
+              <div className="flex items-center justify-between bg-white/5 p-3 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <Sparkles size={16} className="text-yellow-400" />
+                  <span className="text-gray-300 text-sm font-medium">Insights Ativos</span>
+                </div>
+                <span className="text-white font-bold">7</span>
+              </div>
+            </div>
+
+            <div className="mt-4 pt-4 border-t border-gray-700">
+              <span className="text-xs text-gray-500 group-hover:text-gray-300 transition-colors">Clique para ver todos os alertas</span>
+            </div>
+          </div>
+        </div>
+
+        {/* 3. SAÚDE DA CLÍNICA (SCORE) */}
+        <div
+          onClick={() => navigate('/dashboard/clinic-health')}
+          className="relative bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-6 shadow-xl border border-gray-700 overflow-hidden cursor-pointer group hover:scale-[1.02] transition-all"
+        >
+          <div className="absolute inset-0 opacity-10">
+            <div className="absolute top-0 right-0 w-32 h-32">
+              <Activity size={128} className="text-white" />
+            </div>
+          </div>
+
+          <div className="relative z-10">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-3 bg-blue-500/20 rounded-xl backdrop-blur-sm">
+                <Activity size={24} className="text-blue-400" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-white">Saúde da Clínica</h2>
+                <p className="text-blue-200 text-xs">Health Score</p>
+              </div>
+              <ArrowRight className="ml-auto text-gray-500 group-hover:text-white transition-colors" size={20} />
+            </div>
+
+            <p className="text-gray-400 text-sm mb-6 h-10">
+              Score geral de saúde baseado nos 5 pilares operacionais.
+            </p>
+
+            <div className="flex items-center justify-center py-2">
+              <div className="relative w-24 h-24 flex items-center justify-center rounded-full border-4 border-gray-700">
+                <span className="text-3xl font-black text-white">0</span>
+                <span className="absolute -bottom-6 text-xs text-gray-500 font-bold uppercase">Score</span>
+              </div>
+            </div>
+
+            <div className="mt-8 pt-4 border-t border-gray-700 text-center">
+              <span className="text-xs text-gray-500 group-hover:text-gray-300 transition-colors">Clique para análise detalhada</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* AI INSIGHTS WIDGET (BOS LAYER) - Keeping as secondary feed or removing if redundant */}
+      {/* <AIInsightsFeed /> */}
 
       {/* --- GRID LAYOUT --- */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 w-full items-start">

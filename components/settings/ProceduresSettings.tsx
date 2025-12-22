@@ -6,15 +6,16 @@ interface Procedure {
   id: string;
   name: string;
   category: string;
+  specialty?: string;
   duration: number;
   total_sessions: number;
   base_price: number;
-  // Cost fields (joined)
+  // Cost fields (joined) - Supabase retorna como objeto único
   procedure_costs?: {
     material_cost: number;
     professional_cost: number;
     operational_overhead: number;
-  }[];
+  };
 }
 
 const ProceduresSettings: React.FC = () => {
@@ -62,6 +63,8 @@ const ProceduresSettings: React.FC = () => {
   };
 
   const handleSave = async (procedureData: Partial<Procedure> & { custom_costs?: any }) => {
+    console.log('handleSave chamado com:', procedureData);
+
     if (!procedureData.name || !procedureData.base_price) return;
 
     setSaving(true);
@@ -78,6 +81,7 @@ const ProceduresSettings: React.FC = () => {
           .update({
             name: procedureData.name,
             category: procedureData.category,
+            specialty: procedureData.specialty,
             duration: procedureData.duration,
             total_sessions: procedureData.total_sessions,
             base_price: procedureData.base_price,
@@ -91,6 +95,7 @@ const ProceduresSettings: React.FC = () => {
           clinic_id: clinicId,
           name: procedureData.name,
           category: procedureData.category,
+          specialty: procedureData.specialty,
           duration: procedureData.duration || 30,
           total_sessions: procedureData.total_sessions || 1,
           base_price: procedureData.base_price,
@@ -297,16 +302,17 @@ const Modal: React.FC<ModalProps> = ({
   const [activeTab, setActiveTab] = useState<'basic' | 'costs'>('basic');
   const [formData, setFormData] = useState({
     name: procedure?.name || "",
-    category: procedure?.category || "",
+    category: procedure?.category || "CLINICA_GERAL",
+    specialty: procedure?.specialty || "",
     duration: procedure?.duration || 30,
     total_sessions: procedure?.total_sessions || 1,
     base_price: procedure?.base_price || 0,
   });
 
   const [costs, setCosts] = useState({
-    material_cost: procedure?.procedure_costs?.[0]?.material_cost || 0,
-    professional_cost: procedure?.procedure_costs?.[0]?.professional_cost || 0,
-    operational_overhead: procedure?.procedure_costs?.[0]?.operational_overhead || 0,
+    material_cost: procedure?.procedure_costs?.material_cost || 0,
+    professional_cost: procedure?.procedure_costs?.professional_cost || 0,
+    operational_overhead: procedure?.procedure_costs?.operational_overhead || 0,
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -315,6 +321,12 @@ const Modal: React.FC<ModalProps> = ({
   };
 
   const categories = [
+    { value: 'CLINICA_GERAL', label: 'Clínica Geral' },
+    { value: 'ORTODONTIA', label: 'Ortodontia' },
+    { value: 'HOF', label: 'HOF (Harmonização Orofacial)' }
+  ];
+
+  const specialties = [
     "Dentística",
     "Cirurgia",
     "Ortodontia",
@@ -394,19 +406,37 @@ const Modal: React.FC<ModalProps> = ({
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Categoria
+                    Categoria *
                   </label>
                   <select
                     value={formData.category}
                     onChange={(e) => setFormData((prev) => ({ ...prev, category: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                    required
                   >
-                    <option value="">Selecione uma categoria</option>
                     {categories.map((cat) => (
-                      <option key={cat} value={cat}>{cat}</option>
+                      <option key={cat.value} value={cat.value}>{cat.label}</option>
                     ))}
                   </select>
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Especialidade
+                  </label>
+                  <select
+                    value={formData.specialty}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, specialty: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                  >
+                    <option value="">Selecione uma especialidade</option>
+                    {specialties.map((spec) => (
+                      <option key={spec} value={spec}>{spec}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Preço Base (R$) *
