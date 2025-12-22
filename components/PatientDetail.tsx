@@ -463,7 +463,12 @@ const PatientDetail: React.FC = () => {
                           budget.status === 'REJECTED' ? 'bg-rose-900/30 text-rose-300' :
                             'bg-amber-900/30 text-amber-300'
                           }`}>
-                          {budget.status}
+                          {budget.status === 'DRAFT' ? 'Rascunho' :
+                            budget.status === 'APPROVED' ? 'Aprovado' :
+                              budget.status === 'REJECTED' ? 'Rejeitado' :
+                                budget.status === 'SENT' ? 'Enviado' :
+                                  budget.status === 'NEGOTIATION' ? 'Em Negociação' :
+                                    budget.status}
                         </span>
                       </div>
                     </div>
