@@ -12,8 +12,11 @@ import {
     Phone,
     Instagram,
     Briefcase,
-    LayoutGrid,
-    List
+    DollarSign,
+    TrendingUp,
+    Filter,
+    X,
+    ChevronRight
 } from 'lucide-react';
 
 interface Patient {
@@ -43,6 +46,8 @@ const PatientsList: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [filterScore, setFilterScore] = useState<string>('ALL');
     const [filterStatus, setFilterStatus] = useState<string>('ALL');
+    const [showFilters, setShowFilters] = useState(false);
+    const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
     useEffect(() => {
         if (profile?.clinic_id) {
@@ -57,13 +62,27 @@ const PatientsList: React.FC = () => {
     const loadPatients = async () => {
         try {
             setLoading(true);
+
+            if (!profile?.clinic_id) {
+                console.warn('LoadPatients: Clinic ID not found in profile', profile);
+                setLoading(false);
+                return;
+            }
+
+            console.log('LoadPatients: Fetching for clinic', profile.clinic_id);
+
             const { data, error } = await supabase
                 .from('patients')
                 .select('*')
-                .eq('clinic_id', profile!.clinic_id)
+                .eq('clinic_id', profile.clinic_id)
                 .order('created_at', { ascending: false });
 
-            if (error) throw error;
+            if (error) {
+                console.error('Supabase Error loading patients:', error);
+                throw error;
+            }
+
+            console.log('Patients loaded:', data?.length);
             setPatients(data || []);
         } catch (error) {
             console.error('Erro ao carregar pacientes:', error);
@@ -98,211 +117,430 @@ const PatientsList: React.FC = () => {
         setFilteredPatients(filtered);
     };
 
+    // Score Configuration (High-Ticket Visual Rules)
     const getScoreConfig = (score: string) => {
         switch (score) {
             case 'DIAMOND':
                 return {
-                    borderColor: 'border-amber-400',
-                    bgColor: 'bg-amber-50',
-                    textColor: 'text-amber-700',
-                    badge: 'bg-gradient-to-r from-amber-400 to-yellow-500 text-white shadow-md',
+                    bg: 'bg-purple-50 dark:bg-purple-900/20',
+                    text: 'text-purple-700 dark:text-purple-300',
+                    border: 'border-purple-300 dark:border-purple-800',
                     icon: Crown,
-                    label: 'Diamond'
+                    label: 'Diamond',
+                    cardBorder: 'border-l-4 border-l-purple-500 shadow-purple-100 dark:shadow-none'
                 };
             case 'GOLD':
                 return {
-                    borderColor: 'border-yellow-400',
-                    bgColor: 'bg-yellow-50',
-                    textColor: 'text-yellow-700',
-                    badge: 'bg-yellow-400 text-white',
+                    bg: 'bg-amber-50 dark:bg-amber-900/20',
+                    text: 'text-amber-700 dark:text-amber-300',
+                    border: 'border-amber-300 dark:border-amber-800',
                     icon: Star,
-                    label: 'Gold'
+                    label: 'Gold',
+                    cardBorder: 'border-l-4 border-l-amber-500 shadow-amber-100 dark:shadow-none'
                 };
             case 'RISK':
                 return {
-                    borderColor: 'border-rose-300',
-                    bgColor: 'bg-rose-50',
-                    textColor: 'text-rose-700',
-                    badge: 'bg-rose-500 text-white',
+                    bg: 'bg-rose-50 dark:bg-rose-900/20',
+                    text: 'text-rose-700 dark:text-rose-300',
+                    border: 'border-rose-300 dark:border-rose-800',
                     icon: AlertCircle,
-                    label: 'Risco'
+                    label: 'Risco',
+                    cardBorder: 'border-l-4 border-l-rose-500 shadow-rose-100 dark:shadow-none'
                 };
-            default:
+            case 'BLACKLIST':
                 return {
-                    borderColor: 'border-slate-200',
-                    bgColor: 'bg-white',
-                    textColor: 'text-slate-600',
-                    badge: 'bg-slate-100 text-slate-600',
+                    bg: 'bg-slate-900 dark:bg-black',
+                    text: 'text-white',
+                    border: 'border-slate-700',
+                    icon: AlertCircle,
+                    label: 'Blacklist',
+                    cardBorder: 'border-l-4 border-l-slate-900 shadow-slate-200 dark:shadow-none'
+                };
+            default: // STANDARD
+                return {
+                    bg: 'bg-slate-50 dark:bg-slate-800',
+                    text: 'text-slate-600 dark:text-slate-400',
+                    border: 'border-slate-200 dark:border-slate-600',
                     icon: Users,
-                    label: 'Standard'
+                    label: 'Standard',
+                    cardBorder: 'border-l-4 border-l-slate-300 dark:border-l-slate-600'
                 };
         }
     };
 
+    // Loading State
     if (loading) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-[60vh] text-slate-400 animate-pulse">
-                <Users size={48} className="mb-4 opacity-50" />
-                <p>Carregando pacientes...</p>
+            <div className="flex flex-col items-center justify-center h-[calc(100vh-200px)] animate-pulse">
+                <div className="w-12 h-12 border-4 border-violet-200 border-t-violet-600 rounded-full animate-spin mb-4" />
+                <p className="text-slate-500 font-medium">Carregando pacientes...</p>
             </div>
         );
     }
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-500">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="space-y-6">
+            {/* ============================================ */}
+            {/* HEADER & ACTIONS */}
+            {/* ============================================ */}
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Pacientes</h1>
-                    <p className="text-slate-500 mt-1">
-                        Gerencie sua base de {patients.length} pacientes
+                    <h1 className="text-3xl font-bold text-slate-800 dark:text-white tracking-tight flex items-center gap-3">
+                        <Users className="text-teal-600 dark:text-teal-400" size={32} />
+                        Pacientes
+                    </h1>
+                    <p className="text-slate-500 dark:text-slate-400 mt-2">
+                        {filteredPatients.length} {filteredPatients.length === 1 ? 'paciente encontrado' : 'pacientes encontrados'}
                     </p>
                 </div>
                 <button
                     onClick={() => navigate('/patients/new')}
-                    className="group bg-violet-600 hover:bg-violet-700 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg hover:shadow-violet-200 hover:-translate-y-0.5 flex items-center gap-2"
+                    className="flex items-center gap-2 px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors font-medium shadow-sm"
                 >
-                    <Plus size={20} className="group-hover:rotate-90 transition-transform" />
+                    <Plus size={18} />
                     Novo Paciente
                 </button>
             </div>
 
-            {/* Filters Bar */}
-            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-4 items-center">
-                <div className="relative flex-1 w-full">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-                    <input
-                        type="text"
-                        placeholder="Buscar por nome, telefone..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all font-medium text-slate-700"
-                    />
+            {/* ============================================ */}
+            {/* SEARCH & FILTERS */}
+            {/* ============================================ */}
+            <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-4 transition-colors">
+                <div className="flex flex-col md:flex-row gap-4">
+                    {/* Search Bar */}
+                    <div className="flex-1 relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+                        <input
+                            type="text"
+                            placeholder="Buscar por nome ou telefone..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400"
+                        />
+                        {searchTerm && (
+                            <button
+                                onClick={() => setSearchTerm('')}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                            >
+                                <X size={18} />
+                            </button>
+                        )}
+                    </div>
+
+                    {/* View Toggles & Filters */}
+                    <div className="flex items-center gap-2">
+                        <div className="flex p-1 bg-slate-100 dark:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-600">
+                            <button
+                                onClick={() => setViewMode('grid')}
+                                className={`p-1.5 rounded-md transition-all ${viewMode === 'grid'
+                                    ? 'bg-white dark:bg-slate-600 text-violet-600 dark:text-violet-400 shadow-sm'
+                                    : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
+                                title="Visualização em Grade"
+                            >
+                                <Users size={18} />
+                            </button>
+                            <button
+                                onClick={() => setViewMode('list')}
+                                className={`p-1.5 rounded-md transition-all ${viewMode === 'list'
+                                    ? 'bg-white dark:bg-slate-600 text-violet-600 dark:text-violet-400 shadow-sm'
+                                    : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
+                                title="Visualização em Lista"
+                            >
+                                <Filter size={18} className="rotate-90" /> {/* Improvisando icone de lista com filter rotacionado ou usar outro se disponivel */}
+                            </button>
+                        </div>
+
+                        <button
+                            onClick={() => setShowFilters(!showFilters)}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${showFilters || filterScore !== 'ALL' || filterStatus !== 'ALL'
+                                ? 'bg-violet-50 border-violet-200 text-violet-700 dark:bg-violet-900/30 dark:border-violet-700 dark:text-violet-300'
+                                : 'bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600'
+                                }`}
+                        >
+                            <Filter size={18} />
+                            Filtros
+                            {(filterScore !== 'ALL' || filterStatus !== 'ALL') && (
+                                <span className="w-2 h-2 bg-violet-600 rounded-full" />
+                            )}
+                        </button>
+                    </div>
                 </div>
 
-                <div className="flex gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
-                    <select
-                        value={filterScore}
-                        onChange={(e) => setFilterScore(e.target.value)}
-                        className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500 font-medium text-slate-600 cursor-pointer"
-                    >
-                        <option value="ALL">Todos os Scores</option>
-                        <option value="DIAMOND">💎 Diamond</option>
-                        <option value="GOLD">⭐ Gold</option>
-                        <option value="STANDARD">👤 Standard</option>
-                        <option value="RISK">⚠️ Risco</option>
-                    </select>
+                {/* Filter Panel */}
+                {showFilters && (
+                    <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700 grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in duration-200">
+                        {/* Score Filter */}
+                        <div>
+                            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2">
+                                Classificação
+                            </label>
+                            <select
+                                value={filterScore}
+                                onChange={(e) => setFilterScore(e.target.value)}
+                                className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 text-sm bg-white dark:bg-slate-700 text-slate-700 dark:text-white"
+                            >
+                                <option value="ALL">Todos</option>
+                                <option value="DIAMOND">💎 Diamond</option>
+                                <option value="GOLD">⭐ Gold</option>
+                                <option value="STANDARD">👤 Standard</option>
+                                <option value="RISK">⚠️ Risco</option>
+                                <option value="BLACKLIST">🚫 Blacklist</option>
+                            </select>
+                        </div>
 
-                    <select
-                        value={filterStatus}
-                        onChange={(e) => setFilterStatus(e.target.value)}
-                        className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500 font-medium text-slate-600 cursor-pointer"
-                    >
-                        <option value="ALL">Todos os Status</option>
-                        <option value="Ativo">✅ Ativos</option>
-                        <option value="Em Tratamento">🩺 Em Tratamento</option>
-                        <option value="DEBTOR">🔴 Inadimplentes</option>
-                    </select>
-                </div>
+                        {/* Status Filter */}
+                        <div>
+                            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2">
+                                Status
+                            </label>
+                            <select
+                                value={filterStatus}
+                                onChange={(e) => setFilterStatus(e.target.value)}
+                                className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 text-sm bg-white dark:bg-slate-700 text-slate-700 dark:text-white"
+                            >
+                                <option value="ALL">Todos</option>
+                                <option value="Em Tratamento">Em Tratamento</option>
+                                <option value="Em Orçamento">Em Orçamento</option>
+                                <option value="Finalizado">Finalizado</option>
+                                <option value="DEBTOR">Inadimplentes</option>
+                            </select>
+                        </div>
+                    </div>
+                )}
             </div>
 
-            {/* Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {filteredPatients.map(patient => {
-                    const config = getScoreConfig(patient.patient_score);
-                    const Icon = config.icon;
+            {/* ============================================ */}
+            {/* PATIENTS CONTENT */}
+            {/* ============================================ */}
+            {filteredPatients.length > 0 ? (
+                <>
+                    {viewMode === 'grid' ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in">
+                            {filteredPatients.map((patient) => {
+                                const config = getScoreConfig(patient.patient_score);
+                                const Icon = config.icon;
 
-                    return (
-                        <div
-                            key={patient.id}
-                            onClick={() => navigate(`/patients/${patient.id}`)}
-                            className={`group bg-white rounded-2xl border-2 ${config.borderColor} p-6 shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer relative overflow-hidden`}
-                        >
-                            {/* Decorative Background for High Scores */}
-                            {(patient.patient_score === 'DIAMOND' || patient.patient_score === 'GOLD') && (
-                                <div className={`absolute top-0 right-0 w-32 h-32 ${config.bgColor} rounded-bl-full -mr-16 -mt-16 opacity-50`} />
-                            )}
+                                return (
+                                    <div
+                                        key={patient.id}
+                                        onClick={() => navigate(`/patients/${patient.id}`)}
+                                        className={`
+                                            bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-lg 
+                                            transition-all cursor-pointer group overflow-hidden
+                                            ${config.cardBorder}
+                                        `}
+                                    >
+                                        {/* Card Header */}
+                                        <div className="p-4 border-b border-slate-100 dark:border-slate-700">
+                                            <div className="flex items-start gap-3">
+                                                {/* Avatar */}
+                                                <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center overflow-hidden flex-shrink-0">
+                                                    {patient.profile_photo_url ? (
+                                                        <img
+                                                            src={patient.profile_photo_url}
+                                                            alt={patient.name}
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                    ) : (
+                                                        <span className="font-bold text-slate-500 dark:text-slate-400 text-lg">
+                                                            {patient.name.substring(0, 2).toUpperCase()}
+                                                        </span>
+                                                    )}
+                                                </div>
 
-                            <div className="relative flex items-start justify-between mb-6">
-                                <div className="flex items-center gap-4">
-                                    <div className={`w-16 h-16 rounded-2xl ${config.bgColor} flex items-center justify-center overflow-hidden border-2 border-white shadow-sm`}>
-                                        {patient.profile_photo_url ? (
-                                            <img src={patient.profile_photo_url} alt={patient.name} className="w-full h-full object-cover" />
-                                        ) : (
-                                            <span className={`text-2xl font-bold ${config.textColor}`}>
-                                                {patient.name.charAt(0).toUpperCase()}
-                                            </span>
-                                        )}
-                                    </div>
-                                    <div>
-                                        <h3 className="font-bold text-lg text-slate-800 group-hover:text-violet-600 transition-colors line-clamp-1">
-                                            {patient.name}
-                                        </h3>
-                                        <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold mt-1 ${config.badge}`}>
-                                            <Icon size={12} />
-                                            {config.label}
+                                                {/* Name & Score */}
+                                                <div className="flex-1 min-w-0">
+                                                    <h3 className="font-bold text-slate-800 dark:text-white truncate group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors">
+                                                        {patient.name}
+                                                    </h3>
+                                                    <div className="flex items-center gap-2 mt-1">
+                                                        <span className={`
+                                                            inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold
+                                                            ${config.bg} ${config.text} ${config.border} border
+                                                        `}>
+                                                            <Icon size={12} />
+                                                            {config.label}
+                                                        </span>
+                                                        {patient.bad_debtor && (
+                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-800">
+                                                                <AlertCircle size={12} />
+                                                                Inadimplente
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {/* Arrow Icon */}
+                                                <ChevronRight className="text-slate-300 dark:text-slate-600 group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors flex-shrink-0" size={20} />
+                                            </div>
+                                        </div>
+
+                                        {/* Card Body */}
+                                        <div className="p-4 space-y-3">
+                                            {/* Contact Info */}
+                                            <div className="space-y-2">
+                                                <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+                                                    <Phone size={14} className="text-slate-400 dark:text-slate-500 flex-shrink-0" />
+                                                    <span className="truncate">{patient.phone}</span>
+                                                </div>
+                                                {patient.instagram_handle && (
+                                                    <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+                                                        <Instagram size={14} className="text-pink-500 flex-shrink-0" />
+                                                        <span className="truncate">@{patient.instagram_handle}</span>
+                                                    </div>
+                                                )}
+                                                {patient.occupation && (
+                                                    <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+                                                        <Briefcase size={14} className="text-slate-400 dark:text-slate-500 flex-shrink-0" />
+                                                        <span className="truncate">{patient.occupation}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* Financial Summary */}
+                                            <div className="pt-3 border-t border-slate-100 dark:border-slate-700">
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <div>
+                                                        <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Total Aprovado</p>
+                                                        <p className="text-sm font-bold text-green-600 dark:text-green-400 flex items-center gap-1">
+                                                            <TrendingUp size={12} />
+                                                            {new Intl.NumberFormat('pt-BR', {
+                                                                style: 'currency',
+                                                                currency: 'BRL'
+                                                            }).format(patient.total_approved)}
+                                                        </p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Saldo Devedor</p>
+                                                        <p className={`text-sm font-bold flex items-center gap-1 ${patient.balance_due > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-400 dark:text-slate-500'
+                                                            }`}>
+                                                            <DollarSign size={12} />
+                                                            {new Intl.NumberFormat('pt-BR', {
+                                                                style: 'currency',
+                                                                currency: 'BRL'
+                                                            }).format(patient.balance_due)}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                                {patient.bad_debtor && (
-                                    <div className="absolute top-0 right-0">
-                                        <span className="flex h-3 w-3">
-                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                                            <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500"></span>
-                                        </span>
-                                    </div>
-                                )}
-                            </div>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        // List View (Table)
+                        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden animate-in fade-in">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left text-sm">
+                                    <thead className="bg-slate-50 dark:bg-slate-700/50 text-slate-500 dark:text-slate-400 font-medium">
+                                        <tr>
+                                            <th className="px-6 py-4">Paciente</th>
+                                            <th className="px-6 py-4">Contato</th>
+                                            <th className="px-6 py-4">Classificação</th>
+                                            <th className="px-6 py-4">Financeiro</th>
+                                            <th className="px-6 py-4 text-right">Ação</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                                        {filteredPatients.map((patient) => {
+                                            const config = getScoreConfig(patient.patient_score);
+                                            const Icon = config.icon;
 
-                            <div className="space-y-3 mb-6">
-                                <div className="flex items-center gap-3 text-slate-500 text-sm">
-                                    <Phone size={16} className="text-slate-400" />
-                                    {patient.phone}
-                                </div>
-                                {patient.instagram_handle && (
-                                    <div className="flex items-center gap-3 text-slate-500 text-sm">
-                                        <Instagram size={16} className="text-pink-500" />
-                                        {patient.instagram_handle}
-                                    </div>
-                                )}
-                                {patient.occupation && (
-                                    <div className="flex items-center gap-3 text-slate-500 text-sm">
-                                        <Briefcase size={16} className="text-slate-400" />
-                                        <span className="truncate">{patient.occupation}</span>
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-                                <div>
-                                    <p className="text-xs text-slate-400 font-medium uppercase">Aprovado</p>
-                                    <p className="font-bold text-teal-600">
-                                        R$ {patient.total_approved.toLocaleString('pt-BR')}
-                                    </p>
-                                </div>
-                                {patient.balance_due > 0 && (
-                                    <div className="text-right">
-                                        <p className="text-xs text-rose-400 font-medium uppercase">Pendente</p>
-                                        <p className="font-bold text-rose-600">
-                                            R$ {patient.balance_due.toLocaleString('pt-BR')}
-                                        </p>
-                                    </div>
-                                )}
+                                            return (
+                                                <tr
+                                                    key={patient.id}
+                                                    className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer"
+                                                    onClick={() => navigate(`/patients/${patient.id}`)}
+                                                >
+                                                    <td className="px-6 py-4">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center overflow-hidden">
+                                                                {patient.profile_photo_url ? (
+                                                                    <img src={patient.profile_photo_url} alt={patient.name} className="w-full h-full object-cover" />
+                                                                ) : (
+                                                                    <span className="font-bold text-slate-500 dark:text-slate-400 text-sm">
+                                                                        {patient.name.substring(0, 2).toUpperCase()}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <div>
+                                                                <p className="font-bold text-slate-800 dark:text-white">{patient.name}</p>
+                                                                {patient.occupation && (
+                                                                    <p className="text-xs text-slate-500 dark:text-slate-400">{patient.occupation}</p>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <div className="text-slate-600 dark:text-slate-300">
+                                                            <div className="flex items-center gap-1.5">
+                                                                <Phone size={14} className="text-slate-400" />
+                                                                {patient.phone}
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <div className="flex flex-col gap-1 items-start">
+                                                            <span className={`
+                                                                inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold
+                                                                ${config.bg} ${config.text} ${config.border} border
+                                                            `}>
+                                                                <Icon size={12} />
+                                                                {config.label}
+                                                            </span>
+                                                            {patient.bad_debtor && (
+                                                                <span className="text-[10px] text-rose-600 dark:text-rose-400 font-bold flex items-center gap-1">
+                                                                    <AlertCircle size={10} /> Inadimplente
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <div>
+                                                            <p className="text-xs text-slate-500 dark:text-slate-400">Total: <span className="text-green-600 dark:text-green-400 font-bold">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(patient.total_approved)}</span></p>
+                                                            {patient.balance_due > 0 && (
+                                                                <p className="text-xs text-rose-600 dark:text-rose-400 font-bold mt-0.5">
+                                                                    Deve: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(patient.balance_due)}
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right">
+                                                        <ChevronRight className="text-slate-300 dark:text-slate-600 inline-block" size={20} />
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
-                    );
-                })}
-            </div>
-
-            {filteredPatients.length === 0 && !loading && (
-                <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-slate-300">
-                    <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <Users className="text-slate-400" size={32} />
-                    </div>
-                    <h3 className="text-lg font-bold text-slate-700">Nenhum paciente encontrado</h3>
-                    <p className="text-slate-500">
-                        {searchTerm ? `Não encontramos ninguém com "${searchTerm}"` : 'Sua lista de pacientes está vazia.'}
+                    )}
+                </>
+            ) : (
+                // Empty State
+                <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-12 text-center transition-colors">
+                    <Users className="text-slate-300 dark:text-slate-600 mx-auto mb-4" size={64} />
+                    <h3 className="text-lg font-bold text-slate-600 dark:text-slate-300 mb-2">
+                        {searchTerm || filterScore !== 'ALL' || filterStatus !== 'ALL'
+                            ? 'Nenhum paciente encontrado'
+                            : 'Nenhum paciente cadastrado'}
+                    </h3>
+                    <p className="text-slate-500 dark:text-slate-400 mb-6 max-w-md mx-auto">
+                        {searchTerm || filterScore !== 'ALL' || filterStatus !== 'ALL'
+                            ? 'Tente ajustar os filtros ou realizar uma nova busca.'
+                            : 'Comece cadastrando seu primeiro paciente para começar a usar o sistema.'}
                     </p>
+                    {!(searchTerm || filterScore !== 'ALL' || filterStatus !== 'ALL') && (
+                        <button
+                            onClick={() => navigate('/patients/new')}
+                            className="inline-flex items-center gap-2 px-6 py-3 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors font-medium shadow-sm"
+                        >
+                            <Plus size={20} />
+                            Cadastrar Primeiro Paciente
+                        </button>
+                    )}
                 </div>
             )}
         </div>

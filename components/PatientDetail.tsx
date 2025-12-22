@@ -24,6 +24,8 @@ import {
   AlertCircle,
   Trash2,
   Edit,
+  Sparkles,
+  Smile,
 } from "lucide-react";
 import { SocialDossier, MedicalAlertPopup, PatientScoreBadge } from "./patient";
 import { OrthoContractForm, OrthoContractList, AlignerTracker, OrthoTreatmentPlanForm } from "./ortho";
@@ -40,12 +42,13 @@ const PatientDetail: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<
     | "cadastro"
-    | "prontuario"
     | "orcamentos"
-    | "tratamentos"
+    | "clinica"
+    | "ortodontia"
+    | "hof"
     | "financeiro"
     | "documentos"
-    | "ortodontia"
+    | "prontuario"
   >("cadastro");
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -115,9 +118,10 @@ const PatientDetail: React.FC = () => {
       rg: formData.get("rg") as string,
       birth_date: formData.get("birth_date") as string,
       gender: formData.get("gender") as string,
-      civilStatus: formData.get("civilStatus") as string,
-      profession: formData.get("profession") as string,
-      contactPreference: formData.get("contactPreference") as string,
+      // Mapeamento correto para o banco de dados
+      marital_status: formData.get("marital_status") as any,
+      occupation: formData.get("occupation") as string,
+      contactPreference: formData.get("contactPreference") as any,
       zipCode: formData.get("zipCode") as string,
       street: formData.get("street") as string,
       number: formData.get("number") as string,
@@ -130,6 +134,12 @@ const PatientDetail: React.FC = () => {
       insuranceCardNumber: formData.get("insuranceCardNumber") as string,
       initialClinicalNotes: formData.get("initialClinicalNotes") as string,
       generalNotes: formData.get("generalNotes") as string,
+
+      // Campos High-Ticket
+      nickname: formData.get("nickname") as string,
+      instagram_handle: formData.get("instagram_handle") as string,
+      wedding_anniversary: formData.get("wedding_anniversary") as string,
+      vip_notes: formData.get("vip_notes") as string,
     });
     setIsEditingProfile(false);
   };
@@ -215,14 +225,24 @@ const PatientDetail: React.FC = () => {
   };
 
   const tabs = [
-    { id: "cadastro", label: "Cadastro", icon: User },
-    { id: "orcamentos", label: "Orçamentos", icon: FileText },
-    { id: "tratamentos", label: "Tratamentos", icon: Shield },
-    { id: "ortodontia", label: "Ortodontia", icon: Shield },
-    { id: "financeiro", label: "Financeiro", icon: DollarSign },
-    { id: "documentos", label: "Docs", icon: File },
-    { id: "prontuario", label: "Evolução", icon: Activity },
+    { id: "cadastro", label: "Visão Geral", icon: User, color: "text-slate-600 border-slate-600" },
+    { id: "orcamentos", label: "Propostas", icon: FileText, color: "text-slate-600 border-slate-600" },
+    { id: "clinica", label: "CLÍNICA", icon: Activity, color: "text-teal-600 border-teal-600 bg-teal-50/50 dark:bg-teal-900/20" },
+    { id: "ortodontia", label: "ORTODONTIA", icon: Smile, color: "text-indigo-600 border-indigo-600 bg-indigo-50/50 dark:bg-indigo-900/20" },
+    { id: "hof", label: "HOF", icon: Sparkles, color: "text-amber-600 border-amber-600 bg-amber-50/50 dark:bg-amber-900/20" },
+    { id: "financeiro", label: "Financeiro", icon: DollarSign, color: "text-slate-600 border-slate-600" },
+    { id: "documentos", label: "Docs", icon: File, color: "text-slate-600 border-slate-600" },
+    { id: "prontuario", label: "Evolução", icon: Activity, color: "text-slate-600 border-slate-600" },
   ];
+
+  // Helper para filtragem de tratamentos
+  const getTreatmentCategoryGroup = (category?: string) => {
+    if (!category) return 'CLINICA';
+    const cat = category.toUpperCase();
+    if (['HOF', 'HARMONIZACAO', 'ESTETICA', 'BOTOX', 'PREENCHEDOR'].some(c => cat.includes(c))) return 'HOF';
+    if (['ORTODONTIA', 'ORTO', 'APARELHO', 'ALINHADOR'].some(c => cat.includes(c))) return 'ORTODONTIA';
+    return 'CLINICA';
+  };
 
   const StatusBadge = ({ status }: { status: string }) => {
     const colors: any = {
@@ -261,8 +281,12 @@ const PatientDetail: React.FC = () => {
               <ArrowLeft size={20} />
             </button>
             <div className="flex items-center gap-3 md:gap-5 flex-1">
-              <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-blue-600 dark:text-blue-400 text-xl md:text-2xl font-bold border-2 border-white dark:border-gray-700 shadow-sm shrink-0">
-                {patient.name?.charAt(0) || "?"}
+              <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-blue-600 dark:text-blue-400 text-xl md:text-2xl font-bold border-2 border-white dark:border-gray-700 shadow-sm shrink-0 overflow-hidden">
+                {patient.photo_profile_url || patient.profile_photo_url ? (
+                  <img src={patient.photo_profile_url || patient.profile_photo_url} alt={patient.name} className="w-full h-full object-cover" />
+                ) : (
+                  patient.name?.charAt(0) || "?"
+                )}
               </div>
               <div className="flex-1">
                 <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-3">
@@ -325,7 +349,7 @@ const PatientDetail: React.FC = () => {
               onClick={() => setActiveTab(tab.id as any)}
               className={`flex items-center gap-2 px-4 md:px-6 py-3 border-b-2 font-medium text-xs md:text-sm transition-colors whitespace-nowrap
                 ${activeTab === tab.id
-                  ? "border-blue-600 text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/20 rounded-t-lg"
+                  ? (tab.color || "border-blue-600 text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/20 rounded-t-lg")
                   : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-t-lg"
                 }`}
             >
@@ -396,7 +420,7 @@ const PatientDetail: React.FC = () => {
                       <input
                         name="name"
                         defaultValue={patient.name}
-                        className="w-full bg-white text-gray-900 border border-gray-200 rounded-lg p-3 md:p-2 text-base md:text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none placeholder-gray-400 transition-all shadow-sm h-12 md:h-10"
+                        className="w-full bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-slate-700 rounded-lg p-3 md:p-2 text-base md:text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none placeholder-gray-400 transition-all shadow-sm h-12 md:h-10"
                       />
                     </div>
                     <div>
@@ -408,7 +432,91 @@ const PatientDetail: React.FC = () => {
                         name="phone"
                         type="tel"
                         defaultValue={patient.phone}
-                        className="w-full bg-white text-gray-900 border border-gray-200 rounded-lg p-3 md:p-2 text-base md:text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none placeholder-gray-400 transition-all shadow-sm h-12 md:h-10"
+                        className="w-full bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-slate-700 rounded-lg p-3 md:p-2 text-base md:text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none placeholder-gray-400 transition-all shadow-sm h-12 md:h-10"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 1.5 DOSSIÊ HIGH-TICKET (CRM de Luxo) */}
+                <div className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 p-5 rounded-xl shadow-sm border-l-4 border-purple-500 ring-1 ring-purple-100 dark:ring-purple-800">
+                  <h3 className="text-xs font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                    <User size={16} /> 💎 Dossiê High-Ticket (CRM de Luxo)
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-3">
+                    {/* Apelido (4) / Instagram (4) / Profissão (4) */}
+                    <div className="col-span-1 md:col-span-4">
+                      <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
+                        Apelido / Como Chamar
+                      </label>
+                      <input
+                        name="nickname"
+                        defaultValue={patient.nickname}
+                        className="w-full bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-slate-700 rounded-lg p-3 md:p-2 text-base md:text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none placeholder-gray-400 transition-all shadow-sm h-12 md:h-10"
+                        placeholder="Ex: Janjão"
+                      />
+                    </div>
+                    <div className="col-span-1 md:col-span-4">
+                      <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
+                        Instagram
+                      </label>
+                      <input
+                        name="instagram_handle"
+                        defaultValue={patient.instagram_handle}
+                        className="w-full bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-slate-700 rounded-lg p-3 md:p-2 text-base md:text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none placeholder-gray-400 transition-all shadow-sm h-12 md:h-10"
+                        placeholder="@usuario"
+                      />
+                    </div>
+                    <div className="col-span-1 md:col-span-4">
+                      <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
+                        Profissão
+                      </label>
+                      <input
+                        name="occupation"
+                        defaultValue={patient.occupation || patient.profession}
+                        className="w-full bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-slate-700 rounded-lg p-3 md:p-2 text-base md:text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none placeholder-gray-400 transition-all shadow-sm h-12 md:h-10"
+                      />
+                    </div>
+
+                    {/* Estado Civil (4) / Aniversário de Casamento (4) */}
+                    <div className="col-span-1 md:col-span-4">
+                      <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
+                        Estado Civil
+                      </label>
+                      <select
+                        name="marital_status"
+                        defaultValue={patient.marital_status || patient.civilStatus || "SINGLE"}
+                        className="w-full bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-slate-700 rounded-lg p-3 md:p-2 text-base md:text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none placeholder-gray-400 transition-all shadow-sm h-12 md:h-10"
+                      >
+                        <option value="SINGLE">Solteiro(a)</option>
+                        <option value="MARRIED">Casado(a)</option>
+                        <option value="DIVORCED">Divorciado(a)</option>
+                        <option value="WIDOWED">Viúvo(a)</option>
+                        <option value="OTHER">Outro</option>
+                      </select>
+                    </div>
+                    <div className="col-span-1 md:col-span-4">
+                      <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
+                        Aniversário de Casamento
+                      </label>
+                      <input
+                        name="wedding_anniversary"
+                        type="date"
+                        defaultValue={patient.wedding_anniversary}
+                        className="w-full bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-slate-700 rounded-lg p-3 md:p-2 text-base md:text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none placeholder-gray-400 transition-all shadow-sm h-12 md:h-10"
+                      />
+                    </div>
+
+                    {/* Notas VIP (12) */}
+                    <div className="col-span-1 md:col-span-12">
+                      <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
+                        🌟 Notas VIP (Preferências Pessoais)
+                      </label>
+                      <textarea
+                        name="vip_notes"
+                        defaultValue={patient.vip_notes}
+                        className="w-full bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-slate-700 rounded-lg p-3 md:p-2 text-base md:text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none placeholder-gray-400 transition-all shadow-sm resize-none h-20"
+                        placeholder="Ex: Gosta de café sem açúcar, prefere ar condicionado fraco..."
                       />
                     </div>
                   </div>
@@ -428,7 +536,7 @@ const PatientDetail: React.FC = () => {
                         <input
                           name="cpf"
                           defaultValue={patient.cpf}
-                          className="w-full bg-white text-gray-900 border border-gray-200 rounded-lg p-3 md:p-2 text-base md:text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none placeholder-gray-400 transition-all shadow-sm h-12 md:h-10"
+                          className="w-full bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-slate-700 rounded-lg p-3 md:p-2 text-base md:text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none placeholder-gray-400 transition-all shadow-sm h-12 md:h-10"
                         />
                       </div>
                       <div className="col-span-1 md:col-span-6">
@@ -438,7 +546,7 @@ const PatientDetail: React.FC = () => {
                         <input
                           name="rg"
                           defaultValue={patient.rg}
-                          className="w-full bg-white text-gray-900 border border-gray-200 rounded-lg p-3 md:p-2 text-base md:text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none placeholder-gray-400 transition-all shadow-sm h-12 md:h-10"
+                          className="w-full bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-slate-700 rounded-lg p-3 md:p-2 text-base md:text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none placeholder-gray-400 transition-all shadow-sm h-12 md:h-10"
                         />
                       </div>
                       <div className="col-span-1 md:col-span-7">
@@ -449,7 +557,7 @@ const PatientDetail: React.FC = () => {
                           name="birth_date"
                           type="date"
                           defaultValue={patient.birth_date}
-                          className="w-full bg-white text-gray-900 border border-gray-200 rounded-lg p-3 md:p-2 text-base md:text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none placeholder-gray-400 transition-all shadow-sm h-12 md:h-10"
+                          className="w-full bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-slate-700 rounded-lg p-3 md:p-2 text-base md:text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none placeholder-gray-400 transition-all shadow-sm h-12 md:h-10"
                         />
                       </div>
                       <div className="col-span-1 md:col-span-5">
@@ -459,7 +567,7 @@ const PatientDetail: React.FC = () => {
                         <select
                           name="gender"
                           defaultValue={patient.gender || "Não Informado"}
-                          className="w-full bg-white text-gray-900 border border-gray-200 rounded-lg p-3 md:p-2 text-base md:text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none placeholder-gray-400 transition-all shadow-sm h-12 md:h-10"
+                          className="w-full bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-slate-700 rounded-lg p-3 md:p-2 text-base md:text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none placeholder-gray-400 transition-all shadow-sm h-12 md:h-10"
                         >
                           <option>Masculino</option>
                           <option>Feminino</option>
@@ -467,30 +575,11 @@ const PatientDetail: React.FC = () => {
                           <option>Não Informado</option>
                         </select>
                       </div>
-                      <div className="col-span-1 md:col-span-5">
-                        <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
-                          Estado Civil
-                        </label>
-                        <select
-                          name="civilStatus"
-                          defaultValue={patient.civilStatus || "Solteiro(a)"}
-                          className="w-full bg-white text-gray-900 border border-gray-200 rounded-lg p-3 md:p-2 text-base md:text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none placeholder-gray-400 transition-all shadow-sm h-12 md:h-10"
-                        >
-                          <option>Solteiro(a)</option>
-                          <option>Casado(a)</option>
-                          <option>Divorciado(a)</option>
-                          <option>Viúvo(a)</option>
-                        </select>
+                      <div className="col-span-1 md:col-span-5 hidden">
+                        {/* Hidden Civil Status and Profession in Personal Section because they are now in High Ticket Section */}
+                        {/* Kept hidden to preserve grid structure if needed, or we can just remove them from here */}
                       </div>
-                      <div className="col-span-1 md:col-span-7">
-                        <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
-                          Profissão
-                        </label>
-                        <input
-                          name="profession"
-                          defaultValue={patient.profession}
-                          className="w-full bg-white text-gray-900 border border-gray-200 rounded-lg p-3 md:p-2 text-base md:text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none placeholder-gray-400 transition-all shadow-sm h-12 md:h-10"
-                        />
+                      <div className="col-span-1 md:col-span-7 hidden">
                       </div>
                     </div>
                   </div>
@@ -509,7 +598,7 @@ const PatientDetail: React.FC = () => {
                           name="email"
                           type="email"
                           defaultValue={patient.email}
-                          className="w-full bg-white text-gray-900 border border-gray-200 rounded-lg p-3 md:p-2 text-base md:text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none placeholder-gray-400 transition-all shadow-sm h-12 md:h-10"
+                          className="w-full bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-slate-700 rounded-lg p-3 md:p-2 text-base md:text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none placeholder-gray-400 transition-all shadow-sm h-12 md:h-10"
                         />
                       </div>
                       <div className="col-span-1 md:col-span-4">
@@ -519,7 +608,7 @@ const PatientDetail: React.FC = () => {
                         <select
                           name="contactPreference"
                           defaultValue={patient.contactPreference || "WhatsApp"}
-                          className="w-full bg-white text-gray-900 border border-gray-200 rounded-lg p-3 md:p-2 text-base md:text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none placeholder-gray-400 transition-all shadow-sm h-12 md:h-10"
+                          className="w-full bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-slate-700 rounded-lg p-3 md:p-2 text-base md:text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none placeholder-gray-400 transition-all shadow-sm h-12 md:h-10"
                         >
                           <option>WhatsApp</option>
                           <option>Ligação</option>
@@ -534,7 +623,7 @@ const PatientDetail: React.FC = () => {
                           name="zipCode"
                           type="tel"
                           defaultValue={patient.zipCode}
-                          className="w-full bg-white text-gray-900 border border-gray-200 rounded-lg p-3 md:p-2 text-base md:text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none placeholder-gray-400 transition-all shadow-sm h-12 md:h-10"
+                          className="w-full bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-slate-700 rounded-lg p-3 md:p-2 text-base md:text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none placeholder-gray-400 transition-all shadow-sm h-12 md:h-10"
                         />
                       </div>
                       <div className="col-span-1 md:col-span-8">
@@ -544,7 +633,7 @@ const PatientDetail: React.FC = () => {
                         <input
                           name="street"
                           defaultValue={patient.street}
-                          className="w-full bg-white text-gray-900 border border-gray-200 rounded-lg p-3 md:p-2 text-base md:text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none placeholder-gray-400 transition-all shadow-sm h-12 md:h-10"
+                          className="w-full bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-slate-700 rounded-lg p-3 md:p-2 text-base md:text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none placeholder-gray-400 transition-all shadow-sm h-12 md:h-10"
                         />
                       </div>
                       <div className="col-span-1 md:col-span-2">
@@ -554,7 +643,7 @@ const PatientDetail: React.FC = () => {
                         <input
                           name="number"
                           defaultValue={patient.number}
-                          className="w-full bg-white text-gray-900 border border-gray-200 rounded-lg p-3 md:p-2 text-base md:text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none placeholder-gray-400 transition-all shadow-sm h-12 md:h-10"
+                          className="w-full bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-slate-700 rounded-lg p-3 md:p-2 text-base md:text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none placeholder-gray-400 transition-all shadow-sm h-12 md:h-10"
                         />
                       </div>
                       <div className="col-span-1 md:col-span-4">
@@ -564,7 +653,7 @@ const PatientDetail: React.FC = () => {
                         <input
                           name="complement"
                           defaultValue={patient.complement}
-                          className="w-full bg-white text-gray-900 border border-gray-200 rounded-lg p-3 md:p-2 text-base md:text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none placeholder-gray-400 transition-all shadow-sm h-12 md:h-10"
+                          className="w-full bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-slate-700 rounded-lg p-3 md:p-2 text-base md:text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none placeholder-gray-400 transition-all shadow-sm h-12 md:h-10"
                         />
                       </div>
                       <div className="col-span-1 md:col-span-6">
@@ -574,7 +663,7 @@ const PatientDetail: React.FC = () => {
                         <input
                           name="neighborhood"
                           defaultValue={patient.neighborhood}
-                          className="w-full bg-white text-gray-900 border border-gray-200 rounded-lg p-3 md:p-2 text-base md:text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none placeholder-gray-400 transition-all shadow-sm h-12 md:h-10"
+                          className="w-full bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-slate-700 rounded-lg p-3 md:p-2 text-base md:text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none placeholder-gray-400 transition-all shadow-sm h-12 md:h-10"
                         />
                       </div>
                       <div className="col-span-1 md:col-span-9">
@@ -584,7 +673,7 @@ const PatientDetail: React.FC = () => {
                         <input
                           name="city"
                           defaultValue={patient.city}
-                          className="w-full bg-white text-gray-900 border border-gray-200 rounded-lg p-3 md:p-2 text-base md:text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none placeholder-gray-400 transition-all shadow-sm h-12 md:h-10"
+                          className="w-full bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-slate-700 rounded-lg p-3 md:p-2 text-base md:text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none placeholder-gray-400 transition-all shadow-sm h-12 md:h-10"
                         />
                       </div>
                       <div className="col-span-1 md:col-span-3">
@@ -595,7 +684,7 @@ const PatientDetail: React.FC = () => {
                           name="state"
                           maxLength={2}
                           defaultValue={patient.state}
-                          className="w-full bg-white text-gray-900 border border-gray-200 rounded-lg p-3 md:p-2 text-base md:text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none placeholder-gray-400 transition-all shadow-sm h-12 md:h-10"
+                          className="w-full bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-slate-700 rounded-lg p-3 md:p-2 text-base md:text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none placeholder-gray-400 transition-all shadow-sm h-12 md:h-10"
                         />
                       </div>
                     </div>
@@ -681,6 +770,8 @@ const PatientDetail: React.FC = () => {
             ) : (
               // MODO VISUALIZAÇÃO - Mostrar todos os campos organizados
               <div className="space-y-6">
+                {/* Social Dossier integrado na visualização Geral */}
+                <SocialDossier patient={patient} />
                 {/* 1. IDENTIFICAÇÃO PRINCIPAL */}
                 <div className="bg-white dark:bg-slate-800 p-5 rounded-xl shadow-sm border-l-4 border-primary-500 ring-1 ring-gray-100 dark:ring-slate-700">
                   <h3 className="text-xs font-bold text-primary-600 dark:text-primary-400 uppercase tracking-wider mb-4 flex items-center gap-2">
@@ -750,7 +841,9 @@ const PatientDetail: React.FC = () => {
                           Estado Civil
                         </label>
                         <p className="font-medium text-gray-900 dark:text-white">
-                          {patient.civilStatus || "-"}
+                          {patient.marital_status === 'MARRIED' ? 'Casado(a)' :
+                            patient.marital_status === 'SINGLE' ? 'Solteiro(a)' :
+                              patient.marital_status || patient.civilStatus || "-"}
                         </p>
                       </div>
                       <div className="flex justify-between md:block border-b md:border-0 border-gray-50 dark:border-gray-700 pb-2 md:pb-0">
@@ -758,7 +851,7 @@ const PatientDetail: React.FC = () => {
                           Profissão
                         </label>
                         <p className="font-medium text-gray-900 dark:text-white">
-                          {patient.profession || "-"}
+                          {patient.occupation || patient.profession || "-"}
                         </p>
                       </div>
                     </div>
@@ -1181,9 +1274,35 @@ const PatientDetail: React.FC = () => {
         )}
 
         {/* TAB: TRATAMENTOS (NEW COMPONENT) */}
-        {activeTab === "tratamentos" && (
+        {/* TAB: CLÍNICA (FILTRADO) */}
+        {activeTab === "clinica" && (
           <div className="max-w-5xl mx-auto animate-in fade-in">
-            <PatientTreatments patient={patient} />
+            <div className="bg-teal-50/50 dark:bg-teal-900/10 p-4 rounded-xl border border-teal-100 dark:border-teal-800 mb-6">
+              <h3 className="text-lg font-bold text-teal-900 dark:text-teal-300 flex items-center gap-2">
+                <Activity size={20} /> Clínica Geral & Procedimentos
+              </h3>
+              <p className="text-sm text-teal-700 dark:text-teal-400">Gerencie restaurações, limpezas, cirurgias e outros procedimentos clínicos.</p>
+            </div>
+            <PatientTreatments patient={{
+              ...patient,
+              treatments: (patient.treatments || []).filter(t => getTreatmentCategoryGroup(t.category) === 'CLINICA')
+            }} />
+          </div>
+        )}
+
+        {/* TAB: HOF (FILTRADO) */}
+        {activeTab === "hof" && (
+          <div className="max-w-5xl mx-auto animate-in fade-in">
+            <div className="bg-amber-50/50 dark:bg-amber-900/10 p-4 rounded-xl border border-amber-100 dark:border-amber-800 mb-6">
+              <h3 className="text-lg font-bold text-amber-900 dark:text-amber-300 flex items-center gap-2">
+                <Sparkles size={20} /> Harmonização Orofacial
+              </h3>
+              <p className="text-sm text-amber-700 dark:text-amber-400">Procedimentos estéticos, botox, preenchedores e bioestimuladores.</p>
+            </div>
+            <PatientTreatments patient={{
+              ...patient,
+              treatments: (patient.treatments || []).filter(t => getTreatmentCategoryGroup(t.category) === 'HOF')
+            }} />
           </div>
         )}
 
@@ -1276,9 +1395,25 @@ const PatientDetail: React.FC = () => {
         {/* TAB: ORTODONTIA */}
         {activeTab === "ortodontia" && (
           <div className="max-w-6xl mx-auto animate-in fade-in">
-            <div className="flex items-center justify-between mb-6">
+
+            {/* Resumo de Procedimentos Ortodônticos Avulsos */}
+            <div className="mb-8">
+              <div className="bg-indigo-50/50 dark:bg-indigo-900/10 p-4 rounded-xl border border-indigo-100 dark:border-indigo-800 mb-6">
+                <h3 className="text-lg font-bold text-indigo-900 dark:text-indigo-300 flex items-center gap-2">
+                  <Smile size={20} /> Ortodontia
+                </h3>
+                <p className="text-sm text-indigo-700 dark:text-indigo-400">Gestão de aparelhos, alinhadores, manutenções e contratos.</p>
+              </div>
+
+              <PatientTreatments patient={{
+                ...patient,
+                treatments: (patient.treatments || []).filter(t => getTreatmentCategoryGroup(t.category) === 'ORTODONTIA')
+              }} />
+            </div>
+
+            <div className="flex items-center justify-between mb-6 border-t border-gray-100 dark:border-gray-700 pt-8">
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                Ortodontia
+                Contratos & Alinhadores
               </h2>
               <button
                 onClick={() => setShowOrthoContractForm(true)}

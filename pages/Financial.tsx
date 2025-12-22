@@ -255,8 +255,8 @@ const Financial: React.FC = () => {
                                 </div>
                                 <div className="flex justify-between items-center">
                                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border 
-                                ${expense.status === 'Pago' ? 'bg-green-50 text-green-700 border-green-100' :
-                                            'bg-yellow-50 text-yellow-700 border-yellow-100'}`}>
+                                ${expense.status === 'Pago' ? 'bg-green-50 text-green-700 border-green-100 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800' :
+                                            'bg-yellow-50 text-yellow-700 border-yellow-100 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-800'}`}>
                                         {expense.status}
                                     </span>
                                     {expense.status !== 'Pago' && (
@@ -343,8 +343,8 @@ const Financial: React.FC = () => {
                                 <div className="flex justify-between items-center">
                                     <div className="flex gap-2 items-center">
                                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border 
-                                    ${item.status === 'Pago' ? 'bg-green-50 text-green-700 border-green-100' :
-                                                'bg-yellow-50 text-yellow-700 border-yellow-100'}`}>
+                                    ${item.status === 'Pago' ? 'bg-green-50 text-green-700 border-green-100 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800' :
+                                                'bg-yellow-50 text-yellow-700 border-yellow-100 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-800'}`}>
                                             {item.status}
                                         </span>
                                         <span className="text-[10px] text-gray-400 uppercase">{item.paymentMethod}</span>

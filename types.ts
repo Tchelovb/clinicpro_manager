@@ -83,6 +83,8 @@ export interface BudgetItem {
   id: string;
   procedure: string;
   region: string; // Tooth or Area
+  face?: string; // New: Face do dente
+  tooth_number?: string; // New: Número do dente específico
   quantity: number;
   unitValue: number;
   total: number;
@@ -93,7 +95,7 @@ export interface Budget {
   createdAt: string;
   doctorName: string;
   doctorId?: string; // UUID of the professional responsible
-  status: "Em Análise" | "Enviado" | "Aprovado" | "Reprovado" | "Em Negociação";
+  status: "Em Análise" | "Enviado" | "Aprovado" | "Reprovado" | "Em Negociação" | "DRAFT" | "NEGOTIATING" | "APPROVED" | "REJECTED";
   items: BudgetItem[];
   totalValue: number;
   discount?: number;
@@ -107,6 +109,14 @@ export interface Budget {
   rejectionReason?: string;
   lostAt?: string;
   potentialMargin?: number;
+
+  // New Financial Intelligence Fields
+  option_label?: string; // Ex: "Opção Premium"
+  expires_at?: string;
+  discount_type?: 'PERCENTAGE' | 'FIXED';
+  discount_value?: number; // The logic value (e.g. 10 for 10% or 100 for R$100)
+  down_payment_value?: number; // Entrada
+  installments_count?: number;
 }
 
 export interface TreatmentItem {
@@ -117,6 +127,7 @@ export interface TreatmentItem {
   doctorName?: string;
   executionDate?: string;
   budgetId: string;
+  category?: string;
 }
 
 export interface PaymentHistoryItem {
@@ -204,6 +215,7 @@ export interface Patient {
   photo_profile_side_url?: string;
   photo_document_front_url?: string;
   photo_document_back_url?: string;
+  profile_photo_url?: string; // Legacy field backup
 
   // Linked Data (for detailed queries)
   budgets?: Budget[];

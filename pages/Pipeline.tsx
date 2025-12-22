@@ -3,20 +3,82 @@ import { useNavigate } from 'react-router-dom';
 import {
     TrendingUp, Users, DollarSign, Target, Phone, Mail, Calendar,
     CheckCircle, XCircle, Clock, Zap, MessageSquare, MoreVertical,
-    Filter, AlertCircle
+    Filter, AlertCircle, Plus, Crown, Star, Sparkles, Instagram,
+    Briefcase, ChevronRight
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { highTicketService, HighTicketLead, PipelineStats } from '../services/highTicketService';
 
-// Status Columns Configuration
+// Status Columns Configuration (High-Ticket Flow)
 const COLUMNS = [
-    { id: 'NEW', label: 'Novo Lead', color: 'border-blue-500', bg: 'bg-blue-50' },
-    { id: 'CONTACTED', label: 'Em Contato', color: 'border-violet-500', bg: 'bg-violet-50' },
-    { id: 'SCHEDULED', label: 'Agendado', color: 'border-teal-500', bg: 'bg-teal-50' },
-    { id: 'BUDGET_CREATED', label: 'Orçamento', color: 'border-amber-500', bg: 'bg-amber-50' },
-    { id: 'WON', label: 'Fechado', color: 'border-green-500', bg: 'bg-green-50' },
-    { id: 'LOST', label: 'Perdido', color: 'border-slate-400', bg: 'bg-slate-50' },
+    {
+        id: 'NEW',
+        label: 'Novo Lead',
+        color: 'border-blue-500',
+        bg: 'bg-blue-50',
+        icon: Sparkles,
+        description: 'Leads recém-capturados'
+    },
+    {
+        id: 'CONTACTED',
+        label: 'Em Contato',
+        color: 'border-violet-500',
+        bg: 'bg-violet-50',
+        icon: MessageSquare,
+        description: 'Primeiro contato realizado'
+    },
+    {
+        id: 'SCHEDULED',
+        label: 'Avaliação Agendada',
+        color: 'border-teal-500',
+        bg: 'bg-teal-50',
+        icon: Calendar,
+        description: 'Consulta marcada'
+    },
+    {
+        id: 'BUDGET_CREATED',
+        label: 'Orçamento Enviado',
+        color: 'border-amber-500',
+        bg: 'bg-amber-50',
+        icon: DollarSign,
+        description: 'Proposta em análise'
+    },
+    {
+        id: 'WON',
+        label: 'Fechado ✨',
+        color: 'border-green-500',
+        bg: 'bg-green-50',
+        icon: CheckCircle,
+        description: 'Orçamento aprovado'
+    },
+    {
+        id: 'LOST',
+        label: 'Perdido',
+        color: 'border-slate-400',
+        bg: 'bg-slate-50',
+        icon: XCircle,
+        description: 'Não convertido'
+    },
 ];
+
+// Priority Badge Configuration
+const getPriorityConfig = (priority: string) => {
+    switch (priority) {
+        case 'HIGH':
+            return { bg: 'bg-rose-50', text: 'text-rose-700', border: 'border-rose-200', label: 'Alta 🔥' };
+        case 'MEDIUM':
+            return { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', label: 'Média ⚡' };
+        default:
+            return { bg: 'bg-slate-50', text: 'text-slate-600', border: 'border-slate-200', label: 'Normal' };
+    }
+};
+
+// Value Tier Badge (DIAMOND, GOLD, STANDARD)
+const getValueTier = (value: number) => {
+    if (value >= 10000) return { label: 'DIAMOND', icon: Crown, color: 'text-purple-600', bg: 'bg-purple-50' };
+    if (value >= 5000) return { label: 'GOLD', icon: Star, color: 'text-amber-600', bg: 'bg-amber-50' };
+    return { label: 'STANDARD', icon: Target, color: 'text-slate-500', bg: 'bg-slate-50' };
+};
 
 export const PipelinePage: React.FC = () => {
     const navigate = useNavigate();
@@ -74,177 +136,255 @@ export const PipelinePage: React.FC = () => {
 
                 // API Update
                 await highTicketService.updateLeadStatus(draggedLead.id, status as any);
-
-                // Reload to sync (optional, maybe just keep optimistic)
-                // loadData(); 
             } catch (error) {
                 console.error('Erro ao mover card:', error);
-                // Revert on error would be ideal
-                loadData();
+                loadData(); // Revert on error
             }
         }
         setDraggedLead(null);
-    };
-
-    const handleLeadAction = (leadId: string, action: string) => {
-        // Implement actions
-        navigate(`/crm/${leadId}`); // Or specific action route
     };
 
     const filteredLeads = leads.filter(l =>
         filterPriority === 'ALL' || l.priority === filterPriority
     );
 
-    return (
-        <div className="flex flex-col h-[calc(100vh-6rem)]">
-            {/* Header Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
-                    <div className="p-3 bg-violet-50 rounded-lg text-violet-600">
-                        <DollarSign size={24} />
-                    </div>
-                    <div>
-                        <p className="text-sm text-slate-500 font-medium">Pipeline Total</p>
-                        <p className="text-2xl font-bold text-slate-800">
-                            {stats ? `R$ ${(stats.totalValue / 1000).toFixed(1)}k` : '...'}
-                        </p>
-                    </div>
-                </div>
-                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
-                    <div className="p-3 bg-amber-50 rounded-lg text-amber-500">
-                        <Zap size={24} />
-                    </div>
-                    <div>
-                        <p className="text-sm text-slate-500 font-medium">Leads Quentes</p>
-                        <p className="text-2xl font-bold text-slate-800">
-                            {stats?.hotLeads || 0}
-                        </p>
-                    </div>
-                </div>
-                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
-                    <div className="p-3 bg-teal-50 rounded-lg text-teal-600">
-                        <TrendingUp size={24} />
-                    </div>
-                    <div>
-                        <p className="text-sm text-slate-500 font-medium">Conversão</p>
-                        <p className="text-2xl font-bold text-slate-800">
-                            {stats?.conversionRate.toFixed(1) || 0}%
-                        </p>
-                    </div>
-                </div>
-                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
-                    <div className="p-3 bg-blue-50 rounded-lg text-blue-600">
-                        <Users size={24} />
-                    </div>
-                    <div>
-                        <p className="text-sm text-slate-500 font-medium">Total Leads</p>
-                        <p className="text-2xl font-bold text-slate-800">
-                            {leads.length}
-                        </p>
-                    </div>
-                </div>
+    // Loading State
+    if (loading) {
+        return (
+            <div className="flex flex-col items-center justify-center h-[calc(100vh-200px)] animate-pulse">
+                <div className="w-12 h-12 border-4 border-violet-200 border-t-violet-600 rounded-full animate-spin mb-4" />
+                <p className="text-slate-500 font-medium">Carregando pipeline...</p>
             </div>
+        );
+    }
 
-            {/* Filters & Actions */}
-            <div className="flex justify-between items-center mb-6">
-                <div className="flex items-center gap-2 bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
-                    <button
-                        onClick={() => setFilterPriority('ALL')}
-                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${filterPriority === 'ALL' ? 'bg-slate-100 text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}
-                    >
-                        Todos
-                    </button>
-                    <button
-                        onClick={() => setFilterPriority('HIGH')}
-                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${filterPriority === 'HIGH' ? 'bg-rose-50 text-rose-600' : 'text-slate-500 hover:text-rose-600'}`}
-                    >
-                        Alta 🔥
-                    </button>
-                    <button
-                        onClick={() => setFilterPriority('MEDIUM')}
-                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${filterPriority === 'MEDIUM' ? 'bg-amber-50 text-amber-600' : 'text-slate-500 hover:text-amber-600'}`}
-                    >
-                        Média ⚡
-                    </button>
+    return (
+        <div className="flex flex-col h-[calc(100vh-6rem)] space-y-6">
+
+            {/* ============================================ */}
+            {/* HEADER */}
+            {/* ============================================ */}
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-3xl font-bold text-slate-800 tracking-tight flex items-center gap-3">
+                        <Sparkles className="text-amber-600" size={32} />
+                        Pipeline High-Ticket
+                    </h1>
+                    <p className="text-slate-500 mt-2">Funil de conversão de procedimentos premium</p>
                 </div>
-
-                <button className="bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-lg font-medium shadow-sm flex items-center gap-2">
-                    <Users size={18} />
+                <button
+                    className="flex items-center gap-2 px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors font-medium shadow-sm"
+                    onClick={() => navigate('/pipeline/leads/new')}
+                >
+                    <Plus size={18} />
                     Novo Lead
                 </button>
             </div>
 
-            {/* Kanban Board */}
-            <div className="flex-1 overflow-x-auto pb-4">
-                <div className="flex gap-4 min-w-[1200px] h-full">
-                    {COLUMNS.map(col => (
-                        <div
-                            key={col.id}
-                            className={`flex flex-col flex-1 min-w-[280px] bg-slate-50 rounded-xl border-t-4 ${col.color} shadow-sm`}
-                            onDragOver={handleDragOver}
-                            onDrop={() => handleDrop(col.id)}
-                        >
-                            <div className="p-3 border-b border-slate-200 flex justify-between items-center">
-                                <span className={`font-bold text-slate-700 ${col.id === 'WON' ? 'text-green-700' : ''}`}>
-                                    {col.label}
-                                </span>
-                                <span className="text-xs font-semibold bg-white text-slate-500 px-2 py-0.5 rounded-full border border-slate-200">
-                                    {filteredLeads.filter(l => l.status === col.id).length}
-                                </span>
-                            </div>
-
-                            <div className="p-2 flex-1 overflow-y-auto space-y-2 custom-scrollbar">
-                                {filteredLeads.filter(l => l.status === col.id).map(lead => (
-                                    <div
-                                        key={lead.id}
-                                        draggable
-                                        onDragStart={() => handleDragStart(lead)}
-                                        className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm cursor-grab hover:shadow-md transition-all group relative"
-                                    >
-                                        <div className="flex justify-between items-start mb-2">
-                                            <h4 className="font-bold text-slate-800 text-sm truncate pr-6">{lead.name}</h4>
-                                            <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <button className="text-slate-400 hover:text-violet-600">
-                                                    <MoreVertical size={16} />
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        <div className="space-y-2 mb-3">
-                                            {lead.value && (
-                                                <div className="flex items-center text-teal-600 text-xs font-bold">
-                                                    <DollarSign size={12} className="mr-1" />
-                                                    R$ {lead.value.toLocaleString('pt-BR')}
-                                                </div>
-                                            )}
-                                            <div className="flex items-center text-slate-500 text-xs">
-                                                <Phone size={12} className="mr-1" />
-                                                {lead.phone}
-                                            </div>
-                                            {lead.desired_treatment && (
-                                                <div className="flex items-center text-slate-500 text-xs">
-                                                    <Target size={12} className="mr-1" />
-                                                    {lead.desired_treatment}
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        <div className="border-t border-slate-100 pt-2 flex justify-between items-center">
-                                            <div className="flex gap-1">
-                                                {lead.priority === 'HIGH' && <span className="text-[10px] bg-rose-50 text-rose-600 px-1.5 py-0.5 rounded font-bold">Alta</span>}
-                                                <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">
-                                                    Score: {lead.lead_score}
-                                                </span>
-                                            </div>
-                                            <div className="text-[10px] text-slate-400">
-                                                {new Date(lead.last_interaction).toLocaleDateString('pt-BR')}
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
+            {/* ============================================ */}
+            {/* KPI CARDS */}
+            {/* ============================================ */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {/* Pipeline Total */}
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 bg-violet-50 rounded-lg">
+                            <DollarSign className="text-violet-600" size={20} />
                         </div>
-                    ))}
+                        <p className="text-xs font-bold text-slate-500 uppercase">Pipeline Total</p>
+                    </div>
+                    <p className="text-2xl font-bold text-violet-600">
+                        {stats ? `R$ ${(stats.totalValue / 1000).toFixed(1)}k` : '...'}
+                    </p>
+                </div>
+
+                {/* Leads Quentes */}
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 bg-rose-50 rounded-lg">
+                            <Zap className="text-rose-600" size={20} />
+                        </div>
+                        <p className="text-xs font-bold text-slate-500 uppercase">Leads Quentes</p>
+                    </div>
+                    <p className="text-2xl font-bold text-rose-600">
+                        {stats?.hotLeads || 0}
+                    </p>
+                </div>
+
+                {/* Taxa de Conversão */}
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 bg-teal-50 rounded-lg">
+                            <TrendingUp className="text-teal-600" size={20} />
+                        </div>
+                        <p className="text-xs font-bold text-slate-500 uppercase">Conversão</p>
+                    </div>
+                    <p className="text-2xl font-bold text-teal-600">
+                        {stats?.conversionRate.toFixed(1) || 0}%
+                    </p>
+                </div>
+
+                {/* Total de Leads */}
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 bg-blue-50 rounded-lg">
+                            <Users className="text-blue-600" size={20} />
+                        </div>
+                        <p className="text-xs font-bold text-slate-500 uppercase">Total Leads</p>
+                    </div>
+                    <p className="text-2xl font-bold text-blue-600">
+                        {leads.length}
+                    </p>
+                </div>
+            </div>
+
+            {/* ============================================ */}
+            {/* FILTERS */}
+            {/* ============================================ */}
+            <div className="flex items-center gap-2 bg-white p-1 rounded-lg border border-slate-200 shadow-sm w-fit">
+                <button
+                    onClick={() => setFilterPriority('ALL')}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${filterPriority === 'ALL'
+                            ? 'bg-violet-50 text-violet-700 shadow-sm'
+                            : 'text-slate-500 hover:text-slate-700'
+                        }`}
+                >
+                    Todos
+                </button>
+                <button
+                    onClick={() => setFilterPriority('HIGH')}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${filterPriority === 'HIGH'
+                            ? 'bg-rose-50 text-rose-700 shadow-sm'
+                            : 'text-slate-500 hover:text-rose-600'
+                        }`}
+                >
+                    Alta 🔥
+                </button>
+                <button
+                    onClick={() => setFilterPriority('MEDIUM')}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${filterPriority === 'MEDIUM'
+                            ? 'bg-amber-50 text-amber-700 shadow-sm'
+                            : 'text-slate-500 hover:text-amber-600'
+                        }`}
+                >
+                    Média ⚡
+                </button>
+            </div>
+
+            {/* ============================================ */}
+            {/* KANBAN BOARD */}
+            {/* ============================================ */}
+            <div className="flex-1 overflow-x-auto pb-4">
+                <div className="flex gap-4 min-w-[1400px] h-full">
+                    {COLUMNS.map(col => {
+                        const Icon = col.icon;
+                        const columnLeads = filteredLeads.filter(l => l.status === col.id);
+
+                        return (
+                            <div
+                                key={col.id}
+                                className={`flex flex-col flex-1 min-w-[280px] bg-white rounded-xl border-t-4 ${col.color} shadow-sm`}
+                                onDragOver={handleDragOver}
+                                onDrop={() => handleDrop(col.id)}
+                            >
+                                {/* Column Header */}
+                                <div className="p-4 border-b border-slate-100">
+                                    <div className="flex items-center justify-between mb-1">
+                                        <div className="flex items-center gap-2">
+                                            <Icon size={18} className={col.id === 'WON' ? 'text-green-600' : 'text-slate-600'} />
+                                            <span className={`font-bold ${col.id === 'WON' ? 'text-green-700' : 'text-slate-700'}`}>
+                                                {col.label}
+                                            </span>
+                                        </div>
+                                        <span className="text-xs font-bold bg-slate-100 text-slate-600 px-2 py-1 rounded-full">
+                                            {columnLeads.length}
+                                        </span>
+                                    </div>
+                                    <p className="text-xs text-slate-500">{col.description}</p>
+                                </div>
+
+                                {/* Cards Container */}
+                                <div className="p-3 flex-1 overflow-y-auto space-y-3 bg-slate-50/50">
+                                    {columnLeads.length > 0 ? (
+                                        columnLeads.map(lead => {
+                                            const priorityConfig = getPriorityConfig(lead.priority);
+                                            const valueTier = lead.value ? getValueTier(lead.value) : null;
+                                            const TierIcon = valueTier?.icon;
+
+                                            return (
+                                                <div
+                                                    key={lead.id}
+                                                    draggable
+                                                    onDragStart={() => handleDragStart(lead)}
+                                                    className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm cursor-grab active:cursor-grabbing hover:shadow-md transition-all group"
+                                                >
+                                                    {/* Card Header */}
+                                                    <div className="flex justify-between items-start mb-3">
+                                                        <h4 className="font-bold text-slate-800 text-sm truncate pr-2 flex-1">
+                                                            {lead.name}
+                                                        </h4>
+                                                        <button className="text-slate-300 hover:text-violet-600 transition-colors opacity-0 group-hover:opacity-100">
+                                                            <MoreVertical size={16} />
+                                                        </button>
+                                                    </div>
+
+                                                    {/* Value & Tier Badge */}
+                                                    {lead.value && valueTier && (
+                                                        <div className="flex items-center gap-2 mb-3">
+                                                            <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-bold ${valueTier.bg} ${valueTier.color} border border-${valueTier.color.replace('text-', '')}-200`}>
+                                                                {TierIcon && <TierIcon size={12} />}
+                                                                {valueTier.label}
+                                                            </div>
+                                                            <div className="flex items-center text-teal-600 text-sm font-bold">
+                                                                <DollarSign size={14} className="mr-0.5" />
+                                                                {lead.value.toLocaleString('pt-BR')}
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Contact Info */}
+                                                    <div className="space-y-2 mb-3">
+                                                        <div className="flex items-center text-slate-600 text-xs">
+                                                            <Phone size={12} className="mr-2 text-slate-400" />
+                                                            {lead.phone}
+                                                        </div>
+                                                        {lead.desired_treatment && (
+                                                            <div className="flex items-center text-slate-600 text-xs">
+                                                                <Target size={12} className="mr-2 text-slate-400" />
+                                                                {lead.desired_treatment}
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Footer */}
+                                                    <div className="border-t border-slate-100 pt-3 flex justify-between items-center">
+                                                        <div className="flex gap-1.5">
+                                                            {lead.priority === 'HIGH' && (
+                                                                <span className={`text-[10px] px-2 py-0.5 rounded font-bold border ${priorityConfig.bg} ${priorityConfig.text} ${priorityConfig.border}`}>
+                                                                    {priorityConfig.label}
+                                                                </span>
+                                                            )}
+                                                            <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded">
+                                                                Score: {lead.lead_score}
+                                                            </span>
+                                                        </div>
+                                                        <div className="text-[10px] text-slate-400">
+                                                            {new Date(lead.last_interaction).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })
+                                    ) : (
+                                        <div className="flex flex-col items-center justify-center text-center p-8 text-slate-400">
+                                            <Icon size={32} className="mb-2 opacity-30" />
+                                            <p className="text-xs">Nenhum lead nesta etapa</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })}
                 </div>
             </div>
         </div>

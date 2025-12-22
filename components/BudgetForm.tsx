@@ -45,6 +45,8 @@ const BudgetForm: React.FC = () => {
     const [selectedPriceTableId, setSelectedPriceTableId] = useState('');
     const [selectedProfessionalId, setSelectedProfessionalId] = useState('');
     const [region, setRegion] = useState('');
+    const [toothNumber, setToothNumber] = useState('');
+    const [face, setFace] = useState('');
     const [price, setPrice] = useState(0);
     const [qty, setQty] = useState(1);
     const [categoryId, setCategoryId] = useState('');
@@ -81,8 +83,8 @@ const BudgetForm: React.FC = () => {
             }
             // Auto-select logged user
             if (profile?.id && !selectedProfessionalId) {
-                if (profile.professional_id) {
-                    setSelectedProfessionalId(profile.professional_id);
+                if ((profile as any)?.professional_id) {
+                    setSelectedProfessionalId((profile as any).professional_id);
                 }
             }
         }
@@ -112,6 +114,8 @@ const BudgetForm: React.FC = () => {
             id: Math.random().toString(36).substr(2, 5),
             procedure: selectedProcedure,
             region: region || 'Geral',
+            tooth_number: toothNumber,
+            face: face,
             quantity: qty,
             unitValue: price,
             total: price * qty
@@ -297,8 +301,16 @@ const BudgetForm: React.FC = () => {
                                 </select>
                             </div>
                             <div className="md:col-span-3">
-                                <label className={labelClass}>Região</label>
-                                <input className={inputClass} value={region} onChange={e => setRegion(e.target.value)} placeholder="Ex: 11, 12, Sup..." />
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label className={labelClass}>Dente</label>
+                                        <input className={inputClass} value={toothNumber} onChange={e => setToothNumber(e.target.value)} placeholder="Ex: 11" />
+                                    </div>
+                                    <div>
+                                        <label className={labelClass}>Face</label>
+                                        <input className={inputClass} value={face} onChange={e => setFace(e.target.value)} placeholder="Ex: V" />
+                                    </div>
+                                </div>
                             </div>
                             <div className="grid grid-cols-2 md:col-span-3 gap-4">
                                 <div><label className={labelClass}>Valor</label><input type="number" className={inputClass} value={price} onChange={e => setPrice(parseFloat(e.target.value))} /></div>
@@ -316,7 +328,11 @@ const BudgetForm: React.FC = () => {
                             <div key={item.id || idx} className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-card border border-gray-200 flex justify-between items-center">
                                 <div>
                                     <h4 className="font-bold">{item.procedure}</h4>
-                                    <p className="text-sm text-gray-500">{item.quantity}x R$ {item.unitValue}</p>
+                                    <div className="text-sm text-gray-500 flex gap-2">
+                                        {item.tooth_number && <span className="bg-gray-100 px-1 rounded text-xs font-bold">Dente {item.tooth_number}</span>}
+                                        {item.face && <span className="bg-gray-100 px-1 rounded text-xs">Face {item.face}</span>}
+                                        <span>{item.quantity}x R$ {item.unitValue}</span>
+                                    </div>
                                 </div>
                                 <div className="flex items-center gap-4">
                                     <span className="font-bold">R$ {item.total}</span>

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
     Calendar,
@@ -16,19 +16,33 @@ import {
     Target,
     Sparkles,
     TrendingUp,
-    Activity
+    Activity,
+    DollarSign,
+    TrendingDown,
+    Users
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { useDashboardData } from "../hooks/useDashboardData";
 import { LeadStatus } from "../types";
 import AIInsightsFeed from "../components/dashboard/AIInsightsFeed";
 import ComplianceWidget from "../components/dashboard/ComplianceWidget";
+import { HealthPillars } from "../components/dashboard/HealthPillars";
+import { supabase } from "../lib/supabase";
 
 const Dashboard: React.FC = () => {
     const navigate = useNavigate();
     const { profile } = useAuth();
     const [showNotifications, setShowNotifications] = useState(false);
     const [completedTasks, setCompletedTasks] = useState<string[]>([]);
+
+    // Estados para dados financeiros
+    const [financialData, setFinancialData] = useState({
+        revenue: 0,
+        expenses: 0,
+        profit: 0,
+        profitMargin: 0
+    });
+    const [loadingFinancial, setLoadingFinancial] = useState(true);
 
     // Usar o hook personalizado para dados do dashboard
     const {
@@ -52,6 +66,65 @@ const Dashboard: React.FC = () => {
             ),
         [leads]
     );
+
+    // Carregar dados financeiros do mês atual
+    useEffect(() => {
+        const loadFinancialData = async () => {
+            if (!profile?.clinic_id) return;
+
+            setLoadingFinancial(true);
+            const now = new Date();
+            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+            const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString();
+
+            try {
+                // Buscar receita real (transações de entrada no mês)
+                // Usando a tabela transactions que é a fonte de verdade financeira
+                const { data: revenueData, error: revenueError } = await supabase
+                    .from('transactions')
+                    .select('amount')
+                    .eq('clinic_id', profile.clinic_id)
+                    .eq('type', 'INCOME')
+                    .gte('created_at', startOfMonth)
+                    .lte('created_at', endOfMonth);
+
+                if (revenueError) {
+                    console.warn('Erro ao buscar transações, tentando fallback para budget_items (legado):', revenueError);
+                    // Tentativa de Fallback para sistemas antigos sem transactions
+                    const { data: fallbackData } = await supabase
+                        .from('budget_items')
+                        .select('amount') // Tentar amount se amount_paid falhar
+                        .eq('status', 'PAID') // Isso assume que existe status no item
+                        .gte('created_at', startOfMonth)
+                        .lte('created_at', endOfMonth);
+
+                    // Se ainda falhar, assumimos 0
+                }
+
+                // Buscar despesas (expenses pagos)
+                const { data: expensesData } = await supabase
+                    .from('expenses')
+                    .select('amount')
+                    .eq('clinic_id', profile.clinic_id)
+                    .eq('status', 'PAID')
+                    .gte('payment_date', startOfMonth.split('T')[0]) // payment_date usually DATE type
+                    .lte('payment_date', endOfMonth.split('T')[0]);
+
+                const revenue = revenueData ? revenueData.reduce((sum, item) => sum + (item.amount || 0), 0) : 0;
+                const expenses = expensesData ? expensesData.reduce((sum, item) => sum + (item.amount || 0), 0) : 0;
+                const profit = revenue - expenses;
+                const profitMargin = revenue > 0 ? (profit / revenue) * 100 : 0;
+
+                setFinancialData({ revenue, expenses, profit, profitMargin });
+            } catch (error) {
+                console.error('Erro ao carregar dados financeiros:', error);
+            } finally {
+                setLoadingFinancial(false);
+            }
+        };
+
+        loadFinancialData();
+    }, [profile?.clinic_id]);
 
     // Componente de estado vazio
     const EmptyState: React.FC<{
@@ -131,89 +204,231 @@ const Dashboard: React.FC = () => {
 
                 {/* Welcome Block */}
                 <div className="flex-1 min-w-[300px]">
-                    <h1 className="text-3xl font-bold text-slate-800 tracking-tight">
+                    <h1 className="text-3xl font-bold text-slate-800 dark:text-white tracking-tight">
                         Olá, {profile?.name?.split(' ')[0] || 'Doutor'}! 👋
                     </h1>
-                    <p className="text-slate-500 mt-2 flex items-center gap-2 text-sm">
-                        <Calendar size={14} className="text-violet-500" />
+                    <p className="text-slate-500 dark:text-slate-400 mt-2 flex items-center gap-2 text-sm">
+                        <Calendar size={14} className="text-violet-500 dark:text-violet-400" />
                         <span className="capitalize">{new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}</span>
-                        <span className="w-1 h-1 bg-slate-300 rounded-full" />
-                        <span className="font-medium text-slate-700">{profile?.clinics?.name}</span>
+                        <span className="w-1 h-1 bg-slate-300 dark:bg-slate-600 rounded-full" />
+                        <span className="font-medium text-slate-700 dark:text-slate-300">{profile?.clinics?.name}</span>
                     </p>
                 </div>
 
                 {/* Global KPIs Grid */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full xl:w-auto">
                     {/* KPI 1: Atendimentos */}
-                    <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all">
                         <div className="flex justify-between items-start mb-2">
-                            <p className="text-xs font-bold text-slate-500 uppercase">Atendimentos</p>
-                            <Activity size={16} className="text-blue-500" />
+                            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Atendimentos</p>
+                            <Activity size={16} className="text-blue-500 dark:text-blue-400" />
                         </div>
                         <div className="flex items-end gap-2">
-                            <span className="text-2xl font-bold text-slate-800">{kpis.confirmed}</span>
-                            <span className="text-xs text-slate-400 mb-1">/ {kpis.appointments}</span>
+                            <span className="text-2xl font-bold text-slate-800 dark:text-white">{kpis.confirmed}</span>
+                            <span className="text-xs text-slate-400 dark:text-slate-500 mb-1">/ {kpis.appointments}</span>
                         </div>
-                        <div className="w-full bg-slate-100 h-1.5 rounded-full mt-3 overflow-hidden">
+                        <div className="w-full bg-slate-100 dark:bg-slate-700 h-1.5 rounded-full mt-3 overflow-hidden">
                             <div
-                                className="bg-blue-500 h-full rounded-full transition-all duration-1000"
+                                className="bg-blue-500 dark:bg-blue-400 h-full rounded-full transition-all duration-1000"
                                 style={{ width: `${kpis.appointments > 0 ? (kpis.confirmed / kpis.appointments) * 100 : 0}%` }}
                             />
                         </div>
                     </div>
 
                     {/* KPI 2: Oportunidades CRM */}
-                    <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all">
                         <div className="flex justify-between items-start mb-2">
-                            <p className="text-xs font-bold text-slate-500 uppercase">Novos Leads</p>
-                            <Target size={16} className="text-purple-500" />
+                            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Novos Leads</p>
+                            <Target size={16} className="text-purple-500 dark:text-purple-400" />
                         </div>
                         <div className="flex items-end gap-2">
-                            <span className="text-2xl font-bold text-purple-600">{kpis.pendingLeads}</span>
-                            <span className="text-xs text-purple-200 bg-purple-600 rounded px-1 mb-1 font-bold">HOT</span>
+                            <span className="text-2xl font-bold text-purple-600 dark:text-purple-400">{kpis.pendingLeads}</span>
+                            <span className="text-xs text-purple-200 dark:text-purple-900 bg-purple-600 dark:bg-purple-400/20 rounded px-1 mb-1 font-bold">HOT</span>
                         </div>
-                        <p className="text-[10px] text-slate-400 mt-3 align-bottom">Oportunidades ativas</p>
+                        <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-3 align-bottom">Oportunidades ativas</p>
                     </div>
 
                     {/* KPI 3: Lembretes */}
-                    <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all">
                         <div className="flex justify-between items-start mb-2">
-                            <p className="text-xs font-bold text-slate-500 uppercase">Pendências</p>
-                            <ListTodo size={16} className="text-orange-500" />
+                            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Pendências</p>
+                            <ListTodo size={16} className="text-orange-500 dark:text-orange-400" />
                         </div>
-                        <span className="text-2xl font-bold text-slate-800">{reminders.length}</span>
-                        <p className="text-[10px] text-orange-600 mt-3 font-medium">Requer atenção</p>
+                        <span className="text-2xl font-bold text-slate-800 dark:text-white">{reminders.length}</span>
+                        <p className="text-[10px] text-orange-600 dark:text-orange-400 mt-3 font-medium">Requer atenção</p>
                     </div>
 
-                    {/* KPI 4: Financeiro (Placeholder) */}
-                    <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group cursor-pointer" onClick={() => navigate('/financial')}>
+                    {/* KPI 4: Faturamento do Mês */}
+                    <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all relative overflow-hidden group cursor-pointer" onClick={() => navigate('/reports')}>
                         <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
-                            <TrendingUp size={48} className="text-green-600" />
+                            <DollarSign size={48} className="text-green-600 dark:text-green-400" />
                         </div>
                         <div className="flex justify-between items-start mb-2">
-                            <p className="text-xs font-bold text-slate-500 uppercase">Faturamento</p>
+                            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Faturamento</p>
                         </div>
-                        <span className="text-xl font-bold text-green-600">--</span>
-                        <p className="text-[10px] text-slate-400 mt-4 flex items-center gap-1">
-                            Ver detalhes <ArrowRight size={10} />
+                        {loadingFinancial ? (
+                            <div className="h-8 bg-slate-100 dark:bg-slate-700 rounded animate-pulse" />
+                        ) : (
+                            <span className="text-xl font-bold text-green-600 dark:text-green-400">
+                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(financialData.revenue)}
+                            </span>
+                        )}
+                        <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-4 flex items-center gap-1">
+                            Ver relatórios <ArrowRight size={10} />
                         </p>
                     </div>
                 </div>
             </div>
 
-            {/* SECTION 2: AI INSIGHTS (BOS) */}
-            <div className="bg-gradient-to-br from-violet-600 to-indigo-700 rounded-2xl p-[1px] shadow-lg shadow-violet-200">
-                <div className="bg-white dark:bg-slate-800 rounded-[15px] p-6 lg:p-8 relative overflow-hidden">
-                    {/* Decorative Background Elements */}
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-violet-50 dark:bg-violet-900/20 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none" />
+            {/* SECTION 1.5: DESEMPENHO FINANCEIRO */}
+            <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-6 transition-all">
+                <div className="flex items-center justify-between mb-6">
+                    <div>
+                        <h2 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                            <DollarSign className="text-green-600 dark:text-green-400" size={20} />
+                            Desempenho Financeiro
+                        </h2>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Resumo do mês atual</p>
+                    </div>
+                    <button
+                        onClick={() => navigate('/reports')}
+                        className="text-xs text-violet-600 dark:text-violet-400 hover:text-violet-700 font-medium flex items-center gap-1"
+                    >
+                        Ver completo <ArrowRight size={12} />
+                    </button>
+                </div>
 
-                    <div className="relative z-10">
-                        <AIInsightsFeed />
+                {loadingFinancial ? (
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        {[1, 2, 3, 4].map(i => (
+                            <div key={i} className="h-24 bg-slate-100 dark:bg-slate-700 rounded-lg animate-pulse" />
+                        ))}
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        {/* Receita */}
+                        <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/10 dark:to-emerald-900/10 p-4 rounded-lg border border-green-100 dark:border-green-800/30">
+                            <div className="flex items-center gap-2 mb-2">
+                                <div className="p-1.5 bg-green-100 dark:bg-green-900/30 rounded">
+                                    <DollarSign size={14} className="text-green-600 dark:text-green-400" />
+                                </div>
+                                <p className="text-xs font-bold text-green-700 dark:text-green-400 uppercase">Receita</p>
+                            </div>
+                            <p className="text-2xl font-bold text-green-700 dark:text-green-400">
+                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 }).format(financialData.revenue)}
+                            </p>
+                        </div>
+
+                        {/* Despesas */}
+                        <div className="bg-gradient-to-br from-rose-50 to-red-50 dark:from-rose-900/10 dark:to-red-900/10 p-4 rounded-lg border border-rose-100 dark:border-rose-800/30">
+                            <div className="flex items-center gap-2 mb-2">
+                                <div className="p-1.5 bg-rose-100 dark:bg-rose-900/30 rounded">
+                                    <TrendingDown size={14} className="text-rose-600 dark:text-rose-400" />
+                                </div>
+                                <p className="text-xs font-bold text-rose-700 dark:text-rose-400 uppercase">Despesas</p>
+                            </div>
+                            <p className="text-2xl font-bold text-rose-700 dark:text-rose-400">
+                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 }).format(financialData.expenses)}
+                            </p>
+                        </div>
+
+                        {/* Lucro */}
+                        <div className={`
+                            bg-gradient-to-br p-4 rounded-lg border
+                            ${financialData.profit >= 0
+                                ? 'from-blue-50 to-cyan-50 border-blue-100 dark:from-blue-900/10 dark:to-cyan-900/10 dark:border-blue-800/30'
+                                : 'from-orange-50 to-amber-50 border-orange-100 dark:from-orange-900/10 dark:to-amber-900/10 dark:border-orange-800/30'} 
+                        `}>
+                            <div className="flex items-center gap-2 mb-2">
+                                <div className={`p-1.5 rounded ${financialData.profit >= 0 ? 'bg-blue-100 dark:bg-blue-900/30' : 'bg-orange-100 dark:bg-orange-900/30'}`}>
+                                    <Activity size={14} className={financialData.profit >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'} />
+                                </div>
+                                <p className={`text-xs font-bold uppercase ${financialData.profit >= 0 ? 'text-blue-700 dark:text-blue-400' : 'text-orange-700 dark:text-orange-400'}`}>Lucro</p>
+                            </div>
+                            <p className={`text-2xl font-bold ${financialData.profit >= 0 ? 'text-blue-700 dark:text-blue-400' : 'text-orange-700 dark:text-orange-400'}`}>
+                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 }).format(financialData.profit)}
+                            </p>
+                        </div>
+
+                        {/* Margem */}
+                        <div className="bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-900/10 dark:to-purple-900/10 p-4 rounded-lg border border-violet-100 dark:border-violet-800/30">
+                            <div className="flex items-center gap-2 mb-2">
+                                <div className="p-1.5 bg-violet-100 dark:bg-violet-900/30 rounded">
+                                    <Target size={14} className="text-violet-600 dark:text-violet-400" />
+                                </div>
+                                <p className="text-xs font-bold text-violet-700 dark:text-violet-400 uppercase">Margem</p>
+                            </div>
+                            <p className="text-2xl font-bold text-violet-700 dark:text-violet-400">
+                                {financialData.profitMargin.toFixed(1)}%
+                            </p>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* SECTION 2: DESEMPENHO OPERACIONAL */}
+            <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-6 transition-all">
+                <div className="flex items-center justify-between mb-6">
+                    <div>
+                        <h2 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                            <Activity className="text-blue-600 dark:text-blue-400" size={20} />
+                            Desempenho Operacional
+                        </h2>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Indicadores do mês atual</p>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Novos Pacientes */}
+                    <div className="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/10 dark:to-cyan-900/10 p-4 rounded-lg border border-blue-100 dark:border-blue-800/30">
+                        <div className="flex items-center gap-2 mb-2">
+                            <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded">
+                                <Users size={14} className="text-blue-600 dark:text-blue-400" />
+                            </div>
+                            <p className="text-xs font-bold text-blue-700 dark:text-blue-400 uppercase">Novos Pacientes</p>
+                        </div>
+                        <p className="text-2xl font-bold text-blue-700 dark:text-blue-400">{kpis.newPatients || 0}</p>
+                        <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">Este mês</p>
+                    </div>
+
+                    {/* Ticket Médio */}
+                    <div className="bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-900/10 dark:to-green-900/10 p-4 rounded-lg border border-emerald-100 dark:border-emerald-800/30">
+                        <div className="flex items-center gap-2 mb-2">
+                            <div className="p-1.5 bg-emerald-100 dark:bg-emerald-900/30 rounded">
+                                <DollarSign size={14} className="text-emerald-600 dark:text-emerald-400" />
+                            </div>
+                            <p className="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase">Ticket Médio</p>
+                        </div>
+                        <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-400">
+                            {financialData.revenue > 0 && kpis.appointments > 0
+                                ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 }).format(financialData.revenue / kpis.appointments)
+                                : 'R$ 0'}
+                        </p>
+                        <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">Por atendimento</p>
+                    </div>
+
+                    {/* Taxa de Conversão */}
+                    <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/10 dark:to-orange-900/10 p-4 rounded-lg border border-amber-100 dark:border-amber-800/30">
+                        <div className="flex items-center gap-2 mb-2">
+                            <div className="p-1.5 bg-amber-100 dark:bg-amber-900/30 rounded">
+                                <TrendingUp size={14} className="text-amber-600 dark:text-amber-400" />
+                            </div>
+                            <p className="text-xs font-bold text-amber-700 dark:text-amber-400 uppercase">Taxa de Conversão</p>
+                        </div>
+                        <p className="text-2xl font-bold text-amber-700 dark:text-amber-400">
+                            {kpis.pendingLeads > 0
+                                ? `${((kpis.confirmed / (kpis.pendingLeads + kpis.confirmed)) * 100).toFixed(1)}%`
+                                : '0%'}
+                        </p>
+                        <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">Leads → Pacientes</p>
                     </div>
                 </div>
             </div>
 
-            {/* SECTION 3: MAIN GRID (AGENDA & TASKS) */}
+            {/* SEÇÃO 0: CLINIC HEALTH (5 PILARES) */}
+            <HealthPillars financialData={financialData} kpis={kpis} />
+
+            {/* SECTION 1: AGENDA E COMPLIANCE */}
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 items-start">
 
                 {/* COLUMN 1: AGENDA (Larger) */}

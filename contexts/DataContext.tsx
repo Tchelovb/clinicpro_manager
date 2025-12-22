@@ -232,25 +232,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         // Fetch patients
         const { data: patientsData, error: patientsError } = await supabase
           .from("patients")
-          .select(
-            `
-            id,
-            name,
-            phone,
-            email,
-            cpf,
-            birth_date,
-            gender,
-            address,
-            status,
-            total_approved,
-            total_paid,
-            balance_due,
-            created_at,
-            updated_at,
-            clinic_id
-          `
-          )
+          .select("*")
           .eq("clinic_id", profile.clinic_id)
           .order("name");
 
@@ -1108,7 +1090,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         id: Math.random().toString(36).substr(2, 5),
         procedure: item.procedure,
         region: item.region,
-        status: "NÃ£o Iniciado",
+        status: "Não Iniciado",
         budgetId: budget.id,
         doctorName: budget.doctorName,
       }));
@@ -1120,7 +1102,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
 
         newFinancials.push({
           id: Math.random().toString(36).substr(2, 5),
-          description: `OrÃ§amento #${budgetId} - Parc. ${i + 1
+          description: `Orçamento #${budgetId} - Parc. ${i + 1
             }/${installmentsCount}`,
           dueDate: dueDate.toLocaleDateString("pt-BR"),
           amount: installmentValue,
@@ -1154,7 +1136,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
             {
               id: Math.random().toString(36).substr(2, 5),
               type: "System",
-              content: `OrÃ§amento #${budgetId} aprovado. Oportunidade ganha!`,
+              content: `Orçamento #${budgetId} aprovado. Oportunidade ganha!`,
               date: new Date().toISOString(),
               user: "System",
             },
@@ -1181,11 +1163,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
             region: t.region,
             status:
               t.status === "NOT_STARTED"
-                ? "NÃ£o Iniciado"
+                ? "Não Iniciado"
                 : t.status === "IN_PROGRESS"
                   ? "Em Andamento"
                   : t.status === "COMPLETED"
-                    ? "ConcluÃ­do"
+                    ? "Concluído"
                     : t.status,
             budgetId: t.budget_id,
             doctorName: `Dr. ${profile?.name || 'Não informado'}`,
@@ -1237,7 +1219,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
       date: new Date().toLocaleDateString("pt-BR"),
       doctorName: "System",
       type: "Evolução",
-      content: `OrÃ§amento #${budgetId} reprovado. Motivo: ${reason}`,
+      content: `Orçamento #${budgetId} reprovado. Motivo: ${reason}`,
     };
 
     updatePatient(patientId, {
@@ -1255,7 +1237,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
           {
             id: Math.random().toString(36).substr(2, 5),
             type: "System",
-            content: `OrÃ§amento #${budgetId} reprovado. Motivo: ${reason}`,
+            content: `Orçamento #${budgetId} reprovado. Motivo: ${reason}`,
             date: new Date().toISOString(),
             user: "System",
           },
@@ -1296,11 +1278,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
           region: t.region,
           status:
             t.status === "NOT_STARTED"
-              ? "NÃ£o Iniciado"
+              ? "Não Iniciado"
               : t.status === "IN_PROGRESS"
                 ? "Em Andamento"
                 : t.status === "COMPLETED"
-                  ? "ConcluÃ­do"
+                  ? "Concluído"
                   : t.status,
           budgetId: t.budget_id,
           doctorName: `Dr. ${profile?.name || 'Não informado'}`,
@@ -1357,7 +1339,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
 
     // Update Budget Status (Marks as in negotiation, but stays in list until Lost)
     const updatedBudgets = patient.budgets.map((b) =>
-      b.id === budgetId ? { ...b, status: "Em NegociaÃ§Ã£o" as const } : b
+      b.id === budgetId ? { ...b, status: "Em Negociação" as const } : b
     );
     updatePatient(patientId, { budgets: updatedBudgets });
 

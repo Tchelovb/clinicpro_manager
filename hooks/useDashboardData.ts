@@ -174,10 +174,32 @@ export const useDashboardData = () => {
     retry: 2,
   });
 
+  // Query para novos pacientes deste mês (KPI)
+  const newPatientsQuery = useQuery({
+    queryKey: ["dashboard-new-patients", clinicId],
+    queryFn: async () => {
+      if (!clinicId) return 0;
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+
+      const { count, error } = await supabase
+        .from("patients")
+        .select('*', { count: 'exact', head: true })
+        .eq("clinic_id", clinicId)
+        .gte("created_at", startOfMonth);
+
+      if (error) throw error;
+      return count || 0;
+    },
+    enabled: !!clinicId,
+    staleTime: 5 * 60 * 1000,
+  });
+
   // Calcular KPIs
   const appointments = appointmentsQuery.data || [];
   const leads = leadsQuery.data || [];
   const patients = patientsQuery.data || [];
+  const newPatientsCount = newPatientsQuery.data || 0;
 
   const kpis = {
     appointments: appointments.length,
@@ -190,6 +212,7 @@ export const useDashboardData = () => {
         l.status === "CONTACT" ||
         l.status === "NEGOTIATION"
     ).length,
+    newPatients: newPatientsCount
   };
 
   // Calcular lembretes baseados nos dados

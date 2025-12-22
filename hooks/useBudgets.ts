@@ -110,7 +110,7 @@ export const useBudgetOperations = () => {
             // doctor_id MUST be a valid ID from the users table (NOT professionals table)
             console.log('🔍 Checking doctor_id (User ID required)...', {
                 providedId: data.doctorId,
-                profileProfessionalId: profile?.professional_id,
+                profileProfessionalId: (profile as any)?.professional_id,
                 profileId: profile?.id
             });
 
