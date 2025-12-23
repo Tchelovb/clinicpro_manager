@@ -1,6 +1,6 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useBudget } from '../hooks/useBudgets';
+import { useBudget, useBudgetOperations } from '../hooks/useBudgets';
 import { usePatient } from '../hooks/usePatients';
 import {
     ArrowLeft, Edit, CheckCircle, XCircle, Printer,
@@ -14,6 +14,17 @@ const BudgetDetail: React.FC = () => {
 
     const { data: budget, isLoading: loadingBudget } = useBudget(budgetId);
     const { data: patient, isLoading: loadingPatient } = usePatient(patientId);
+    const { approveBudget } = useBudgetOperations();
+
+    const handleApprove = () => {
+        if (!budgetId || !patientId) {
+            alert('Erro: ID do orçamento ou paciente não encontrado');
+            return;
+        }
+        approveBudget({ budgetId, patientId });
+        // Navigate back after approval
+        setTimeout(() => navigate(`/patients/${patientId}`), 1000);
+    };
 
     if (loadingBudget || loadingPatient) {
         return (
@@ -195,7 +206,10 @@ const BudgetDetail: React.FC = () => {
                             <h3 className="text-lg font-bold text-white mb-4">Ações</h3>
                             <div className="space-y-3">
                                 {budget.status !== 'APPROVED' && (
-                                    <button className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium">
+                                    <button
+                                        onClick={handleApprove}
+                                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium"
+                                    >
                                         <CheckCircle size={18} />
                                         Aprovar Proposta
                                     </button>
