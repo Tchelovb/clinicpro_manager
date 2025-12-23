@@ -9,30 +9,38 @@ import {
     FileText, Loader, TrendingUp
 } from 'lucide-react';
 
-console.log("🚀 BudgetDetail v2.0 LOADED - Com Blindagem");
+console.log("🚀 BudgetDetail v3.0 LOADED - Hard Fix Applied at " + new Date().toISOString());
 
 const BudgetDetail: React.FC = () => {
-    const { patientId, id: budgetId } = useParams<{ patientId: string; id: string }>();
+    // 1. CAPTURA NO INÍCIO DO COMPONENTE (HARD FIX)
+    const params = useParams();
+    // Tenta capturar 'id' (padrão) ou 'budgetId' (alternativo)
+    const budgetId = params.id || params.budgetId;
+    const patientId = params.patientId;
     const navigate = useNavigate();
+
+    // 3. LOG DE DEBUG
+    console.log("DEBUG: Params capturados:", params);
+    console.log("DEBUG: ID capturado da URL:", budgetId);
+    console.log("DEBUG: PatientID capturado da URL:", patientId);
 
     const { data: budget, isLoading: loadingBudget } = useBudget(budgetId);
     const { data: patient, isLoading: loadingPatient } = usePatient(patientId);
     const { approveBudget } = useBudgetOperations();
 
     const handleApprove = () => {
-        // 1. DEFINIÇÃO DO ID & CLÁUSULA DE GUARDA (Blindagem)
+        // CLÁUSULA DE GUARDA (Reforçada)
         if (!budgetId || !patientId) {
-            console.error("❌ Tentativa de aprovar sem ID válido.", { budgetId, patientId });
-            toast.error("Erro: Orçamento não encontrado. Tente recarregar a página.");
+            console.error("ERRO CRÍTICO: ID do orçamento não encontrado na URL.", { budgetId, patientId, params });
+            toast.error("Erro de sistema: ID do orçamento não identificado na URL.");
             return;
         }
 
-        // 2. CORREÇÃO DA CHAMADA
-        console.log('✅ Approving budget with ID:', budgetId);
+        // CORREÇÃO DA CHAMADA
+        console.log('✅ Executing approveBudget with:', { budgetId, patientId });
         approveBudget({ budgetId, patientId }, {
             onSuccess: () => {
                 toast.success("Orçamento aprovado com sucesso!");
-                // Navigate back after approval with a slight delay for UX
                 setTimeout(() => navigate(`/patients/${patientId}`), 1000);
             },
             onError: (error) => {
