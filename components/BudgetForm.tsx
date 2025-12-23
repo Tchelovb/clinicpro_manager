@@ -269,7 +269,18 @@ const BudgetForm: React.FC = () => {
                 payment_config: { method: paymentMethod, installments },
                 status: 'DRAFT'
             };
-            updateBudget({ id: budgetId, ...budgetData });
+            updateBudget({
+                budgetId: budgetId,
+                data: {
+                    doctorId: selectedProfessionalId,
+                    priceTableId: selectedPriceTableId,
+                    totalValue: subtotal,
+                    discount,
+                    finalValue: finalTotal,
+                    items,
+                    paymentConfig: { method: paymentMethod, installments }
+                }
+            });
         } else {
             // Create new budget - CORRECT API FORMAT
             createBudget({
