@@ -305,8 +305,13 @@ const BudgetForm: React.FC = () => {
     };
 
     const handleApprove = async () => {
-        if (!budgetId) return;
-        await approveBudget(budgetId);
+        if (!budgetId || !patient?.id) {
+            console.error("❌ Tentativa de aprovar sem ID válido (BudgetForm)", { budgetId, patientId: patient?.id });
+            alert("Erro: Dados incompletos para aprovação.");
+            return;
+        }
+        console.log('✅ Approving from BudgetForm:', { budgetId, patientId: patient.id });
+        await approveBudget({ budgetId, patientId: patient.id });
         navigate(`/patients/${patient.id}`);
     };
 
