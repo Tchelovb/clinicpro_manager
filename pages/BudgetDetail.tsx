@@ -63,9 +63,16 @@ const BudgetDetail: React.FC = () => {
         return new Date(date).toLocaleDateString('pt-BR');
     };
 
+    // v4.0 FIX - Log version
+    console.log("🚀 BudgetDetail PAGE v4.0 LOADED - REAL FIX APPLIED");
+
     const handleApprove = async () => {
-        if (!budgetId) return;
-        await approveBudget(budgetId);
+        if (!budgetId || !patientId) {
+            console.error("❌ Erro: ID inválido na página de detalhes.", { budgetId, patientId });
+            return;
+        }
+        console.log("✅ Aprovando orçamento (Page View):", { budgetId, patientId });
+        await approveBudget({ budgetId, patientId });
         navigate(`/patients/${patientId}`);
     };
 
