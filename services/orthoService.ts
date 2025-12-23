@@ -190,9 +190,9 @@ class OrthoService {
             .from('ortho_treatment_plans')
             .select('*')
             .eq('contract_id', contractId)
-            .single();
+            .maybeSingle();
 
-        if (error && error.code !== 'PGRST116') throw error;
+        if (error) throw error;
         return data;
     }
 
@@ -227,14 +227,53 @@ class OrthoService {
     // CONSULTAS ORTODÔNTICAS
     // =====================================================
 
-    async createOrthoAppointment(appointment: Partial<OrthoAppointment>): Promise<OrthoAppointment> {
-        const { data, error } = await supabase
-            .from('ortho_appointments')
-            .insert([appointment])
+    async createOrthoAppointment(appointment: Partial<OrthoAppointment> & { patient_id: string, clinic_id: string }): Promise<OrthoAppointment> {
+        // 1. Get Current User (Doctor)
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('User not authenticated');
+
+        // 2. Create Parent Appointment (Required by Schema)
+        const { data: parentAppt, error: parentError } = await supabase
+            .from('appointments')
+            .insert([{
+                clinic_id: appointment.clinic_id,
+                patient_id: appointment.patient_id,
+                doctor_id: user.id, // Logged in user
+                date: new Date().toISOString(),
+                duration: 15,
+                type: 'EVALUATION', // Changed to EVALUATION as TREATMENT is invalid
+                status: 'COMPLETED',
+                notes: 'Evolução Ortodôntica (Automática)'
+            }])
             .select()
             .single();
 
-        if (error) throw error;
+        if (parentError) {
+            console.error('Error creating parent appointment:', parentError);
+            throw new Error(`Failed to create parent appointment: ${parentError.message}`);
+        }
+
+        // 3. Create Ortho Appointment
+        // Remove patient_id/clinic_id from payload as they are not in ortho_appointments
+        const { patient_id, clinic_id, ...orthoData } = appointment;
+
+        const { data, error } = await supabase
+            .from('ortho_appointments')
+            .insert([{
+                ...orthoData,
+                appointment_id: parentAppt.id
+            }])
+            .select()
+            .single();
+
+        if (error) {
+            // Rollback parent? Ideally yes, but Supabase doesn't support multi-table transactions via simple client calls easily without RPC.
+            // For now, we accept the orphan parent or manually delete.
+            // Attempt manual cleanup:
+            await supabase.from('appointments').delete().eq('id', parentAppt.id);
+            throw error;
+        }
+
         return data;
     }
 

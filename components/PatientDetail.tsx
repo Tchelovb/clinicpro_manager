@@ -9,6 +9,7 @@ import {
   Smile, Scissors, Sparkles
 } from "lucide-react";
 import { PatientInstallments } from "./PatientInstallments";
+import { OrthoTab } from "./ortho/OrthoTab";
 
 // Patient Score Badge (VIP Status)
 const ScoreBadge = ({ score }: { score?: string }) => {
@@ -623,90 +624,12 @@ const PatientDetail: React.FC = () => {
         )}
 
         {/* ORTHO TAB (REAL DATA) */}
-        {/* ORTODONTIA TAB */}
         {activeTab === 'ortho' && (
-          <div className="space-y-4">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-white">Tratamentos de Ortodontia</h2>
-            </div>
-            {orthoTreatments.length === 0 ? (
-              <div className="bg-slate-900 border border-slate-800 rounded-xl p-12 text-center">
-                <Smile size={48} className="text-slate-600 mx-auto mb-4" />
-                <p className="text-slate-400">Nenhum tratamento de ortodontia registrado</p>
-              </div>
-            ) : (
-              <div className="grid gap-4">
-                {orthoTreatments.map(treatment => {
-                  const handleUpdateStatus = async (newStatus: string) => {
-                    try {
-                      const { error } = await supabase
-                        .from('treatment_items')
-                        .update({
-                          status: newStatus,
-                          ...(newStatus === 'COMPLETED' ? { execution_date: new Date().toISOString().split('T')[0] } : {}),
-                          updated_at: new Date().toISOString()
-                        })
-                        .eq('id', treatment.id);
-
-                      if (error) throw error;
-                      window.location.reload();
-                    } catch (error) {
-                      console.error('Error updating treatment:', error);
-                      alert('Erro ao atualizar tratamento');
-                    }
-                  };
-
-                  return (
-                    <div
-                      key={treatment.id}
-                      className="bg-slate-900 border border-slate-800 rounded-xl p-6"
-                    >
-                      <div className="flex justify-between items-start mb-3">
-                        <div className="flex-1">
-                          <h4 className="text-lg font-bold text-white mb-2">
-                            {treatment.procedure_name || treatment.description}
-                          </h4>
-                          <div className="flex items-center gap-3 text-sm text-slate-400">
-                            <span>{new Date(treatment.created_at).toLocaleDateString('pt-BR')}</span>
-                            {treatment.specialty && (
-                              <span className="px-2 py-1 bg-slate-800 rounded text-xs">{treatment.specialty}</span>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <span className={`px-3 py-1 rounded-full text-xs font-bold ${treatment.status === 'COMPLETED' ? 'bg-emerald-900/30 text-emerald-300' :
-                            treatment.status === 'IN_PROGRESS' ? 'bg-blue-900/30 text-blue-300' :
-                              'bg-amber-900/30 text-amber-300'
-                            }`}>
-                            {treatment.status === 'COMPLETED' ? '✓ Concluído' :
-                              treatment.status === 'IN_PROGRESS' ? '⏳ Em Andamento' :
-                                '📋 Planejado'}
-                          </span>
-
-                          {treatment.status === 'NOT_STARTED' && (
-                            <button
-                              onClick={() => confirm('Iniciar este tratamento?') && handleUpdateStatus('IN_PROGRESS')}
-                              className="px-3 py-1 bg-blue-600 text-white rounded-lg text-xs hover:bg-blue-700"
-                            >
-                              Iniciar
-                            </button>
-                          )}
-                          {treatment.status === 'IN_PROGRESS' && (
-                            <button
-                              onClick={() => confirm('Concluir este tratamento?') && handleUpdateStatus('COMPLETED')}
-                              className="px-3 py-1 bg-emerald-600 text-white rounded-lg text-xs hover:bg-emerald-700"
-                            >
-                              Concluir
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+          <OrthoTab
+            patientId={id!}
+            patientName={patient.name}
+            clinicId={patient.clinic_id}
+          />
         )}
 
         {/* HOF TAB */}
