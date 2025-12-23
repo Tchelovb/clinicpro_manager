@@ -783,6 +783,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
     budgetData: Partial<Budget>
   ) => {
     try {
+      if (!budgetId) throw new Error("ID do orçamento é obrigatório");
+
       // Check if approved
       const { data: existing, error: checkError } = await supabase
         .from("budgets")
@@ -792,7 +794,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
 
       if (checkError) throw checkError;
       if (existing.status === "APPROVED") {
-        throw new Error("NÃ£o Ã© possÃ­vel editar orÃ§amento aprovado");
+        throw new Error("Não é possível editar orçamento aprovado");
       }
 
       // Calculate new totals if items provided

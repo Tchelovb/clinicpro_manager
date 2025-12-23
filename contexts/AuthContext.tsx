@@ -56,14 +56,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       setUser(session?.user ?? null);
 
       if (session?.user) {
-        // Faz o fetchProfile em background, sem bloquear o loading
-        fetchProfile(session.user.id).catch((err) => {
-          console.error(
-            "Falha ao carregar profile (continuando sem ele):",
-            err
-          );
-          setProfile(null);
-        });
+        if (session.user.id) {
+          // Faz o fetchProfile em background, sem bloquear o loading
+          fetchProfile(session.user.id).catch((err) => {
+            console.error(
+              "Falha ao carregar profile (continuando sem ele):",
+              err
+            );
+            setProfile(null);
+          });
+        }
       } else {
         setProfile(null);
       }
