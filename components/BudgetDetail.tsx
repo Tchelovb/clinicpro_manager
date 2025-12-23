@@ -2,11 +2,14 @@ import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useBudget, useBudgetOperations } from '../hooks/useBudgets';
 import { usePatient } from '../hooks/usePatients';
+import toast from 'react-hot-toast';
 import {
     ArrowLeft, Edit, CheckCircle, XCircle, Printer,
     MessageCircle, Calendar, DollarSign, CreditCard,
     FileText, Loader, TrendingUp
 } from 'lucide-react';
+
+console.log("🚀 BudgetDetail v2.0 LOADED - Com Blindagem");
 
 const BudgetDetail: React.FC = () => {
     const { patientId, id: budgetId } = useParams<{ patientId: string; id: string }>();
@@ -17,15 +20,26 @@ const BudgetDetail: React.FC = () => {
     const { approveBudget } = useBudgetOperations();
 
     const handleApprove = () => {
+        // 1. DEFINIÇÃO DO ID & CLÁUSULA DE GUARDA (Blindagem)
         if (!budgetId || !patientId) {
-            console.error("❌ ID do orçamento ou paciente não encontrado", { budgetId, patientId });
-            alert('Erro: ID do orçamento ou paciente não encontrado');
+            console.error("❌ Tentativa de aprovar sem ID válido.", { budgetId, patientId });
+            toast.error("Erro: Orçamento não encontrado. Tente recarregar a página.");
             return;
         }
-        console.log('✅ Approving budget:', { budgetId, patientId });
-        approveBudget({ budgetId, patientId });
-        // Navigate back after approval
-        setTimeout(() => navigate(`/patients/${patientId}`), 1000);
+
+        // 2. CORREÇÃO DA CHAMADA
+        console.log('✅ Approving budget with ID:', budgetId);
+        approveBudget({ budgetId, patientId }, {
+            onSuccess: () => {
+                toast.success("Orçamento aprovado com sucesso!");
+                // Navigate back after approval with a slight delay for UX
+                setTimeout(() => navigate(`/patients/${patientId}`), 1000);
+            },
+            onError: (error) => {
+                console.error("Erro na aprovação:", error);
+                toast.error("Falha ao aprovar orçamento.");
+            }
+        });
     };
 
     if (loadingBudget || loadingPatient) {
