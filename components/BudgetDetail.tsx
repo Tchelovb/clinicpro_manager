@@ -18,9 +18,11 @@ const BudgetDetail: React.FC = () => {
 
     const handleApprove = () => {
         if (!budgetId || !patientId) {
+            console.error("❌ ID do orçamento ou paciente não encontrado", { budgetId, patientId });
             alert('Erro: ID do orçamento ou paciente não encontrado');
             return;
         }
+        console.log('✅ Approving budget:', { budgetId, patientId });
         approveBudget({ budgetId, patientId });
         // Navigate back after approval
         setTimeout(() => navigate(`/patients/${patientId}`), 1000);
