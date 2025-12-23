@@ -107,7 +107,9 @@ const BudgetDetail: React.FC = () => {
 
                         <div className="flex items-center gap-3">
                             <span className={`px-4 py-2 rounded-lg font-medium text-sm ${getStatusColor(budget.status)}`}>
-                                {budget.status}
+                                {budget.status === 'APPROVED' ? 'Aprovado' :
+                                    budget.status === 'DRAFT' ? 'Rascunho' :
+                                        budget.status === 'REJECTED' ? 'Rejeitado' : budget.status}
                             </span>
                             <button
                                 onClick={() => navigate(`/budgets/new?id=${budgetId}&patient_id=${patientId}`)}

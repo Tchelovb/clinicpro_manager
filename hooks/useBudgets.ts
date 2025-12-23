@@ -257,8 +257,8 @@ export const useBudgetOperations = () => {
 
     const approveBudget = useMutation({
         mutationFn: async ({ budgetId, patientId }: { budgetId: string, patientId: string }) => {
-            // 1. Update Status
-            const { error } = await supabase.from('budgets').update({ status: 'Aprovado' }).eq('id', budgetId);
+            // 1. Update Status - Must be 'APPROVED' for Enum compatibility
+            const { error } = await supabase.from('budgets').update({ status: 'APPROVED' }).eq('id', budgetId);
             if (error) throw error;
 
             // NOTE: Future implementation should generate treatments and installments here.
