@@ -227,30 +227,30 @@ const PatientDetail: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-6">
+          <div className="flex flex-col xl:flex-row items-center xl:items-start justify-between gap-6 md:gap-8">
+            <div className="flex flex-col md:flex-row items-center gap-4 md:gap-6 text-center md:text-left w-full xl:w-auto">
               {/* Avatar */}
-              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-3xl font-black shadow-xl">
+              <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-2xl md:text-3xl font-black shadow-xl shrink-0">
                 {patient.name?.charAt(0).toUpperCase()}
               </div>
 
               {/* Identity */}
-              <div>
-                <h1 className="text-4xl font-black text-white mb-2">{patient.name}</h1>
-                <div className="flex items-center gap-3 mb-3">
+              <div className="flex-1 min-w-0 flex flex-col items-center md:items-start w-full">
+                <h1 className="text-xl sm:text-2xl md:text-4xl font-black text-white mb-2 break-all md:break-words leading-tight">{patient.name}</h1>
+                <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 md:gap-3 mb-3">
                   <ScoreBadge score={patient.patient_score} />
                   {patient.is_bad_debtor && (
-                    <span className="px-3 py-1 bg-rose-900/30 border border-rose-600 text-rose-300 rounded-full text-xs font-bold">
+                    <span className="px-3 py-1 bg-rose-900/30 border border-rose-600 text-rose-300 rounded-full text-[10px] md:text-xs font-bold">
                       ⚠️ INADIMPLENTE
                     </span>
                   )}
                   {!patient.active && (
-                    <span className="px-3 py-1 bg-slate-700 text-slate-300 rounded-full text-xs font-bold">
+                    <span className="px-3 py-1 bg-slate-700 text-slate-300 rounded-full text-[10px] md:text-xs font-bold">
                       INATIVO
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-4 text-sm text-slate-400">
+                <div className="flex flex-col sm:flex-row items-center justify-center md:justify-start gap-2 sm:gap-4 text-xs sm:text-sm text-slate-400">
                   <span className="flex items-center gap-1">
                     <Phone size={14} />
                     {patient.phone}
@@ -258,7 +258,7 @@ const PatientDetail: React.FC = () => {
                   {patient.email && (
                     <span className="flex items-center gap-1">
                       <Mail size={14} />
-                      {patient.email}
+                      <span className="truncate max-w-[200px]">{patient.email}</span>
                     </span>
                   )}
                 </div>
@@ -266,22 +266,22 @@ const PatientDetail: React.FC = () => {
             </div>
 
             {/* Financial Indicators (REAL DATA) */}
-            <div className="flex gap-4">
-              <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 min-w-[160px]">
-                <p className="text-xs text-slate-500 uppercase font-bold mb-1">Saldo Devedor</p>
-                <p className={`text-2xl font-black ${financialData.balanceDue > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full xl:w-auto">
+              <div className="bg-slate-800 border border-slate-700 rounded-xl p-3 md:p-4 flex flex-row sm:flex-col justify-between sm:justify-center items-center sm:items-start gap-2">
+                <p className="text-[10px] sm:text-xs text-slate-500 uppercase font-bold">Saldo Devedor</p>
+                <p className={`text-base sm:text-lg md:text-2xl font-black ${financialData.balanceDue > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
                   R$ {financialData.balanceDue.toLocaleString('pt-BR')}
                 </p>
               </div>
-              <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 min-w-[160px]">
-                <p className="text-xs text-slate-500 uppercase font-bold mb-1">Aprovado</p>
-                <p className="text-2xl font-black text-blue-400">
+              <div className="bg-slate-800 border border-slate-700 rounded-xl p-3 md:p-4 flex flex-row sm:flex-col justify-between sm:justify-center items-center sm:items-start gap-2">
+                <p className="text-[10px] sm:text-xs text-slate-500 uppercase font-bold">Aprovado</p>
+                <p className="text-base sm:text-lg md:text-2xl font-black text-blue-400">
                   R$ {financialData.totalApproved.toLocaleString('pt-BR')}
                 </p>
               </div>
-              <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 min-w-[160px]">
-                <p className="text-xs text-slate-500 uppercase font-bold mb-1">Pago</p>
-                <p className="text-2xl font-black text-emerald-400">
+              <div className="bg-slate-800 border border-slate-700 rounded-xl p-3 md:p-4 flex flex-row sm:flex-col justify-between sm:justify-center items-center sm:items-start gap-2">
+                <p className="text-[10px] sm:text-xs text-slate-500 uppercase font-bold">Pago</p>
+                <p className="text-base sm:text-lg md:text-2xl font-black text-emerald-400">
                   R$ {financialData.totalPaid.toLocaleString('pt-BR')}
                 </p>
               </div>
@@ -370,7 +370,15 @@ const PatientDetail: React.FC = () => {
                   </div>
                   <div>
                     <p className="text-slate-500 text-xs uppercase font-bold mb-1">Estado Civil</p>
-                    <p className="text-slate-200">{patient.marital_status || 'Não informado'}</p>
+                    <p className="text-slate-200">
+                      {{
+                        'SINGLE': 'Solteiro(a)',
+                        'MARRIED': 'Casado(a)',
+                        'DIVORCED': 'Divorciado(a)',
+                        'WIDOWED': 'Viúvo(a)',
+                        'SEPARATED': 'Separado(a)'
+                      }[patient.marital_status as string] || patient.marital_status || 'Não informado'}
+                    </p>
                   </div>
                   <div>
                     <p className="text-slate-500 text-xs uppercase font-bold mb-1">Status de Sentimento</p>

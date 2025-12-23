@@ -172,9 +172,9 @@ export const PatientInstallments: React.FC<PatientInstallmentsProps> = ({ patien
                             className={`bg-slate-900 border rounded-xl p-4 transition-all ${isOverdue ? 'border-rose-700/50' : 'border-slate-800'
                                 }`}
                         >
-                            <div className="flex items-center justify-between">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                 <div className="flex items-center gap-4">
-                                    <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold ${installment.status === 'PAID' ? 'bg-emerald-900/30 text-emerald-300' :
+                                    <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-sm shrink-0 ${installment.status === 'PAID' ? 'bg-emerald-900/30 text-emerald-300' :
                                         isOverdue ? 'bg-rose-900/30 text-rose-300' :
                                             'bg-amber-900/30 text-amber-300'
                                         }`}>
@@ -184,7 +184,7 @@ export const PatientInstallments: React.FC<PatientInstallmentsProps> = ({ patien
                                         <p className="text-lg font-bold text-white">
                                             R$ {installment.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                         </p>
-                                        <div className="flex items-center gap-3 text-xs text-slate-400 mt-1">
+                                        <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400 mt-1">
                                             <span className="flex items-center gap-1">
                                                 <Calendar size={12} />
                                                 Venc: {new Date(installment.due_date).toLocaleDateString('pt-BR')}
@@ -199,7 +199,7 @@ export const PatientInstallments: React.FC<PatientInstallmentsProps> = ({ patien
                                     </div>
                                 </div>
 
-                                <div className="flex items-center gap-3">
+                                <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
                                     {getStatusBadge(installment.status, installment.due_date)}
 
                                     {installment.status === 'PENDING' && (
@@ -209,7 +209,7 @@ export const PatientInstallments: React.FC<PatientInstallmentsProps> = ({ patien
                                                     handlePayInstallment(installment.id, installment.source || 'NEW');
                                                 }
                                             }}
-                                            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg transition-colors font-medium text-sm"
+                                            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-3 sm:py-2 rounded-lg transition-colors font-medium text-sm flex-1 sm:flex-none justify-center"
                                         >
                                             <Check size={16} />
                                             Baixar
