@@ -1,0 +1,13 @@
+ATENÇÃO: Para o PWA funcionar corretamente, você precisa adicionar os seguintes arquivos de imagem nesta pasta 'public':
+
+1. pwa-192x192.png (Dimensão: 192x192 pixels, Formato: PNG)
+2. pwa-512x512.png (Dimensão: 512x512 pixels, Formato: PNG)
+3. apple-touch-icon.png (Dimensão: 180x180 pixels ou 192x192, Formato: PNG - usado pelo iOS)
+4. masked-icon.svg (Opcional: ícone monocromático para Android)
+5. favicon.ico (Geralmente já existe, mas bom garantir)
+
+Você pode gerar esses ícones usando sites como:
+- https://realfavicongenerator.net/
+- https://maskable.app/editor
+
+Enquanto você não adicionar as imagens reais, o navegador pode mostrar um ícone quebrado ou genérico ao tentar instalar.
