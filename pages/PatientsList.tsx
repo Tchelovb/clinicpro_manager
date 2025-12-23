@@ -195,7 +195,7 @@ const PatientsList: React.FC = () => {
                 </div>
                 <button
                     onClick={() => navigate('/patients/new')}
-                    className="flex items-center gap-2 px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors font-medium shadow-sm"
+                    className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-3 md:px-4 md:py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors font-medium shadow-sm active:scale-[0.98]"
                 >
                     <Plus size={18} />
                     Novo Paciente
@@ -215,12 +215,12 @@ const PatientsList: React.FC = () => {
                             placeholder="Buscar por nome ou telefone..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400"
+                            className="w-full pl-10 pr-4 py-3 md:py-2 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 text-base"
                         />
                         {searchTerm && (
                             <button
                                 onClick={() => setSearchTerm('')}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 p-2"
                             >
                                 <X size={18} />
                             </button>
@@ -228,37 +228,37 @@ const PatientsList: React.FC = () => {
                     </div>
 
                     {/* View Toggles & Filters */}
-                    <div className="flex items-center gap-2">
-                        <div className="flex p-1 bg-slate-100 dark:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-600">
+                    <div className="flex gap-2">
+                        <div className="flex p-1 bg-slate-100 dark:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-600 flex-shrink-0 hidden md:flex">
                             <button
                                 onClick={() => setViewMode('grid')}
-                                className={`p-1.5 rounded-md transition-all ${viewMode === 'grid'
+                                className={`p-2 rounded-md transition-all ${viewMode === 'grid'
                                     ? 'bg-white dark:bg-slate-600 text-violet-600 dark:text-violet-400 shadow-sm'
                                     : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
                                 title="Visualização em Grade"
                             >
-                                <Users size={18} />
+                                <Users size={20} />
                             </button>
                             <button
                                 onClick={() => setViewMode('list')}
-                                className={`p-1.5 rounded-md transition-all ${viewMode === 'list'
+                                className={`p-2 rounded-md transition-all ${viewMode === 'list'
                                     ? 'bg-white dark:bg-slate-600 text-violet-600 dark:text-violet-400 shadow-sm'
                                     : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
                                 title="Visualização em Lista"
                             >
-                                <Filter size={18} className="rotate-90" /> {/* Improvisando icone de lista com filter rotacionado ou usar outro se disponivel */}
+                                <Filter size={20} className="rotate-90" />
                             </button>
                         </div>
 
                         <button
                             onClick={() => setShowFilters(!showFilters)}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${showFilters || filterScore !== 'ALL' || filterStatus !== 'ALL'
+                            className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-3 md:py-2 rounded-lg border transition-colors ${showFilters || filterScore !== 'ALL' || filterStatus !== 'ALL'
                                 ? 'bg-violet-50 border-violet-200 text-violet-700 dark:bg-violet-900/30 dark:border-violet-700 dark:text-violet-300'
                                 : 'bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600'
                                 }`}
                         >
-                            <Filter size={18} />
-                            Filtros
+                            <Filter size={20} />
+                            <span className="font-medium">Filtros</span>
                             {(filterScore !== 'ALL' || filterStatus !== 'ALL') && (
                                 <span className="w-2 h-2 bg-violet-600 rounded-full" />
                             )}
@@ -277,7 +277,7 @@ const PatientsList: React.FC = () => {
                             <select
                                 value={filterScore}
                                 onChange={(e) => setFilterScore(e.target.value)}
-                                className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 text-sm bg-white dark:bg-slate-700 text-slate-700 dark:text-white"
+                                className="w-full px-3 py-3 md:py-2 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 text-base md:text-sm bg-white dark:bg-slate-700 text-slate-700 dark:text-white"
                             >
                                 <option value="ALL">Todos</option>
                                 <option value="DIAMOND">💎 Diamond</option>
@@ -296,7 +296,7 @@ const PatientsList: React.FC = () => {
                             <select
                                 value={filterStatus}
                                 onChange={(e) => setFilterStatus(e.target.value)}
-                                className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 text-sm bg-white dark:bg-slate-700 text-slate-700 dark:text-white"
+                                className="w-full px-3 py-3 md:py-2 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 text-base md:text-sm bg-white dark:bg-slate-700 text-slate-700 dark:text-white"
                             >
                                 <option value="ALL">Todos</option>
                                 <option value="Em Tratamento">Em Tratamento</option>
@@ -309,6 +309,9 @@ const PatientsList: React.FC = () => {
                 )}
             </div>
 
+            {/* ============================================ */}
+            {/* PATIENTS CONTENT */}
+            {/* ============================================ */}
             {/* ============================================ */}
             {/* PATIENTS CONTENT */}
             {/* ============================================ */}
@@ -429,93 +432,132 @@ const PatientsList: React.FC = () => {
                             })}
                         </div>
                     ) : (
-                        // List View (Table)
-                        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden animate-in fade-in">
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left text-sm">
-                                    <thead className="bg-slate-50 dark:bg-slate-700/50 text-slate-500 dark:text-slate-400 font-medium">
-                                        <tr>
-                                            <th className="px-6 py-4">Paciente</th>
-                                            <th className="px-6 py-4">Contato</th>
-                                            <th className="px-6 py-4">Classificação</th>
-                                            <th className="px-6 py-4">Financeiro</th>
-                                            <th className="px-6 py-4 text-right">Ação</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                                        {filteredPatients.map((patient) => {
-                                            const config = getScoreConfig(patient.patient_score);
-                                            const Icon = config.icon;
+                        // List Mode
+                        <>
+                            {/* Mobile: Card View (Always) */}
+                            <div className="md:hidden grid grid-cols-1 gap-4 animate-in fade-in">
+                                {filteredPatients.map((patient) => {
+                                    const config = getScoreConfig(patient.patient_score);
+                                    const Icon = config.icon;
+                                    // Simplified Card for Mobile List View
+                                    return (
+                                        <div
+                                            key={patient.id}
+                                            onClick={() => navigate(`/patients/${patient.id}`)}
+                                            className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm flex items-center gap-4 active:scale-[0.98] transition-all"
+                                        >
+                                            <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center overflow-hidden flex-shrink-0">
+                                                {patient.profile_photo_url ? (
+                                                    <img src={patient.profile_photo_url} alt={patient.name} className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <span className="font-bold text-slate-500 dark:text-slate-400 text-lg">
+                                                        {patient.name.substring(0, 2).toUpperCase()}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <h4 className="font-bold text-slate-800 dark:text-white truncate">{patient.name}</h4>
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${config.bg} ${config.text} ${config.border}`}>
+                                                        {config.label}
+                                                    </span>
+                                                    <span className="text-xs text-slate-500">{patient.phone}</span>
+                                                </div>
+                                            </div>
+                                            <ChevronRight className="text-slate-300" />
+                                        </div>
+                                    );
+                                })}
+                            </div>
 
-                                            return (
-                                                <tr
-                                                    key={patient.id}
-                                                    className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer"
-                                                    onClick={() => navigate(`/patients/${patient.id}`)}
-                                                >
-                                                    <td className="px-6 py-4">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center overflow-hidden">
-                                                                {patient.profile_photo_url ? (
-                                                                    <img src={patient.profile_photo_url} alt={patient.name} className="w-full h-full object-cover" />
-                                                                ) : (
-                                                                    <span className="font-bold text-slate-500 dark:text-slate-400 text-sm">
-                                                                        {patient.name.substring(0, 2).toUpperCase()}
+                            {/* Desktop: Table View */}
+                            <div className="hidden md:block bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden animate-in fade-in">
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left text-sm">
+                                        <thead className="bg-slate-50 dark:bg-slate-700/50 text-slate-500 dark:text-slate-400 font-medium">
+                                            <tr>
+                                                <th className="px-6 py-4">Paciente</th>
+                                                <th className="px-6 py-4">Contato</th>
+                                                <th className="px-6 py-4">Classificação</th>
+                                                <th className="px-6 py-4">Financeiro</th>
+                                                <th className="px-6 py-4 text-right">Ação</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                                            {filteredPatients.map((patient) => {
+                                                const config = getScoreConfig(patient.patient_score);
+                                                const Icon = config.icon;
+
+                                                return (
+                                                    <tr
+                                                        key={patient.id}
+                                                        className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer"
+                                                        onClick={() => navigate(`/patients/${patient.id}`)}
+                                                    >
+                                                        <td className="px-6 py-4">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center overflow-hidden">
+                                                                    {patient.profile_photo_url ? (
+                                                                        <img src={patient.profile_photo_url} alt={patient.name} className="w-full h-full object-cover" />
+                                                                    ) : (
+                                                                        <span className="font-bold text-slate-500 dark:text-slate-400 text-sm">
+                                                                            {patient.name.substring(0, 2).toUpperCase()}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                                <div>
+                                                                    <p className="font-bold text-slate-800 dark:text-white">{patient.name}</p>
+                                                                    {patient.occupation && (
+                                                                        <p className="text-xs text-slate-500 dark:text-slate-400">{patient.occupation}</p>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-4">
+                                                            <div className="text-slate-600 dark:text-slate-300">
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <Phone size={14} className="text-slate-400" />
+                                                                    {patient.phone}
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-4">
+                                                            <div className="flex flex-col gap-1 items-start">
+                                                                <span className={`
+                                                                    inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold
+                                                                    ${config.bg} ${config.text} ${config.border} border
+                                                                `}>
+                                                                    <Icon size={12} />
+                                                                    {config.label}
+                                                                </span>
+                                                                {patient.bad_debtor && (
+                                                                    <span className="text-[10px] text-rose-600 dark:text-rose-400 font-bold flex items-center gap-1">
+                                                                        <AlertCircle size={10} /> Inadimplente
                                                                     </span>
                                                                 )}
                                                             </div>
+                                                        </td>
+                                                        <td className="px-6 py-4">
                                                             <div>
-                                                                <p className="font-bold text-slate-800 dark:text-white">{patient.name}</p>
-                                                                {patient.occupation && (
-                                                                    <p className="text-xs text-slate-500 dark:text-slate-400">{patient.occupation}</p>
+                                                                <p className="text-xs text-slate-500 dark:text-slate-400">Total: <span className="text-green-600 dark:text-green-400 font-bold">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(patient.total_approved)}</span></p>
+                                                                {patient.balance_due > 0 && (
+                                                                    <p className="text-xs text-rose-600 dark:text-rose-400 font-bold mt-0.5">
+                                                                        Deve: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(patient.balance_due)}
+                                                                    </p>
                                                                 )}
                                                             </div>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <div className="text-slate-600 dark:text-slate-300">
-                                                            <div className="flex items-center gap-1.5">
-                                                                <Phone size={14} className="text-slate-400" />
-                                                                {patient.phone}
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <div className="flex flex-col gap-1 items-start">
-                                                            <span className={`
-                                                                inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold
-                                                                ${config.bg} ${config.text} ${config.border} border
-                                                            `}>
-                                                                <Icon size={12} />
-                                                                {config.label}
-                                                            </span>
-                                                            {patient.bad_debtor && (
-                                                                <span className="text-[10px] text-rose-600 dark:text-rose-400 font-bold flex items-center gap-1">
-                                                                    <AlertCircle size={10} /> Inadimplente
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <div>
-                                                            <p className="text-xs text-slate-500 dark:text-slate-400">Total: <span className="text-green-600 dark:text-green-400 font-bold">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(patient.total_approved)}</span></p>
-                                                            {patient.balance_due > 0 && (
-                                                                <p className="text-xs text-rose-600 dark:text-rose-400 font-bold mt-0.5">
-                                                                    Deve: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(patient.balance_due)}
-                                                                </p>
-                                                            )}
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-6 py-4 text-right">
-                                                        <ChevronRight className="text-slate-300 dark:text-slate-600 inline-block" size={20} />
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
+                                                        </td>
+                                                        <td className="px-6 py-4 text-right">
+                                                            <ChevronRight className="text-slate-300 dark:text-slate-600 inline-block" size={20} />
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
-                        </div>
+                        </>
                     )}
                 </>
             ) : (

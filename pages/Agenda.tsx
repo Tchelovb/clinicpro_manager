@@ -190,8 +190,8 @@ const Agenda: React.FC = () => {
                             key={v}
                             onClick={() => setView(v)}
                             className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${view === v
-                                    ? 'bg-blue-600 text-white shadow-md'
-                                    : 'text-slate-400 hover:text-slate-200'
+                                ? 'bg-blue-600 text-white shadow-md'
+                                : 'text-slate-400 hover:text-slate-200'
                                 }`}
                         >
                             {{ day: 'Dia', week: 'Semana' }[v]}
@@ -210,113 +210,116 @@ const Agenda: React.FC = () => {
             </div>
 
             {/* CALENDAR GRID - DARK MODE */}
-            <div className="flex-1 bg-slate-900 rounded-xl border border-slate-800 shadow-lg overflow-hidden flex flex-col">
-
-                {/* Week View Header */}
-                {view === 'week' && (
-                    <div className="grid border-b border-slate-800" style={{ gridTemplateColumns: `80px repeat(${displayProfessionals.length > 1 ? 7 : 7}, 1fr)` }}>
-                        <div className="p-4 bg-slate-950 border-r border-slate-800"></div>
-                        {getWeekDates(currentDate).map((date, idx) => {
-                            const isToday = date.toDateString() === new Date().toDateString();
-                            return (
-                                <div key={idx} className={`py-4 text-center border-r border-slate-800 last:border-r-0 ${isToday ? 'bg-blue-900/20' : ''}`}>
-                                    <p className={`text-xs uppercase font-bold mb-1 ${isToday ? 'text-blue-400' : 'text-slate-500'}`}>
-                                        {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][date.getDay()]}
-                                    </p>
-                                    <div className={`w-8 h-8 flex items-center justify-center rounded-full mx-auto text-sm font-bold ${isToday ? 'bg-blue-600 text-white' : 'text-slate-300'
-                                        }`}>
-                                        {date.getDate()}
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                )}
-
-                {/* Time Slots Area */}
-                <div className="flex-1 overflow-y-auto">
-                    {timeSlots.map((time) => (
-                        <div key={time} className="grid min-h-[60px] border-b border-slate-800 last:border-b-0 hover:bg-slate-800/30 transition-colors" style={{ gridTemplateColumns: view === 'week' ? `80px repeat(7, 1fr)` : `80px repeat(${displayProfessionals.length}, 1fr)` }}>
-                            <div className="flex items-center justify-center text-xs font-medium text-slate-500 border-r border-slate-800 bg-slate-950">
-                                {time}
+            <div className="flex-1 bg-slate-900 rounded-xl border border-slate-800 shadow-lg flex flex-col overflow-hidden">
+                <div className="overflow-x-auto flex-1 flex flex-col">
+                    <div className="min-w-[1000px]">
+                        {/* Week View Header */}
+                        {view === 'week' && (
+                            <div className="grid border-b border-slate-800 sticky top-0 z-10 bg-slate-900" style={{ gridTemplateColumns: `80px repeat(${displayProfessionals.length > 1 ? 7 : 7}, 1fr)` }}>
+                                <div className="p-4 bg-slate-950 border-r border-slate-800"></div>
+                                {getWeekDates(currentDate).map((date, idx) => {
+                                    const isToday = date.toDateString() === new Date().toDateString();
+                                    return (
+                                        <div key={idx} className={`py-4 text-center border-r border-slate-800 last:border-r-0 ${isToday ? 'bg-blue-900/20' : ''}`}>
+                                            <p className={`text-xs uppercase font-bold mb-1 ${isToday ? 'text-blue-400' : 'text-slate-500'}`}>
+                                                {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][date.getDay()]}
+                                            </p>
+                                            <div className={`w-8 h-8 flex items-center justify-center rounded-full mx-auto text-sm font-bold ${isToday ? 'bg-blue-600 text-white' : 'text-slate-300'
+                                                }`}>
+                                                {date.getDate()}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
                             </div>
+                        )}
 
-                            {view === 'week' && (
-                                <>
-                                    {getWeekDates(currentDate).map((date) => {
-                                        const dateStr = formatDate(date);
-                                        const slotApts = filteredAppointments.filter(
-                                            a => a.date === dateStr && a.time === time
-                                        );
+                        {/* Time Slots Area */}
+                        <div className="min-h-0">
+                            {timeSlots.map((time) => (
+                                <div key={time} className="grid min-h-[60px] border-b border-slate-800 last:border-b-0 hover:bg-slate-800/30 transition-colors" style={{ gridTemplateColumns: view === 'week' ? `80px repeat(7, 1fr)` : `80px repeat(${displayProfessionals.length}, 1fr)` }}>
+                                    <div className="flex items-center justify-center text-xs font-medium text-slate-500 border-r border-slate-800 bg-slate-950 sticky left-0 z-10">
+                                        {time}
+                                    </div>
 
-                                        return (
-                                            <div
-                                                key={`${dateStr}-${time}`}
-                                                className="border-r border-slate-800 last:border-r-0 relative p-1 transition-colors cursor-pointer"
-                                                onClick={() => slotApts.length === 0 && handleNewAppointment(dateStr, time)}
-                                            >
-                                                {slotApts.map(apt => {
-                                                    const style = getSpecialtyStyle(apt.type);
-                                                    const status = getStatusIndicator(apt.status);
-                                                    return (
-                                                        <div
-                                                            key={apt.id}
-                                                            onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/schedule/${apt.id}`); }}
-                                                            className={`rounded-md p-2 text-xs mb-1 cursor-pointer shadow-md border-l-4 hover:shadow-lg transition-all ${style.bg} ${style.border} ${style.text}`}
-                                                        >
-                                                            <div className="flex items-center justify-between mb-1">
-                                                                <span className="font-bold truncate">{apt.patientName}</span>
-                                                                <span className={`w-2 h-2 rounded-full ${status.color}`} title={apt.status}></span>
-                                                            </div>
-                                                            <div className="flex items-center gap-1 opacity-80">
-                                                                <Stethoscope size={10} />
-                                                                <span className="truncate">{apt.type}</span>
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        );
-                                    })}
-                                </>
-                            )}
+                                    {view === 'week' && (
+                                        <>
+                                            {getWeekDates(currentDate).map((date) => {
+                                                const dateStr = formatDate(date);
+                                                const slotApts = filteredAppointments.filter(
+                                                    a => a.date === dateStr && a.time === time
+                                                );
 
-                            {view === 'day' && (
-                                <>
-                                    {displayProfessionals.map(prof => {
-                                        const dateStr = formatDate(currentDate);
-                                        const slotApt = filteredAppointments.find(
-                                            a => a.date === dateStr && a.time === time && a.doctorName === prof
-                                        );
-
-                                        return (
-                                            <div
-                                                key={`${prof}-${time}`}
-                                                className="border-r border-slate-800 last:border-r-0 relative p-2 transition-colors min-h-[70px] cursor-pointer"
-                                                onClick={() => !slotApt && handleNewAppointment(dateStr, time)}
-                                            >
-                                                {slotApt && (
+                                                return (
                                                     <div
-                                                        onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/schedule/${slotApt.id}`); }}
-                                                        className={`h-full rounded-md p-3 text-sm cursor-pointer shadow-md border-l-4 hover:shadow-lg transition-all ${getSpecialtyStyle(slotApt.type).bg} ${getSpecialtyStyle(slotApt.type).border} ${getSpecialtyStyle(slotApt.type).text}`}
+                                                        key={`${dateStr}-${time}`}
+                                                        className="border-r border-slate-800 last:border-r-0 relative p-1 transition-colors cursor-pointer"
+                                                        onClick={() => slotApts.length === 0 && handleNewAppointment(dateStr, time)}
                                                     >
-                                                        <div className="flex items-center justify-between mb-2">
-                                                            <span className="font-bold">{slotApt.patientName}</span>
-                                                            <span className={`w-3 h-3 rounded-full ${getStatusIndicator(slotApt.status).color}`}></span>
-                                                        </div>
-                                                        <div className="flex items-center gap-1 opacity-80 text-xs">
-                                                            <Clock size={12} />
-                                                            <span>{slotApt.time} - {slotApt.type}</span>
-                                                        </div>
+                                                        {slotApts.map(apt => {
+                                                            const style = getSpecialtyStyle(apt.type);
+                                                            const status = getStatusIndicator(apt.status);
+                                                            return (
+                                                                <div
+                                                                    key={apt.id}
+                                                                    onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/schedule/${apt.id}`); }}
+                                                                    className={`rounded-md p-2 text-xs mb-1 cursor-pointer shadow-md border-l-4 hover:shadow-lg transition-all ${style.bg} ${style.border} ${style.text}`}
+                                                                >
+                                                                    <div className="flex items-center justify-between mb-1">
+                                                                        <span className="font-bold truncate">{apt.patientName}</span>
+                                                                        <span className={`w-2 h-2 rounded-full ${status.color}`} title={apt.status}></span>
+                                                                    </div>
+                                                                    <div className="flex items-center gap-1 opacity-80">
+                                                                        <Stethoscope size={10} />
+                                                                        <span className="truncate">{apt.type}</span>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
                                                     </div>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
-                                </>
-                            )}
+                                                );
+                                            })}
+                                        </>
+                                    )}
+
+                                    {view === 'day' && (
+                                        <>
+                                            {displayProfessionals.map(prof => {
+                                                const dateStr = formatDate(currentDate);
+                                                const slotApt = filteredAppointments.find(
+                                                    a => a.date === dateStr && a.time === time && a.doctorName === prof
+                                                );
+
+                                                return (
+                                                    <div
+                                                        key={`${prof}-${time}`}
+                                                        className="border-r border-slate-800 last:border-r-0 relative p-2 transition-colors min-h-[70px] cursor-pointer"
+                                                        onClick={() => !slotApt && handleNewAppointment(dateStr, time)}
+                                                    >
+                                                        {slotApt && (
+                                                            <div
+                                                                onClick={(e) => { e.stopPropagation(); navigate(`/dashboard/schedule/${slotApt.id}`); }}
+                                                                className={`h-full rounded-md p-3 text-sm cursor-pointer shadow-md border-l-4 hover:shadow-lg transition-all ${getSpecialtyStyle(slotApt.type).bg} ${getSpecialtyStyle(slotApt.type).border} ${getSpecialtyStyle(slotApt.type).text}`}
+                                                            >
+                                                                <div className="flex items-center justify-between mb-2">
+                                                                    <span className="font-bold">{slotApt.patientName}</span>
+                                                                    <span className={`w-3 h-3 rounded-full ${getStatusIndicator(slotApt.status).color}`}></span>
+                                                                </div>
+                                                                <div className="flex items-center gap-1 opacity-80 text-xs">
+                                                                    <Clock size={12} />
+                                                                    <span>{slotApt.time} - {slotApt.type}</span>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </>
+                                    )}
+                                </div>
+                            ))}
                         </div>
-                    ))}
+                    </div>
                 </div>
             </div>
         </div>

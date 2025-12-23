@@ -187,7 +187,8 @@ const ProceduresSettings: React.FC = () => {
       )}
 
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Desktop Table */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
@@ -267,6 +268,57 @@ const ProceduresSettings: React.FC = () => {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Cards */}
+        <div className="md:hidden divide-y divide-gray-100 dark:divide-gray-700">
+          {procedures.map((procedure) => (
+            <div key={procedure.id} className="p-4 flex flex-col gap-2">
+              <div className="flex justify-between items-start">
+                <div className="flex-1 pr-2">
+                  <span className="text-sm font-bold text-gray-900 dark:text-white block">
+                    {procedure.name}
+                  </span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    {procedure.category || "-"}
+                  </span>
+                </div>
+                <span className="font-bold text-green-600 dark:text-green-400 text-sm whitespace-nowrap">
+                  {formatCurrency(procedure.base_price)}
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400 mt-1">
+                <div className="flex gap-3">
+                  <span>{procedure.duration} min</span>
+                  <span>{procedure.total_sessions} sessões</span>
+                </div>
+              </div>
+
+              <div className="flex gap-2 mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+                <button
+                  onClick={() => {
+                    setEditingProcedure(procedure);
+                    setModalOpen(true);
+                  }}
+                  className="flex-1 py-1.5 bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 rounded-lg text-xs font-bold flex items-center justify-center gap-1"
+                >
+                  <Edit size={14} /> Editar
+                </button>
+                <button
+                  onClick={() => handleDelete(procedure.id)}
+                  className="flex-1 py-1.5 bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400 rounded-lg text-xs font-bold flex items-center justify-center gap-1"
+                >
+                  <Trash2 size={14} /> Excluir
+                </button>
+              </div>
+            </div>
+          ))}
+          {procedures.length === 0 && (
+            <div className="p-8 text-center text-gray-400 text-sm">
+              Nenhum procedimento cadastrado
+            </div>
+          )}
         </div>
       </div>
 

@@ -156,109 +156,191 @@ const CRM: React.FC = () => {
 
             {/* --- VIEW: LIST --- */}
             {activeView === 'list' && (
-                <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden flex-1 flex flex-col">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left text-sm">
-                            <thead className="bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700 sticky top-0">
-                                <tr>
-                                    <th className="px-6 py-3 font-medium">Nome</th>
-                                    <th className="px-6 py-3 font-medium">Origem</th>
-                                    <th className="px-6 py-3 font-medium">Status</th>
-                                    <th className="px-6 py-3 font-medium">Última Interação</th>
-                                    <th className="px-6 py-3 font-medium text-right">Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                                {leads.map(lead => (
-                                    <tr key={lead.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors" onClick={() => navigate(`/crm/${lead.id}`)}>
-                                        <td className="px-6 py-3 font-medium text-gray-900 dark:text-white">{lead.name}</td>
-                                        <td className="px-6 py-3 text-gray-500 dark:text-gray-400">{lead.source}</td>
-                                        <td className="px-6 py-3">
-                                            <span className="bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-full text-xs font-bold border border-blue-100 dark:border-blue-800">
-                                                {lead.status}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-3 text-gray-500 dark:text-gray-400">
-                                            {new Date(lead.lastInteraction).toLocaleDateString()}
-                                        </td>
-                                        <td className="px-6 py-3 text-right">
-                                            <button className="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"><MoreHorizontal size={16} /></button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                <>
+                    {/* Mobile Card List */}
+                    <div className="md:hidden grid grid-cols-1 gap-4">
+                        {leads.map(lead => (
+                            <div
+                                key={lead.id}
+                                onClick={() => navigate(`/crm/${lead.id}`)}
+                                className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm active:scale-[0.98] transition-all"
+                            >
+                                <div className="flex justify-between items-start mb-2">
+                                    <div>
+                                        <h4 className="font-bold text-gray-900 dark:text-white">{lead.name}</h4>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-1">
+                                            {lead.source} • <Clock size={10} /> {new Date(lead.lastInteraction).toLocaleDateString()}
+                                        </p>
+                                    </div>
+                                    <button className="text-gray-400"><MoreHorizontal size={20} /></button>
+                                </div>
+                                <div className="mt-3 flex items-center justify-between">
+                                    <span className="bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-3 py-1 rounded-full text-xs font-bold border border-blue-100 dark:border-blue-800">
+                                        {lead.status}
+                                    </span>
+                                    {lead.value && (
+                                        <span className="font-bold text-gray-900 dark:text-white">R$ {lead.value.toLocaleString('pt-BR')}</span>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
                     </div>
-                </div>
+
+                    {/* Desktop Table */}
+                    <div className="hidden md:flex bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden flex-1 flex-col">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left text-sm">
+                                <thead className="bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700 sticky top-0">
+                                    <tr>
+                                        <th className="px-6 py-3 font-medium">Nome</th>
+                                        <th className="px-6 py-3 font-medium">Origem</th>
+                                        <th className="px-6 py-3 font-medium">Status</th>
+                                        <th className="px-6 py-3 font-medium">Última Interação</th>
+                                        <th className="px-6 py-3 font-medium text-right">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                                    {leads.map(lead => (
+                                        <tr key={lead.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors" onClick={() => navigate(`/crm/${lead.id}`)}>
+                                            <td className="px-6 py-3 font-medium text-gray-900 dark:text-white">{lead.name}</td>
+                                            <td className="px-6 py-3 text-gray-500 dark:text-gray-400">{lead.source}</td>
+                                            <td className="px-6 py-3">
+                                                <span className="bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-full text-xs font-bold border border-blue-100 dark:border-blue-800">
+                                                    {lead.status}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-3 text-gray-500 dark:text-gray-400">
+                                                {new Date(lead.lastInteraction).toLocaleDateString()}
+                                            </td>
+                                            <td className="px-6 py-3 text-right">
+                                                <button className="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"><MoreHorizontal size={16} /></button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </>
             )}
 
             {/* --- VIEW: BUDGET RECOVERY --- */}
             {activeView === 'budgets' && (
-                <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden flex-1 flex flex-col">
-                    <div className="p-4 bg-orange-50 dark:bg-orange-900/20 border-b border-orange-100 dark:border-orange-900/50 flex items-center gap-2 text-orange-800 dark:text-orange-200 text-sm shrink-0">
+                <>
+                    <div className="p-4 bg-orange-50 dark:bg-orange-900/20 border-b border-orange-100 dark:border-orange-900/50 flex items-center gap-2 text-orange-800 dark:text-orange-200 text-sm shrink-0 rounded-lg mb-4 md:mb-0 md:rounded-none md:border-t md:border-x">
                         <AlertCircle size={16} />
                         Mostrando <strong>{unapprovedBudgets.length}</strong> orçamentos não aprovados.
                     </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left text-sm">
-                            <thead className="bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700 sticky top-0">
-                                <tr>
-                                    <th className="px-6 py-3 font-medium">Paciente</th>
-                                    <th className="px-6 py-3 font-medium">Data Envio</th>
-                                    <th className="px-6 py-3 font-medium">Status</th>
-                                    <th className="px-6 py-3 font-medium text-right">Valor</th>
-                                    <th className="px-6 py-3 font-medium text-right">Ação</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                                {unapprovedBudgets.map((budget, idx) => (
-                                    <tr key={`${budget.id}-${idx}`} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                                        <td className="px-6 py-3">
-                                            <p className="font-bold text-gray-900 dark:text-white">{budget.patientName}</p>
-                                            <p className="text-xs text-gray-500 dark:text-gray-400">{budget.patientPhone}</p>
-                                        </td>
-                                        <td className="px-6 py-3 text-gray-500 dark:text-gray-400">{budget.createdAt}</td>
-                                        <td className="px-6 py-3">
-                                            <span className={`px-2 py-1 rounded-full text-xs font-bold border 
+
+                    {/* Mobile Card List */}
+                    <div className="md:hidden grid grid-cols-1 gap-4">
+                        {unapprovedBudgets.map((budget, idx) => (
+                            <div key={`${budget.id}-${idx}`} className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm relative">
+                                <div className="flex justify-between items-start mb-2">
+                                    <div>
+                                        <h4 className="font-bold text-gray-900 dark:text-white">{budget.patientName}</h4>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400">{budget.patientPhone}</p>
+                                    </div>
+                                    <span className="font-bold text-gray-900 dark:text-white">R$ {budget.totalValue.toLocaleString('pt-BR')}</span>
+                                </div>
+
+                                <div className="flex items-center gap-2 mb-4">
+                                    <span className={`px-2 py-1 rounded-full text-[10px] font-bold border 
                                         ${budget.status === 'Em Negociação' ? 'bg-orange-50 text-orange-700 border-orange-100' : 'bg-yellow-50 text-yellow-700 border-yellow-100'} dark:bg-opacity-20`}>
-                                                {budget.status === 'Em Análise' ? 'Aguardando Aprovação' : budget.status}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-3 text-right font-bold text-gray-900 dark:text-white">
-                                            R$ {budget.totalValue.toLocaleString('pt-BR')}
-                                        </td>
-                                        <td className="px-6 py-3 text-right">
-                                            {budget.status === 'Em Negociação' ? (
-                                                <button
-                                                    onClick={() => {
-                                                        // Try to find the linked lead
-                                                        const linkedLead = leads.find(l => l.budgetId === budget.id);
-                                                        if (linkedLead) {
-                                                            navigate(`/crm/${linkedLead.id}`);
-                                                        } else {
-                                                            // Fallback to budget edit if lead missing (edge case)
-                                                            navigate(`/patients/${budget.patientId}/budgets/${budget.id}`);
-                                                        }
-                                                    }}
-                                                    className="text-purple-600 dark:text-purple-400 hover:text-purple-700 font-medium text-xs border border-purple-200 dark:border-purple-700 bg-purple-50 dark:bg-purple-900/20 px-3 py-1.5 rounded hover:bg-purple-100 dark:hover:bg-purple-900/40 flex items-center gap-1 ml-auto"
-                                                >
-                                                    <TrendingUp size={12} /> Ver Oportunidade
-                                                </button>
-                                            ) : (
-                                                <button
-                                                    onClick={() => handleCreateOpportunity(budget.patientId, budget.id)}
-                                                    className="text-blue-600 dark:text-blue-400 hover:text-blue-700 font-medium text-xs border border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded hover:bg-blue-100 dark:hover:bg-blue-900/40 flex items-center gap-1 ml-auto"
-                                                >
-                                                    <Briefcase size={12} /> Criar Oportunidade
-                                                </button>
-                                            )}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                        {budget.status === 'Em Análise' ? 'Aguardando Aprovação' : budget.status}
+                                    </span>
+                                    <span className="text-xs text-gray-400">{budget.createdAt}</span>
+                                </div>
+
+                                {budget.status === 'Em Negociação' ? (
+                                    <button
+                                        onClick={() => {
+                                            const linkedLead = leads.find(l => l.budgetId === budget.id);
+                                            if (linkedLead) {
+                                                navigate(`/crm/${linkedLead.id}`);
+                                            } else {
+                                                navigate(`/patients/${budget.patientId}/budgets/${budget.id}`);
+                                            }
+                                        }}
+                                        className="w-full text-purple-600 dark:text-purple-400 hover:text-purple-700 font-bold text-sm border border-purple-200 dark:border-purple-700 bg-purple-50 dark:bg-purple-900/20 px-4 py-3 rounded-lg flex items-center justify-center gap-2"
+                                    >
+                                        <TrendingUp size={16} /> Ver Oportunidade
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={() => handleCreateOpportunity(budget.patientId, budget.id)}
+                                        className="w-full text-blue-600 dark:text-blue-400 hover:text-blue-700 font-bold text-sm border border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 px-4 py-3 rounded-lg flex items-center justify-center gap-2"
+                                    >
+                                        <Briefcase size={16} /> Criar Oportunidade
+                                    </button>
+                                )}
+                            </div>
+                        ))}
                     </div>
-                </div>
+
+                    {/* Desktop Table */}
+                    <div className="hidden md:flex bg-white dark:bg-gray-800 rounded-b-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden flex-1 flex-col mt-0">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left text-sm">
+                                <thead className="bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700 sticky top-0">
+                                    <tr>
+                                        <th className="px-6 py-3 font-medium">Paciente</th>
+                                        <th className="px-6 py-3 font-medium">Data Envio</th>
+                                        <th className="px-6 py-3 font-medium">Status</th>
+                                        <th className="px-6 py-3 font-medium text-right">Valor</th>
+                                        <th className="px-6 py-3 font-medium text-right">Ação</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                                    {unapprovedBudgets.map((budget, idx) => (
+                                        <tr key={`${budget.id}-${idx}`} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                            <td className="px-6 py-3">
+                                                <p className="font-bold text-gray-900 dark:text-white">{budget.patientName}</p>
+                                                <p className="text-xs text-gray-500 dark:text-gray-400">{budget.patientPhone}</p>
+                                            </td>
+                                            <td className="px-6 py-3 text-gray-500 dark:text-gray-400">{budget.createdAt}</td>
+                                            <td className="px-6 py-3">
+                                                <span className={`px-2 py-1 rounded-full text-xs font-bold border 
+                                            ${budget.status === 'Em Negociação' ? 'bg-orange-50 text-orange-700 border-orange-100' : 'bg-yellow-50 text-yellow-700 border-yellow-100'} dark:bg-opacity-20`}>
+                                                    {budget.status === 'Em Análise' ? 'Aguardando Aprovação' : budget.status}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-3 text-right font-bold text-gray-900 dark:text-white">
+                                                R$ {budget.totalValue.toLocaleString('pt-BR')}
+                                            </td>
+                                            <td className="px-6 py-3 text-right">
+                                                {budget.status === 'Em Negociação' ? (
+                                                    <button
+                                                        onClick={() => {
+                                                            // Try to find the linked lead
+                                                            const linkedLead = leads.find(l => l.budgetId === budget.id);
+                                                            if (linkedLead) {
+                                                                navigate(`/crm/${linkedLead.id}`);
+                                                            } else {
+                                                                // Fallback to budget edit if lead missing (edge case)
+                                                                navigate(`/patients/${budget.patientId}/budgets/${budget.id}`);
+                                                            }
+                                                        }}
+                                                        className="text-purple-600 dark:text-purple-400 hover:text-purple-700 font-medium text-xs border border-purple-200 dark:border-purple-700 bg-purple-50 dark:bg-purple-900/20 px-3 py-1.5 rounded hover:bg-purple-100 dark:hover:bg-purple-900/40 flex items-center gap-1 ml-auto"
+                                                    >
+                                                        <TrendingUp size={12} /> Ver Oportunidade
+                                                    </button>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => handleCreateOpportunity(budget.patientId, budget.id)}
+                                                        className="text-blue-600 dark:text-blue-400 hover:text-blue-700 font-medium text-xs border border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded hover:bg-blue-100 dark:hover:bg-blue-900/40 flex items-center gap-1 ml-auto"
+                                                    >
+                                                        <Briefcase size={12} /> Criar Oportunidade
+                                                    </button>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </>
             )}
 
             {/* MOBILE FLOATING ACTION BUTTON */}

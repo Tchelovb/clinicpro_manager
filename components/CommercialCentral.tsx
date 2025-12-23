@@ -175,7 +175,8 @@ const CommercialCentral: React.FC = () => {
                 {/* LIST VIEW */}
                 {viewMode === 'list' && (
                     <div className="bg-white dark:bg-slate-800 rounded-xl shadow-card border border-gray-200 dark:border-slate-700 h-full flex flex-col overflow-hidden">
-                        <div className="overflow-auto flex-1">
+                        {/* Desktop Table */}
+                        <div className="hidden md:block overflow-auto flex-1">
                             <table className="w-full text-left text-sm whitespace-nowrap">
                                 <thead className="bg-gray-50 dark:bg-slate-900 border-b border-gray-200 text-gray-500 font-medium sticky top-0 z-10">
                                     <tr>
@@ -229,6 +230,45 @@ const CommercialCentral: React.FC = () => {
                                     ))}
                                 </tbody>
                             </table>
+                        </div>
+
+                        {/* Mobile Card List */}
+                        <div className="md:hidden overflow-y-auto flex-1 p-2 space-y-3">
+                            {filteredItems.map(item => (
+                                <div key={`${item.type}-${item.id}`} onClick={() => navigate(item.actionUrl)} className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700">
+                                    <div className="flex justify-between items-start mb-2">
+                                        <div>
+                                            <h4 className="font-bold text-gray-900 dark:text-white">{item.title}</h4>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{item.subtitle}</p>
+                                        </div>
+                                        {item.value > 0 && <span className="font-bold text-green-600">R$ {item.value.toLocaleString('pt-BR')}</span>}
+                                    </div>
+
+                                    <div className="flex justify-between items-center mb-3">
+                                        <div className="flex gap-2">
+                                            <span className="bg-gray-100 dark:bg-slate-700 text-xs px-2 py-0.5 rounded text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-slate-600">{item.status}</span>
+                                            {item.score > 0 && (
+                                                <span className="flex items-center gap-1 text-[10px] font-bold text-orange-500 bg-orange-50 px-2 py-0.5 rounded border border-orange-100">
+                                                    <Flame size={10} /> {item.score}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <span className="text-xs text-gray-400">{new Date(item.date).toLocaleDateString()}</span>
+                                    </div>
+
+                                    <div className="flex gap-2 pt-2 border-t border-gray-100 dark:border-slate-700">
+                                        <button
+                                            onClick={(e) => handleOpenScript(e, item)}
+                                            className="flex-1 py-2 bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-300 rounded-lg text-xs font-bold flex items-center justify-center gap-1"
+                                        >
+                                            <Sparkles size={14} /> Script IA
+                                        </button>
+                                        <button className="flex-1 py-2 bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 rounded-lg text-xs font-bold flex items-center justify-center gap-1">
+                                            Detalhes <ArrowRight size={14} />
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 )}

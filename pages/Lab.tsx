@@ -104,7 +104,7 @@ const Lab: React.FC = () => {
     return (
         <div className="p-6 space-y-6 max-w-[1600px] mx-auto bg-slate-50 min-h-screen">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-3xl font-bold text-slate-800 tracking-tight flex items-center gap-3">
                         <Microscope className="text-teal-600" size={32} />
@@ -114,7 +114,7 @@ const Lab: React.FC = () => {
                 </div>
                 <button
                     onClick={() => navigate('/lab/new')}
-                    className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors font-medium shadow-sm"
+                    className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-3 md:px-4 md:py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors font-medium shadow-sm active:scale-[0.98]"
                 >
                     <Plus size={18} />
                     Nova Ordem
@@ -146,39 +146,39 @@ const Lab: React.FC = () => {
             </div>
 
             {/* Filters & View Toggle */}
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div className="w-full md:w-auto flex items-center gap-2 bg-white p-1 rounded-lg border border-slate-200 shadow-sm overflow-x-auto pb-2 md:pb-1">
                     <button
                         onClick={() => setFilterStatus('ALL')}
-                        className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${filterStatus === 'ALL' ? 'bg-violet-50 text-violet-700' : 'text-slate-500 hover:text-slate-700'
+                        className={`px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0 ${filterStatus === 'ALL' ? 'bg-violet-50 text-violet-700' : 'text-slate-500 hover:text-slate-700'
                             }`}
                     >
                         Todos
                     </button>
                     <button
                         onClick={() => setFilterStatus('SENT')}
-                        className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${filterStatus === 'SENT' ? 'bg-blue-50 text-blue-700' : 'text-slate-500 hover:text-blue-600'
+                        className={`px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0 ${filterStatus === 'SENT' ? 'bg-blue-50 text-blue-700' : 'text-slate-500 hover:text-blue-600'
                             }`}
                     >
                         Enviados
                     </button>
                     <button
                         onClick={() => setFilterStatus('TESTING')}
-                        className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${filterStatus === 'TESTING' ? 'bg-amber-50 text-amber-700' : 'text-slate-500 hover:text-amber-600'
+                        className={`px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0 ${filterStatus === 'TESTING' ? 'bg-amber-50 text-amber-700' : 'text-slate-500 hover:text-amber-600'
                             }`}
                     >
                         Em Prova
                     </button>
                     <button
                         onClick={() => setFilterStatus('READY')}
-                        className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${filterStatus === 'READY' ? 'bg-green-50 text-green-700' : 'text-slate-500 hover:text-green-600'
+                        className={`px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0 ${filterStatus === 'READY' ? 'bg-green-50 text-green-700' : 'text-slate-500 hover:text-green-600'
                             }`}
                     >
                         Prontos
                     </button>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="hidden md:flex items-center gap-2">
                     <button
                         onClick={() => setViewMode('list')}
                         className={`p-2 rounded-lg transition-colors ${viewMode === 'list' ? 'bg-violet-50 text-violet-700' : 'text-slate-400 hover:bg-slate-100'
@@ -210,54 +210,96 @@ const Lab: React.FC = () => {
                     </button>
                 </div>
             ) : viewMode === 'list' ? (
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                    <table className="w-full">
-                        <thead className="bg-slate-50 border-b border-slate-200">
-                            <tr>
-                                <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 uppercase">Paciente</th>
-                                <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 uppercase">Tipo</th>
-                                <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 uppercase">Laboratório</th>
-                                <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 uppercase">Enviado</th>
-                                <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 uppercase">Previsão</th>
-                                <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 uppercase">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                            {filteredOrders.map(order => {
-                                const statusConfig = getStatusConfig(order.status);
-                                const isOverdue = new Date(order.expected_date) < new Date() && order.status !== 'DELIVERED';
+                <>
+                    {/* Mobile Card List View */}
+                    <div className="md:hidden grid grid-cols-1 gap-4">
+                        {filteredOrders.map(order => {
+                            const statusConfig = getStatusConfig(order.status);
+                            const isOverdue = new Date(order.expected_date) < new Date() && order.status !== 'DELIVERED';
+                            return (
+                                <div key={order.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm relative">
+                                    <div className="flex justify-between items-start mb-2">
+                                        <div className="flex items-center gap-2">
+                                            <User size={16} className="text-slate-400" />
+                                            <span className="font-bold text-slate-800">{order.patient_name}</span>
+                                        </div>
+                                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold border ${statusConfig.bg} ${statusConfig.text} ${statusConfig.border}`}>
+                                            {React.createElement(statusConfig.icon, { size: 10 })}
+                                            {statusConfig.label}
+                                        </span>
+                                    </div>
 
-                                return (
-                                    <tr key={order.id} className="hover:bg-slate-50 transition-colors cursor-pointer">
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-2">
-                                                <User size={16} className="text-slate-400" />
-                                                <span className="font-medium text-slate-800">{order.patient_name}</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 text-sm text-slate-600">{order.prosthesis_type}</td>
-                                        <td className="px-6 py-4 text-sm text-slate-600">{order.lab_partner}</td>
-                                        <td className="px-6 py-4 text-sm text-slate-600">
-                                            {new Date(order.sent_date).toLocaleDateString('pt-BR')}
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <span className={`text-sm ${isOverdue ? 'text-rose-600 font-bold' : 'text-slate-600'}`}>
+                                    <h4 className="font-bold text-slate-700 text-sm mb-1">{order.prosthesis_type}</h4>
+                                    <p className="text-xs text-slate-500 mb-3">{order.lab_partner}</p>
+
+                                    <div className="pt-3 border-t border-slate-100 flex justify-between items-center text-xs">
+                                        <div>
+                                            <p className="text-slate-400">Enviado</p>
+                                            <p className="font-medium text-slate-600">{new Date(order.sent_date).toLocaleDateString('pt-BR')}</p>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-slate-400">Previsão</p>
+                                            <p className={`font-bold ${isOverdue ? 'text-rose-600' : 'text-slate-600'}`}>
                                                 {new Date(order.expected_date).toLocaleDateString('pt-BR')}
                                                 {isOverdue && ' ⚠️'}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold border ${statusConfig.bg} ${statusConfig.text} ${statusConfig.border}`}>
-                                                {React.createElement(statusConfig.icon, { size: 12 })}
-                                                {statusConfig.label}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
-                </div>
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {/* Desktop Table View */}
+                    <div className="hidden md:block bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                        <table className="w-full">
+                            <thead className="bg-slate-50 border-b border-slate-200">
+                                <tr>
+                                    <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 uppercase">Paciente</th>
+                                    <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 uppercase">Tipo</th>
+                                    <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 uppercase">Laboratório</th>
+                                    <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 uppercase">Enviado</th>
+                                    <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 uppercase">Previsão</th>
+                                    <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 uppercase">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {filteredOrders.map(order => {
+                                    const statusConfig = getStatusConfig(order.status);
+                                    const isOverdue = new Date(order.expected_date) < new Date() && order.status !== 'DELIVERED';
+
+                                    return (
+                                        <tr key={order.id} className="hover:bg-slate-50 transition-colors cursor-pointer">
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center gap-2">
+                                                    <User size={16} className="text-slate-400" />
+                                                    <span className="font-medium text-slate-800">{order.patient_name}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 text-sm text-slate-600">{order.prosthesis_type}</td>
+                                            <td className="px-6 py-4 text-sm text-slate-600">{order.lab_partner}</td>
+                                            <td className="px-6 py-4 text-sm text-slate-600">
+                                                {new Date(order.sent_date).toLocaleDateString('pt-BR')}
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className={`text-sm ${isOverdue ? 'text-rose-600 font-bold' : 'text-slate-600'}`}>
+                                                    {new Date(order.expected_date).toLocaleDateString('pt-BR')}
+                                                    {isOverdue && ' ⚠️'}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold border ${statusConfig.bg} ${statusConfig.text} ${statusConfig.border}`}>
+                                                    {React.createElement(statusConfig.icon, { size: 12 })}
+                                                    {statusConfig.label}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                </>
             ) : (
                 <div className="flex gap-4 overflow-x-auto pb-4">
                     {kanbanColumns.map(col => {

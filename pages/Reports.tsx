@@ -49,6 +49,7 @@ const Reports: React.FC = () => {
 
     // Handle Print
     const handlePrint = useReactToPrint({
+        // @ts-ignore - content IS supported but types might be mismatching in this version
         content: () => componentRef.current,
         documentTitle: `Relatorio_Auditoria_${new Date().toISOString().split('T')[0]}`,
     });
@@ -176,15 +177,15 @@ const Reports: React.FC = () => {
             </div>
 
             {/* A4 Paper Container */}
-            <div ref={componentRef} className="bg-white w-[210mm] min-h-[297mm] shadow-2xl print:shadow-none p-[20mm] relative">
+            <div ref={componentRef} className="bg-white w-full md:w-[210mm] min-h-screen md:min-h-[297mm] shadow-sm md:shadow-2xl print:shadow-none p-6 md:p-[20mm] relative rounded-xl md:rounded-none">
 
                 {/* Header */}
-                <div className="border-b-2 border-slate-800 pb-6 mb-8 flex justify-between items-end">
+                <div className="border-b-2 border-slate-800 pb-6 mb-8 flex flex-col md:flex-row justify-between md:items-end gap-4">
                     <div>
-                        <h1 className="text-3xl font-black text-slate-900 uppercase tracking-tighter">Relatório de Auditoria</h1>
-                        <p className="text-slate-500 font-medium mt-1">Torre de Controle Operacional • {profile?.clinic_name || 'Clínica'}</p>
+                        <h1 className="text-2xl md:text-3xl font-black text-slate-900 uppercase tracking-tighter">Relatório de Auditoria</h1>
+                        <p className="text-slate-500 font-medium mt-1">Torre de Controle Operacional • {data?.clinic_name || profile?.clinics?.name || 'Clínica'}</p>
                     </div>
-                    <div className="text-right">
+                    <div className="text-left md:text-right">
                         <p className="text-xs text-slate-400 uppercase font-bold">Data de Emissão</p>
                         <p className="text-lg font-bold text-slate-800">{new Date().toLocaleDateString('pt-BR')}</p>
                     </div>
@@ -194,30 +195,30 @@ const Reports: React.FC = () => {
                 {(activeTab === 'ALL') && (
                     <div className="mb-12 bg-slate-50 p-6 rounded-xl border border-slate-100 print:border-slate-200">
                         <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4">Resumo Executivo (IVC)</h2>
-                        <div className="grid grid-cols-5 gap-4 text-center">
+                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 md:gap-4 text-center">
                             <div>
                                 <p className="text-xs text-slate-500 mb-1">Marketing</p>
-                                <p className="text-2xl font-black text-slate-800">{data.total_leads}</p>
+                                <p className="text-xl md:text-2xl font-black text-slate-800">{data.total_leads}</p>
                                 <p className="text-[10px] text-green-600 font-bold">Leads Totais</p>
                             </div>
-                            <div className="border-l border-slate-200">
+                            <div className="border-l border-slate-200 md:border-l">
                                 <p className="text-xs text-slate-500 mb-1">Vendas</p>
-                                <p className="text-2xl font-black text-slate-800">{data.taxa_conversao_orcamentos}%</p>
+                                <p className="text-xl md:text-2xl font-black text-slate-800">{data.taxa_conversao_orcamentos}%</p>
                                 <p className="text-[10px] text-blue-600 font-bold">Conversão</p>
                             </div>
-                            <div className="border-l border-slate-200">
+                            <div className="col-span-2 md:col-span-1 border-t md:border-t-0 md:border-l border-slate-200 pt-4 md:pt-0">
                                 <p className="text-xs text-slate-500 mb-1">Financeiro</p>
-                                <p className="text-2xl font-black text-slate-800">{data.margem_ebitda}%</p>
+                                <p className="text-xl md:text-2xl font-black text-slate-800">{data.margem_ebitda}%</p>
                                 <p className="text-[10px] text-slate-600 font-bold">Margem EBITDA</p>
                             </div>
                             <div className="border-l border-slate-200">
                                 <p className="text-xs text-slate-500 mb-1">Operacional</p>
-                                <p className="text-2xl font-black text-slate-800">{data.taxa_no_show}%</p>
+                                <p className="text-xl md:text-2xl font-black text-slate-800">{data.taxa_no_show}%</p>
                                 <p className="text-[10px] text-red-600 font-bold">No-Show</p>
                             </div>
                             <div className="border-l border-slate-200">
                                 <p className="text-xs text-slate-500 mb-1">Produção</p>
-                                <p className="text-2xl font-black text-slate-800">
+                                <p className="text-xl md:text-2xl font-black text-slate-800">
                                     {new Intl.NumberFormat('pt-BR', { notation: 'compact', style: 'currency', currency: 'BRL' }).format(data.valor_producao_total)}
                                 </p>
                                 <p className="text-[10px] text-slate-600 font-bold">Realizada</p>
@@ -279,7 +280,7 @@ const Reports: React.FC = () => {
                             <h2 className="text-xl font-bold text-slate-800">Performance Comercial</h2>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <table className="w-full text-sm">
                                 <thead className="text-xs text-slate-400 uppercase font-bold text-left">
                                     <tr><th className="pb-2">KPI Marketing</th><th className="pb-2 text-right">Valor</th></tr>
