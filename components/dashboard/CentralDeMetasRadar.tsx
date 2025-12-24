@@ -1,15 +1,13 @@
 import React, { useMemo } from 'react';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer, Tooltip } from 'recharts';
-import { usePillarScores } from '../../hooks/usePillarScores';
+import { useOptimizedPillarScores } from '../../hooks/useOptimizedPillarScores';
 import { useAuth } from '../../contexts/AuthContext';
 
 export const CentralDeMetasRadar = () => {
     const { user } = useAuth();
-    // Assuming the user belongs to a clinic; defaulting to the first one available or handling this via context is ideal. 
-    // For now, using optional chaining or a safe fallback if session user metadata contains clinic_id.
     const clinicId = user?.user_metadata?.clinic_id;
 
-    const { pillarData, loading } = usePillarScores(clinicId);
+    const { pillarData, loading } = useOptimizedPillarScores(clinicId);
 
     // Default data for skeleton loading or empty state
     const defaultData = [

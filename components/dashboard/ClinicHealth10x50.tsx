@@ -14,9 +14,10 @@ import {
     Star,
     Smile,
     ClipboardCheck,
-    ShieldCheck
+    ShieldCheck,
+    RefreshCw
 } from 'lucide-react';
-import { usePillarScores } from '../../hooks/usePillarScores';
+import { useOptimizedPillarScores } from '../../hooks/useOptimizedPillarScores';
 import { CentralDeMetasRadar } from './CentralDeMetasRadar';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -25,9 +26,28 @@ interface PillarCardProps {
     score: number;
     icon: React.ElementType;
     color: string;
+    isLoading?: boolean;
 }
 
-const PillarCard: React.FC<PillarCardProps> = ({ title, score, icon: Icon, color }) => {
+const PillarCardSkeleton = () => (
+    <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 animate-pulse">
+        <div className="flex justify-between items-start mb-3">
+            <div className="w-10 h-10 bg-slate-200 dark:bg-slate-700 rounded-lg"></div>
+            <div className="flex flex-col items-end gap-1">
+                <div className="w-8 h-6 bg-slate-200 dark:bg-slate-700 rounded"></div>
+                <div className="w-12 h-3 bg-slate-200 dark:bg-slate-700 rounded"></div>
+            </div>
+        </div>
+        <div className="w-24 h-4 bg-slate-200 dark:bg-slate-700 rounded mb-3"></div>
+        <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/50">
+            <div className="w-16 h-3 bg-slate-200 dark:bg-slate-700 rounded"></div>
+        </div>
+    </div>
+);
+
+const PillarCard: React.FC<PillarCardProps> = ({ title, score, icon: Icon, color, isLoading }) => {
+    if (isLoading) return <PillarCardSkeleton />;
+
     // Determine status based on score
     let status: 'healthy' | 'warning' | 'critical' = 'critical';
     if (score >= 70) status = 'healthy';
@@ -74,9 +94,9 @@ const PillarCard: React.FC<PillarCardProps> = ({ title, score, icon: Icon, color
 };
 
 export const ClinicHealth10x50 = () => {
-    const { session } = useAuth();
-    const clinicId = session?.user?.user_metadata?.clinic_id;
-    const { pillarData, loading } = usePillarScores(clinicId);
+    const { user } = useAuth();
+    const clinicId = user?.user_metadata?.clinic_id;
+    const { pillarData, loading, isRefetching, lastUpdated, refresh, error } = useOptimizedPillarScores(clinicId);
 
     // Mapeamento de Configuração Visual dos 10 Pilares
     const pillarConfig: Record<string, { icon: React.ElementType, color: string }> = {
@@ -97,6 +117,21 @@ export const ClinicHealth10x50 = () => {
         ? Math.round(pillarData.reduce((acc, curr) => acc + curr.A, 0) / pillarData.length)
         : 0;
 
+    // Format last updated time
+    const formatLastUpdated = (timestamp: number) => {
+        if (!timestamp) return '';
+        const date = new Date(timestamp);
+        const now = new Date();
+        const diffMs = now.getTime() - date.getTime();
+        const diffMins = Math.floor(diffMs / 60000);
+
+        if (diffMins < 1) return 'agora mesmo';
+        if (diffMins === 1) return 'há 1 minuto';
+        if (diffMins < 60) return `há ${diffMins} minutos`;
+
+        return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    };
+
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
             {/* Header Section */}
@@ -108,9 +143,32 @@ export const ClinicHealth10x50 = () => {
                     </h2>
                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                         Índice de Vitalidade Corporativa: <strong className={ivcScore >= 70 ? 'text-emerald-500' : 'text-amber-500'}>{ivcScore}/100</strong>
+                        {lastUpdated && (
+                            <span className="ml-2 text-slate-400">
+                                • Atualizado {formatLastUpdated(lastUpdated)}
+                            </span>
+                        )}
                     </p>
                 </div>
+                <button
+                    onClick={refresh}
+                    disabled={isRefetching}
+                    className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Atualizar dados"
+                >
+                    <RefreshCw size={16} className={isRefetching ? 'animate-spin' : ''} />
+                    {isRefetching ? 'Atualizando...' : 'Atualizar'}
+                </button>
             </div>
+
+            {/* Error State */}
+            {error && (
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                    <p className="text-sm text-red-600 dark:text-red-400">
+                        Erro ao carregar dados: {error}
+                    </p>
+                </div>
+            )}
 
             {/* Radar Section - Destaque */}
             <div className="w-full">
@@ -119,20 +177,23 @@ export const ClinicHealth10x50 = () => {
 
             {/* Grid de 10 Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                {pillarData.map((item) => {
-                    const config = pillarConfig[item.pilar] || { icon: Activity, color: 'slate' };
-                    return (
-                        <PillarCard
-                            key={item.pilar}
-                            title={item.pilar}
-                            score={item.A}
-                            icon={config.icon}
-                            color={config.color}
-                        />
-                    );
-                })}
-                {/* Fallback while loading or if empty */}
-                {!loading && pillarData.length === 0 && (
+                {loading ? (
+                    // Show 10 skeleton loaders
+                    Array.from({ length: 10 }).map((_, i) => <PillarCardSkeleton key={i} />)
+                ) : pillarData.length > 0 ? (
+                    pillarData.map((item) => {
+                        const config = pillarConfig[item.pilar] || { icon: Activity, color: 'slate' };
+                        return (
+                            <PillarCard
+                                key={item.pilar}
+                                title={item.pilar}
+                                score={item.A}
+                                icon={config.icon}
+                                color={config.color}
+                            />
+                        );
+                    })
+                ) : (
                     <div className="col-span-full text-center text-slate-400 py-8">
                         Nenhum dado de inteligência disponível. As sentinelas estão sendo iniciadas.
                     </div>
