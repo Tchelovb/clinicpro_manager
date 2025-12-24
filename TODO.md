@@ -1,8 +1,8 @@
 # 📋 TODO - CLINIC PRO MANAGER
 
-**Última Atualização:** 21/12/2024  
-**Versão:** 2.0  
-**Status Geral:** 75/100 (85% funcionalidades implementadas)
+**Última Atualização:** 24/12/2024  
+**Versão:** 2.1  
+**Status Geral:** 78/100 (87% funcionalidades implementadas)
 
 ---
 
@@ -106,7 +106,49 @@
 
 ---
 
-### 6. 🤖 AI Insights Engine
+### 5.1. 💰 Sistema de Histórico de Repasses Profissionais
+**Prioridade:** 🟢 CONCLUÍDO ✅  
+**Esforço:** 1 semana  
+**Responsável:** Implementado em 24/12/2024
+
+**Tarefas:**
+- [x] Criar tabela `professional_payment_history` ✅
+- [x] Criar componente `ProfessionalPaymentHistory.tsx` ✅
+- [x] Adicionar botão "Confirmar e Liquidar Período" ✅
+- [x] Adicionar 4ª aba "Histórico" no Master Sheet ✅
+- [x] Implementar prevenção de duplicação ✅
+- [x] Adicionar RLS policies ✅
+- [x] Criar snapshot completo em JSON ✅
+- [x] Adicionar coluna `payment_release_rule` ✅
+- [x] Criar seletor de regra de pagamento no perfil ✅
+- [ ] Implementar filtro de status COMPLETED ⏳
+- [ ] Implementar cálculo proporcional baseado em parcelas ⏳
+- [ ] Adicionar visualização de progresso de pagamento ⏳
+
+**Entregável:** Sistema de histórico permanente de liquidações com opção de repasse proporcional
+
+**Próximos Passos:**
+1. Corrigir query do `ProfessionalClosingPanel` (usar `doctor_id` ao invés de `professional_id`)
+2. Adicionar filtro `.eq('status', 'COMPLETED')` na query
+3. Implementar cálculo proporcional quando regra = `PROPORTIONAL_TO_PAYMENT`
+4. Adicionar cards de "A Receber" e "Progresso de Pagamento"
+5. Adicionar colunas na tabela para mostrar progresso
+
+---
+
+### 5.2. 💰 Cálculo Automático de Comissões
+**Prioridade:** 🔴 ALTA  
+**Esforço:** 1 semana  
+**Responsável:** _____
+
+**Tarefas:**
+- [ ] Criar trigger `calculate_commission()`
+- [ ] Criar função de cálculo de comissão
+- [ ] Criar dashboard de comissões para profissionais
+- [ ] Criar relatório mensal de comissões
+- [ ] Criar UI de pagamento de comissões
+- [ ] Testar cálculo com diferentes cenários
+- [ ] Documentar regras de comissionamento
 **Prioridade:** 🔴 ALTA  
 **Esforço:** 3 semanas  
 **Responsável:** _____
@@ -545,5 +587,5 @@
 
 ---
 
-**Última Revisão:** 21/12/2024  
-**Próxima Revisão:** 28/12/2024
+**Última Revisão:** 24/12/2024  
+**Próxima Revisão:** 31/12/2024

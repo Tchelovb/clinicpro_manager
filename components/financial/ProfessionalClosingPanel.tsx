@@ -3,7 +3,7 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import {
     Calendar, User, DollarSign, TrendingDown, Wallet, PiggyBank,
-    Download, CheckCircle, FileText, AlertTriangle, Calculator, Loader2
+    Download, CheckCircle, FileText, AlertTriangle, Calculator, Loader2, Clock
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -16,6 +16,7 @@ interface TreatmentItem {
     patient_id: string;
     patient_name: string;
     procedure_id?: string;
+    budgets?: any;
 }
 
 interface FeeConfig {
@@ -32,6 +33,12 @@ interface CalculatedItem extends TreatmentItem {
     professionalFee: number;
     clinicProfit: number;
     feeType: 'FIXED' | 'PERCENTAGE';
+    // New fields for Proportional Payment
+    baseFee: number;
+    paymentProgress: number; // 0 to 1
+    futureReceivable: number;
+    totalPaid: number;
+    totalDue: number;
 }
 
 interface ClinicConfig {
@@ -70,7 +77,8 @@ export const ProfessionalClosingPanel: React.FC<ProfessionalClosingPanelProps> =
         totalGross: treatments.reduce((sum, t) => sum + t.total_value, 0),
         totalDeductions: treatments.reduce((sum, t) => sum + t.totalDeductions, 0),
         totalNetPayable: treatments.reduce((sum, t) => sum + t.professionalFee, 0),
-        totalClinicProfit: treatments.reduce((sum, t) => sum + t.clinicProfit, 0)
+        totalClinicProfit: treatments.reduce((sum, t) => sum + t.clinicProfit, 0),
+        totalFutureReceivable: treatments.reduce((sum, t) => sum + (t.futureReceivable || 0), 0)
     };
 
     // Load professionals on mount (skip if autoFilter is true)
@@ -92,7 +100,14 @@ export const ProfessionalClosingPanel: React.FC<ProfessionalClosingPanelProps> =
         try {
             const { data, error } = await supabase
                 .from('users')
-                .select('id, name, professional_id')
+                .select(`
+                    id, 
+                    name, 
+                    professional_id,
+                    professionals (
+                        payment_release_rule
+                    )
+                `)
                 .eq('clinic_id', profile.clinic_id)
                 .eq('role', 'PROFESSIONAL')
                 .eq('is_active', true)
@@ -136,6 +151,10 @@ export const ProfessionalClosingPanel: React.FC<ProfessionalClosingPanelProps> =
 
         setLoading(true);
         try {
+            // Find release rule for selected professional
+            const profData = professionals.find(p => p.id === selectedProfessional);
+            const releaseRule = profData?.professionals?.payment_release_rule || 'FULL_ON_COMPLETION';
+
             // Parse month to get start and end dates
             const [year, month] = selectedMonth.split('-');
             const startDate = `${year}-${month}-01`;
@@ -169,15 +188,38 @@ export const ProfessionalClosingPanel: React.FC<ProfessionalClosingPanelProps> =
                 return;
             }
 
+            // Fetch payments (installments) for relevant budgets
+            const budgetIds = [...new Set(treatmentsData.map(t => t.budget_id).filter(Boolean))];
+
+            let budgetProgressMap: Record<string, number> = {};
+
+            if (budgetIds.length > 0) {
+                const { data: installmentsData } = await supabase
+                    .from('installments')
+                    .select('budget_id, amount, status')
+                    .in('budget_id', budgetIds);
+
+                if (installmentsData) {
+                    // Group by budget and calculate progress
+                    budgetIds.forEach(bid => {
+                        const budgetInstallments = installmentsData.filter(i => i.budget_id === bid);
+                        const totalDue = budgetInstallments.reduce((sum, i) => sum + Number(i.amount), 0);
+                        const totalPaid = budgetInstallments
+                            .filter(i => i.status === 'PAID' || i.status === 'COMPLETED')
+                            .reduce((sum, i) => sum + Number(i.amount), 0);
+
+                        budgetProgressMap[bid] = totalDue > 0 ? (totalPaid / totalDue) : 0;
+                    });
+                }
+            }
+
             // For each treatment, fetch fee configuration and calculate
             const calculatedTreatments: CalculatedItem[] = [];
 
             for (const treatment of treatmentsData) {
                 // Get procedure_id from budget_items if available
-                let procedureId = null;
-                if (treatment.budgets?.procedure_id) {
-                    procedureId = treatment.budgets.procedure_id;
-                }
+                const budget = (Array.isArray(treatment.budgets) ? treatment.budgets[0] : treatment.budgets) as any;
+                const procedureId = budget?.procedure_id || null;
 
                 // Fetch fee configuration
                 let feeConfig: FeeConfig = { fee_type: 'PERCENTAGE', fee_value: 30 }; // Default
@@ -186,9 +228,9 @@ export const ProfessionalClosingPanel: React.FC<ProfessionalClosingPanelProps> =
                     const { data: feeData } = await supabase
                         .from('professional_procedure_fees')
                         .select('fee_type, fee_value')
-                        .eq('professional_id', selectedProfessional)
+                        .eq('professional_id', profData?.professional_id) // Use professional_id not user_id
                         .eq('procedure_id', procedureId)
-                        .single();
+                        .maybeSingle(); // Use maybeSingle to avoid errors
 
                     if (feeData) {
                         feeConfig = feeData as FeeConfig;
@@ -216,13 +258,32 @@ export const ProfessionalClosingPanel: React.FC<ProfessionalClosingPanelProps> =
                 const totalDeductions = taxes + cardFees + labCost;
                 const netBase = salePrice - totalDeductions;
 
-                // Calculate professional fee based on type
-                let professionalFee = 0;
+                // Calculate BASE Base Fee (100%)
+                let baseFee = 0;
                 if (feeConfig.fee_type === 'FIXED') {
-                    professionalFee = feeConfig.fee_value;
+                    baseFee = feeConfig.fee_value;
                 } else {
                     // PERCENTAGE
-                    professionalFee = netBase * (feeConfig.fee_value / 100);
+                    baseFee = netBase * (feeConfig.fee_value / 100);
+                }
+
+                // Determine Payment Progress
+                let paymentProgress = 1; // Default to 100%
+                if (treatment.budget_id && budgetProgressMap[treatment.budget_id] !== undefined) {
+                    paymentProgress = budgetProgressMap[treatment.budget_id];
+                }
+
+                // Determine Actual Payable Fee based on Rule
+                let professionalFee = 0;
+                let futureReceivable = 0;
+
+                if (releaseRule === 'PROPORTIONAL_TO_PAYMENT') {
+                    professionalFee = baseFee * paymentProgress;
+                    futureReceivable = baseFee - professionalFee;
+                } else {
+                    // FULL_ON_COMPLETION
+                    professionalFee = baseFee;
+                    futureReceivable = 0; // Risk is on clinic
                 }
 
                 // Calculate clinic profit
@@ -238,7 +299,12 @@ export const ProfessionalClosingPanel: React.FC<ProfessionalClosingPanelProps> =
                     netBase,
                     professionalFee,
                     clinicProfit,
-                    feeType: feeConfig.fee_type
+                    feeType: feeConfig.fee_type,
+                    baseFee,
+                    paymentProgress,
+                    futureReceivable,
+                    totalPaid: 0, // Placeholder, specific installment matching is complex
+                    totalDue: 0   // Placeholder
                 });
             }
 
@@ -318,10 +384,22 @@ export const ProfessionalClosingPanel: React.FC<ProfessionalClosingPanelProps> =
             {!embedded && (
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
-                            <Calculator className="text-blue-600" size={32} />
-                            Fechamento Profissional
-                        </h1>
+                        <div className="flex items-center gap-4">
+                            <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+                                <Calculator className="text-blue-600" size={32} />
+                                Fechamento Profissional
+                            </h1>
+                            {selectedProfessional && (
+                                <span className={`px-3 py-1 rounded-full text-xs font-bold border ${(professionals.find(p => p.id === selectedProfessional)?.professionals as any)?.payment_release_rule === 'PROPORTIONAL_TO_PAYMENT'
+                                    ? 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700'
+                                    : 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700'
+                                    }`}>
+                                    {(professionals.find(p => p.id === selectedProfessional)?.professionals as any)?.payment_release_rule === 'PROPORTIONAL_TO_PAYMENT'
+                                        ? 'Regra: Proporcional'
+                                        : 'Regra: Execução'}
+                                </span>
+                            )}
+                        </div>
                         <p className="text-gray-600 dark:text-gray-400 mt-1">
                             Cálculo de repasses e comissões mensais
                         </p>
@@ -396,7 +474,7 @@ export const ProfessionalClosingPanel: React.FC<ProfessionalClosingPanelProps> =
 
             {/* Summary Cards */}
             {treatments.length > 0 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                     {/* Total Gross */}
                     <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border border-blue-200 dark:border-blue-700 rounded-xl p-6 shadow-sm">
                         <div className="flex items-center justify-between mb-2">
@@ -436,6 +514,20 @@ export const ProfessionalClosingPanel: React.FC<ProfessionalClosingPanelProps> =
                         </p>
                         <p className="text-xs text-green-600/70 dark:text-green-400/70 mt-1">
                             A Pagar ao Profissional
+                        </p>
+                    </div>
+
+                    {/* Future Receivable (Proportional Hold) */}
+                    <div className="bg-gradient-to-br from-yellow-50 to-amber-100 dark:from-yellow-900/20 dark:to-amber-800/20 border border-yellow-200 dark:border-yellow-700 rounded-xl p-6 shadow-sm">
+                        <div className="flex items-center justify-between mb-2">
+                            <Clock className="text-amber-600 dark:text-amber-400" size={24} />
+                            <span className="text-xs font-semibold text-amber-600 dark:text-amber-400 uppercase">A Receber</span>
+                        </div>
+                        <p className="text-3xl font-black text-amber-700 dark:text-amber-300">
+                            {formatCurrency(summary.totalFutureReceivable)}
+                        </p>
+                        <p className="text-xs text-amber-600/70 dark:text-amber-400/70 mt-1">
+                            Retido por Regra Proporcional
                         </p>
                     </div>
 
@@ -510,7 +602,9 @@ export const ProfessionalClosingPanel: React.FC<ProfessionalClosingPanelProps> =
                                     <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Deduções</th>
                                     <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Base Líquida</th>
                                     <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase">Tipo</th>
+                                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase">Progresso</th>
                                     <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Repasse</th>
+                                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Futuro</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -542,8 +636,21 @@ export const ProfessionalClosingPanel: React.FC<ProfessionalClosingPanelProps> =
                                                 {treatment.feeType === 'FIXED' ? 'R$' : '%'}
                                             </span>
                                         </td>
+                                        <td className="px-4 py-3 text-center">
+                                            <span className={`inline-block px-2 py-1 rounded-full text-xs font-bold ${treatment.paymentProgress >= 1
+                                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                                                : treatment.paymentProgress > 0
+                                                    ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300'
+                                                    : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+                                                }`}>
+                                                {Math.round(treatment.paymentProgress * 100)}%
+                                            </span>
+                                        </td>
                                         <td className="px-4 py-3 text-sm text-right font-bold text-green-600 dark:text-green-400">
                                             {formatCurrency(treatment.professionalFee)}
+                                        </td>
+                                        <td className="px-4 py-3 text-sm text-right font-medium text-amber-600 dark:text-amber-400">
+                                            {formatCurrency(treatment.futureReceivable)}
                                         </td>
                                     </tr>
                                 ))}
@@ -563,8 +670,18 @@ export const ProfessionalClosingPanel: React.FC<ProfessionalClosingPanelProps> =
                                         {formatCurrency(summary.totalGross - summary.totalDeductions)}
                                     </td>
                                     <td className="px-4 py-4"></td>
+                                    <td className="px-4 py-4 text-center text-sm text-gray-500">
+                                        {/* Average Progress */}
+                                        {summary.totalFutureReceivable + summary.totalNetPayable > 0
+                                            ? Math.round((summary.totalNetPayable / (summary.totalNetPayable + summary.totalFutureReceivable)) * 100) + '%'
+                                            : '-'
+                                        }
+                                    </td>
                                     <td className="px-4 py-4 text-sm text-right text-green-700 dark:text-green-300">
                                         {formatCurrency(summary.totalNetPayable)}
+                                    </td>
+                                    <td className="px-4 py-4 text-sm text-right text-amber-700 dark:text-amber-300">
+                                        {formatCurrency(summary.totalFutureReceivable)}
                                     </td>
                                 </tr>
                             </tfoot>

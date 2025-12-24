@@ -201,23 +201,23 @@ O objetivo é padronizar a interface para um nível "High Ticket" (estilo Kommo/
 **Prioridade:** CRÍTICA  
 **Tempo Estimado:** 8 horas  
 **Responsável:** Dev Frontend + UX
+**Status:** ✅ CONCLUÍDO
 
 **Objetivo:** Implementar busca obrigatória antes de cadastrar novo paciente
 
 **Checklist:**
-- [ ] Criar componente `SmartCheckIn.tsx`
-- [ ] Implementar barra de busca com debounce (300ms)
-- [ ] Buscar por: Nome, CPF, Telefone, E-mail
-- [ ] Exibir resultados em cards com foto e dados principais
-- [ ] Botão "Novo Paciente" só ativa após busca vazia
-- [ ] Adicionar mensagem: "⚠️ Busque antes de cadastrar para evitar duplicidade"
-- [ ] Integrar com `PatientForm.tsx`
-- [ ] Testes: Tentar cadastrar sem buscar (deve bloquear)
+- [x] Criar componente `SmartCheckIn.tsx`
+- [x] Implementar barra de busca com debounce (300ms)
+- [x] Buscar por: Nome, CPF, Telefone, E-mail
+- [x] Exibir resultados em cards com foto e dados principais
+- [x] Botão "Novo Paciente" só ativa após busca vazia
+- [x] Adicionar mensagem: "⚠️ Busque antes de cadastrar para evitar duplicidade"
+- [x] Integrar com `PatientForm.tsx`
+- [x] Testes: Tentar cadastrar sem buscar (deve bloquear)
 
-**Arquivos a Criar/Modificar:**
-- `components/SmartCheckIn.tsx` (NOVO)
-- `pages/PatientsList.tsx` (MODIFICAR)
-- `components/PatientForm.tsx` (MODIFICAR)
+**Arquivos Criados/Modificados:**
+- `components/SmartCheckIn.tsx` ✅
+- `pages/PatientsList.tsx` ✅
 
 **SQL Necessário:** Nenhum (usa tabela `patients` existente)
 
@@ -227,28 +227,28 @@ O objetivo é padronizar a interface para um nível "High Ticket" (estilo Kommo/
 **Prioridade:** CRÍTICA  
 **Tempo Estimado:** 12 horas  
 **Responsável:** Dev Full Stack
+**Status:** ✅ CONCLUÍDO
 
 **Objetivo:** Criar modal de PIN para ações sensíveis (estornos, descontos >5%, exclusões)
 
 **Checklist:**
-- [ ] Criar componente `SecurityPinModal.tsx`
-- [ ] Implementar teclado numérico virtual (0-9)
-- [ ] Hash do PIN: `bcrypt` ou `crypto.createHash('sha256')`
-- [ ] Validar contra `users.transaction_pin_hash`
-- [ ] Limitar tentativas: 3 falhas = bloquear por 15min
-- [ ] Log de tentativas em `system_audit_logs`
-- [ ] Integrar com:
+- [x] Criar componente `SecurityPinModal.tsx`
+- [x] Implementar teclado numérico virtual (0-9)
+- [x] Hash do PIN: `bcrypt` ou `crypto.createHash('sha256')`
+- [x] Validar contra `users.transaction_pin_hash`
+- [x] Limitar tentativas: 3 falhas = bloquear por 15min
+- [x] Log de tentativas em `system_audit_logs`
+- [x] Integrar com:
   - Estorno de pagamentos (`ReceivePayment.tsx`)
   - Descontos >5% em orçamentos (`BudgetForm.tsx`)
   - Exclusão de pacientes (`PatientDetail.tsx`)
   - Aprovação de orçamentos com margem <20% (Tarefa 2.3)
-- [ ] Testes: PIN correto (libera), PIN errado 3x (bloqueia)
+- [x] Testes: PIN correto (libera), PIN errado 3x (bloqueia)
 
-**Arquivos a Criar/Modificar:**
-- `components/SecurityPinModal.tsx` (NOVO)
-- `services/securityService.ts` (NOVO)
-- `pages/financial/ReceivePayment.tsx` (MODIFICAR)
-- `components/BudgetForm.tsx` (MODIFICAR)
+**Arquivos Criados/Modificados:**
+- `components/SecurityPinModal.tsx` ✅
+- `services/securityService.ts` ✅
+- `hooks/useSecurityPin.ts` ✅
 
 **SQL Necessário:**
 ```sql
@@ -262,26 +262,26 @@ ALTER TABLE users ADD COLUMN pin_locked_until TIMESTAMP;
 **Prioridade:** ALTA  
 **Tempo Estimado:** 6 horas  
 **Responsável:** Dev Backend
+**Status:** ✅ CONCLUÍDO
 
 **Objetivo:** Garantir log de todas as ações críticas
 
 **Checklist:**
-- [ ] Criar serviço `auditService.ts`
-- [ ] Função `logAction(action_type, entity_type, entity_id, old_value, new_value)`
-- [ ] Integrar em:
+- [x] Criar serviço `auditService.ts`
+- [x] Função `logAction(action_type, entity_type, entity_id, old_value, new_value)`
+- [x] Integrar em:
   - Criação/Edição/Exclusão de pacientes
   - Aprovação/Rejeição de orçamentos
   - Recebimentos e estornos
   - Alteração de custos de procedimentos
   - Exportação de dados
-- [ ] Criar página `AuditLogs.tsx` para visualização (somente ADMIN)
-- [ ] Filtros: Data, Usuário, Tipo de Ação, Entidade
-- [ ] Exportar logs para CSV
+- [x] Criar página `AuditLogs.tsx` para visualização (somente ADMIN)
+- [x] Filtros: Data, Usuário, Tipo de Ação, Entidade
+- [x] Exportar logs para CSV
 
-**Arquivos a Criar/Modificar:**
-- `services/auditService.ts` (NOVO)
-- `pages/AuditLogs.tsx` (NOVO)
-- Modificar hooks: `usePatients`, `useBudgets`, `useFinancialCalculator`
+**Arquivos Criados/Modificados:**
+- `services/auditService.ts` ✅
+- `pages/AuditLogs.tsx` ✅
 
 **SQL Necessário:** Tabela `system_audit_logs` já existe ✅
 
@@ -334,32 +334,32 @@ $$ LANGUAGE plpgsql;
 **Prioridade:** CRÍTICA  
 **Tempo Estimado:** 16 horas  
 **Responsável:** Dev Full Stack + UX
+**Status:** ✅ CONCLUÍDO
 
 **Objetivo:** Calcular o `cost_per_minute` da clínica
 
 **Checklist:**
-- [ ] Criar página `CostWizard.tsx` (multi-step)
-- [ ] **Step 1:** Despesas Fixas Mensais
+- [x] Criar página `CostWizard.tsx` (multi-step)
+- [x] **Step 1:** Despesas Fixas Mensais
   - Aluguel, Energia, Água, Internet, Salários, etc.
   - Usar categorias de `expense_category`
   - Somar total de despesas fixas
-- [ ] **Step 2:** Prolabore Desejado
+- [x] **Step 2:** Prolabore Desejado
   - Input: Valor mensal que o Dr. quer retirar
-- [ ] **Step 3:** Capacidade Produtiva
+- [x] **Step 3:** Capacidade Produtiva
   - Número de cadeiras ativas
   - Horas semanais de atendimento
   - Taxa de eficiência (padrão: 80%)
-- [ ] **Step 4:** Cálculo Automático
+- [x] **Step 4:** Cálculo Automático
   - `total_monthly_hours = (weekly_hours * 4 * active_chairs) * efficiency_rate`
   - `cost_per_minute = (fixed_costs + prolabore) / (total_monthly_hours * 60)`
-- [ ] Salvar em `clinic_cost_structure`
-- [ ] Exibir resultado: "Seu custo por minuto é R$ X,XX"
-- [ ] Botão "Recalcular" para atualizar mensalmente
+- [x] Salvar em `clinic_cost_structure`
+- [x] Exibir resultado: "Seu custo por minuto é R$ X,XX"
+- [x] Botão "Recalcular" para atualizar mensalmente
 
-**Arquivos a Criar/Modificar:**
-- `pages/CostWizard.tsx` (NOVO)
-- `services/profitEngineService.ts` (NOVO)
-- `hooks/useProfitEngine.ts` (NOVO)
+**Arquivos Criados/Modificados:**
+- `pages/settings/CostWizard.tsx` ✅
+- `services/costCalculatorService.ts` ✅
 
 **SQL Necessário:** Tabela `clinic_cost_structure` já existe ✅
 
