@@ -16,6 +16,9 @@ interface FinancialRules {
     max_discount_without_approval: number;
     require_manager_password_for_discount: boolean;
     discount_approval_message: string;
+
+    // Margem de Lucro Alvo
+    target_profit_margin: number;
 }
 
 interface PaymentFee {
@@ -32,7 +35,7 @@ interface SettingItem {
     active: boolean;
 }
 
-type TabType = 'debtor' | 'discount' | 'fees' | 'expense_categories' | 'revenue_categories' | 'payment_methods';
+type TabType = 'debtor' | 'discount' | 'margin' | 'fees' | 'expense_categories' | 'revenue_categories' | 'payment_methods';
 
 const FinancialRulesSettings: React.FC = () => {
     const { profile } = useAuth();
@@ -47,7 +50,8 @@ const FinancialRulesSettings: React.FC = () => {
         debtor_warning_message: 'Paciente possui débitos em atraso. Regularize os pagamentos antes de agendar.',
         max_discount_without_approval: 5.00,
         require_manager_password_for_discount: true,
-        discount_approval_message: 'Desconto acima do limite permitido. Solicite aprovação do gestor.'
+        discount_approval_message: 'Desconto acima do limite permitido. Solicite aprovação do gestor.',
+        target_profit_margin: 30
     });
 
     const [paymentFees, setPaymentFees] = useState<PaymentFee[]>([]);
@@ -80,7 +84,8 @@ const FinancialRulesSettings: React.FC = () => {
           debtor_warning_message,
           max_discount_without_approval,
           require_manager_password_for_discount,
-          discount_approval_message
+          discount_approval_message,
+          target_profit_margin
         `)
                 .eq('id', profile.clinic_id)
                 .single();
@@ -94,7 +99,8 @@ const FinancialRulesSettings: React.FC = () => {
                     debtor_warning_message: data.debtor_warning_message || rules.debtor_warning_message,
                     max_discount_without_approval: data.max_discount_without_approval || 5.00,
                     require_manager_password_for_discount: data.require_manager_password_for_discount ?? true,
-                    discount_approval_message: data.discount_approval_message || rules.discount_approval_message
+                    discount_approval_message: data.discount_approval_message || rules.discount_approval_message,
+                    target_profit_margin: data.target_profit_margin || 30
                 });
             }
         } catch (error) {
@@ -164,7 +170,8 @@ const FinancialRulesSettings: React.FC = () => {
                     debtor_warning_message: rules.debtor_warning_message,
                     max_discount_without_approval: rules.max_discount_without_approval,
                     require_manager_password_for_discount: rules.require_manager_password_for_discount,
-                    discount_approval_message: rules.discount_approval_message
+                    discount_approval_message: rules.discount_approval_message,
+                    target_profit_margin: rules.target_profit_margin
                 })
                 .eq('id', profile.clinic_id);
 
@@ -303,10 +310,11 @@ const FinancialRulesSettings: React.FC = () => {
     const tabs = [
         { key: 'debtor' as TabType, label: 'Bloqueio de Inadimplentes', icon: AlertTriangle },
         { key: 'discount' as TabType, label: 'Limite de Desconto', icon: Percent },
+        { key: 'margin' as TabType, label: 'Margem de Lucro Alvo', icon: DollarSign },
         { key: 'fees' as TabType, label: 'Taxas de Maquininhas', icon: CreditCard },
         { key: 'expense_categories' as TabType, label: 'Categorias de Despesa', icon: TrendingDown },
         { key: 'revenue_categories' as TabType, label: 'Categorias de Receita', icon: TrendingUp },
-        { key: 'payment_methods' as TabType, label: 'Formas de Pagamento', icon: DollarSign },
+        { key: 'payment_methods' as TabType, label: 'Formas de Pagamento', icon: Users },
     ];
 
     return (
@@ -514,6 +522,62 @@ const FinancialRulesSettings: React.FC = () => {
                     </div>
                 )}
 
+                {/* Margin Tab */}
+                {activeTab === 'margin' && (
+                    <div className="space-y-6">
+                        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 space-y-6">
+                            <div className="flex items-center gap-3">
+                                <DollarSign className="text-blue-600" size={24} />
+                                <div>
+                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                                        Margem de Lucro Alvo
+                                    </h3>
+                                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                                        Define a margem mínima que a clínica deve manter em cada procedimento
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        Margem de Lucro Alvo (%)
+                                    </label>
+                                    <div className="flex items-center gap-4">
+                                        <input
+                                            type="range"
+                                            min="10"
+                                            max="60"
+                                            step="1"
+                                            value={rules.target_profit_margin}
+                                            onChange={(e) => setRules({ ...rules, target_profit_margin: Number(e.target.value) })}
+                                            className="flex-1"
+                                        />
+                                        <div className="w-32 text-center">
+                                            <span className="text-3xl font-bold text-blue-600">{rules.target_profit_margin}%</span>
+                                        </div>
+                                    </div>
+                                    <p className="text-xs text-gray-500 mt-2">
+                                        O sistema sugerirá valores de honorários que garantam pelo menos {rules.target_profit_margin}% de margem líquida
+                                    </p>
+                                </div>
+
+                                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                                    <p className="text-sm text-blue-800 dark:text-blue-300">
+                                        <strong>💡 Como funciona:</strong> Ao configurar honorários dos profissionais, o sistema calculará automaticamente o valor ideal de repasse considerando impostos, taxas de cartão, custos operacionais e esta margem de lucro alvo.
+                                    </p>
+                                </div>
+
+                                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+                                    <p className="text-sm text-yellow-800 dark:text-yellow-300">
+                                        <strong>⚠️ Atenção:</strong> Se um honorário configurado deixar a margem abaixo deste valor, o sistema exibirá um alerta visual.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* Payment Fees Tab */}
                 {activeTab === 'fees' && (
                     <div className="space-y-6">
@@ -663,7 +727,7 @@ const FinancialRulesSettings: React.FC = () => {
             </div>
 
             {/* Save Button */}
-            {(activeTab === 'debtor' || activeTab === 'discount') && (
+            {(activeTab === 'debtor' || activeTab === 'discount' || activeTab === 'margin') && (
                 <div className="flex justify-end">
                     <button
                         onClick={handleSave}

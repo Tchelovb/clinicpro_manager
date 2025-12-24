@@ -84,6 +84,34 @@ CREATE TABLE public.appointments (
   CONSTRAINT appointments_patient_id_fkey FOREIGN KEY (patient_id) REFERENCES public.patients(id),
   CONSTRAINT appointments_doctor_id_fkey FOREIGN KEY (doctor_id) REFERENCES public.users(id)
 );
+CREATE TABLE public.bank_accounts (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  clinic_id uuid,
+  bank_name text NOT NULL,
+  account_number text,
+  agency text,
+  name text NOT NULL,
+  initial_balance numeric DEFAULT 0,
+  current_balance numeric DEFAULT 0,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT bank_accounts_pkey PRIMARY KEY (id),
+  CONSTRAINT bank_accounts_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id)
+);
+CREATE TABLE public.bank_transactions (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  bank_account_id uuid,
+  date date NOT NULL,
+  amount numeric NOT NULL,
+  description text,
+  doc_number text,
+  is_reconciled boolean DEFAULT false,
+  matched_transaction_id uuid,
+  import_batch_id text,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT bank_transactions_pkey PRIMARY KEY (id),
+  CONSTRAINT bank_transactions_bank_account_id_fkey FOREIGN KEY (bank_account_id) REFERENCES public.bank_accounts(id),
+  CONSTRAINT bank_transactions_matched_transaction_id_fkey FOREIGN KEY (matched_transaction_id) REFERENCES public.transactions(id)
+);
 CREATE TABLE public.budget_items (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
   budget_id uuid NOT NULL,
@@ -154,11 +182,13 @@ CREATE TABLE public.budgets (
   down_payment_value numeric DEFAULT 0,
   installments_count integer DEFAULT 1,
   payment_method_id uuid,
+  sales_rep_id uuid,
   CONSTRAINT budgets_pkey PRIMARY KEY (id),
   CONSTRAINT budgets_patient_id_fkey FOREIGN KEY (patient_id) REFERENCES public.patients(id),
   CONSTRAINT budgets_doctor_id_fkey FOREIGN KEY (doctor_id) REFERENCES public.users(id),
   CONSTRAINT budgets_price_table_id_fkey FOREIGN KEY (price_table_id) REFERENCES public.price_tables(id),
-  CONSTRAINT budgets_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id)
+  CONSTRAINT budgets_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id),
+  CONSTRAINT budgets_sales_rep_id_fkey FOREIGN KEY (sales_rep_id) REFERENCES public.users(id)
 );
 CREATE TABLE public.business_goals (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -191,6 +221,46 @@ CREATE TABLE public.cash_registers (
   CONSTRAINT cash_registers_pkey PRIMARY KEY (id),
   CONSTRAINT cash_registers_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id),
   CONSTRAINT cash_registers_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.chart_of_accounts (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  clinic_id uuid,
+  code text NOT NULL,
+  name text NOT NULL,
+  type text CHECK (type = ANY (ARRAY['ASSET'::text, 'LIABILITY'::text, 'EQUITY'::text, 'REVENUE'::text, 'EXPENSE'::text])),
+  parent_id uuid,
+  is_active boolean DEFAULT true,
+  CONSTRAINT chart_of_accounts_pkey PRIMARY KEY (id),
+  CONSTRAINT chart_of_accounts_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id),
+  CONSTRAINT chart_of_accounts_parent_id_fkey FOREIGN KEY (parent_id) REFERENCES public.chart_of_accounts(id)
+);
+CREATE TABLE public.clinic_capacity_config (
+  clinic_id uuid NOT NULL,
+  active_chairs integer DEFAULT 1,
+  weekly_hours integer DEFAULT 40,
+  efficiency_rate numeric DEFAULT 0.80,
+  total_monthly_hours numeric DEFAULT ((((weekly_hours * 4) * active_chairs))::numeric * efficiency_rate),
+  last_updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT clinic_capacity_config_pkey PRIMARY KEY (clinic_id),
+  CONSTRAINT clinic_capacity_config_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id)
+);
+CREATE TABLE public.clinic_cost_structure (
+  clinic_id uuid NOT NULL,
+  fixed_costs_monthly numeric NOT NULL DEFAULT 0,
+  desired_prolabore numeric NOT NULL DEFAULT 0,
+  productive_chairs integer DEFAULT 1,
+  weekly_hours integer DEFAULT 40,
+  cost_per_minute numeric DEFAULT 
+CASE
+    WHEN ((((productive_chairs * weekly_hours) * 4) * 60) > 0) THEN ((fixed_costs_monthly + desired_prolabore) / ((((productive_chairs * weekly_hours) * 4) * 60))::numeric)
+    ELSE (0)::numeric
+END,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  efficiency_rate numeric DEFAULT 0.80,
+  available_minutes_month integer DEFAULT 0,
+  CONSTRAINT clinic_cost_structure_pkey PRIMARY KEY (clinic_id),
+  CONSTRAINT clinic_cost_structure_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id)
 );
 CREATE TABLE public.clinic_financial_settings (
   clinic_id uuid NOT NULL,
@@ -228,7 +298,25 @@ CREATE TABLE public.clinic_kpis (
   CONSTRAINT clinic_kpis_pkey PRIMARY KEY (id),
   CONSTRAINT clinic_kpis_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id)
 );
-
+CREATE TABLE public.clinic_landing_pages (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  clinic_id uuid,
+  slug text UNIQUE,
+  page_title text,
+  bio_text text,
+  primary_color text,
+  profile_photo_url text,
+  cover_photo_url text,
+  show_reviews boolean DEFAULT true,
+  show_map boolean DEFAULT true,
+  allow_online_scheduling boolean DEFAULT true,
+  whatsapp_link text,
+  instagram_link text,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT clinic_landing_pages_pkey PRIMARY KEY (id),
+  CONSTRAINT clinic_landing_pages_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id)
+);
 CREATE TABLE public.clinical_form_responses (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   clinic_id uuid,
@@ -341,6 +429,8 @@ Responsável Técnico: {{RT_NAME}} - {{CRO}}'::text,
   last_backup_at timestamp with time zone,
   goals jsonb DEFAULT '{"new_patients": 20, "no_show_rate": 5, "average_ticket": 2000, "occupancy_rate": 80, "conversion_rate": 30, "monthly_revenue": 50000, "monthly_net_result": 25000}'::jsonb,
   type USER-DEFINED DEFAULT 'PRODUCTION'::clinic_type,
+  tax_rate_percent numeric DEFAULT 0,
+  commission_calculation_base text DEFAULT 'NET_RECEIPT'::text CHECK (commission_calculation_base = ANY (ARRAY['GROSS_SALE'::text, 'NET_RECEIPT'::text])),
   CONSTRAINT clinics_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.commission_payments (
@@ -360,6 +450,7 @@ CREATE TABLE public.commission_payments (
   notes text,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
+  user_type text DEFAULT 'PROFESSIONAL'::text CHECK (user_type = ANY (ARRAY['PROFESSIONAL'::text, 'SALES_REP'::text])),
   CONSTRAINT commission_payments_pkey PRIMARY KEY (id),
   CONSTRAINT commission_payments_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id),
   CONSTRAINT commission_payments_professional_id_fkey FOREIGN KEY (professional_id) REFERENCES public.professionals(id),
@@ -378,7 +469,15 @@ CREATE TABLE public.conventions (
   CONSTRAINT conventions_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id),
   CONSTRAINT conventions_price_table_id_fkey FOREIGN KEY (price_table_id) REFERENCES public.price_tables(id)
 );
-
+CREATE TABLE public.cost_centers (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  clinic_id uuid,
+  name text NOT NULL,
+  code text,
+  is_active boolean DEFAULT true,
+  CONSTRAINT cost_centers_pkey PRIMARY KEY (id),
+  CONSTRAINT cost_centers_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id)
+);
 CREATE TABLE public.custom_lead_status (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   clinic_id uuid NOT NULL,
@@ -444,8 +543,10 @@ CREATE TABLE public.expenses (
   payment_date date,
   payment_method text,
   payment_notes text,
+  supplier_id uuid,
   CONSTRAINT expenses_pkey PRIMARY KEY (id),
-  CONSTRAINT expenses_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id)
+  CONSTRAINT expenses_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id),
+  CONSTRAINT expenses_supplier_id_fkey FOREIGN KEY (supplier_id) REFERENCES public.suppliers(id)
 );
 CREATE TABLE public.financial_installments (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
@@ -461,6 +562,39 @@ CREATE TABLE public.financial_installments (
   CONSTRAINT financial_installments_pkey PRIMARY KEY (id),
   CONSTRAINT financial_installments_patient_id_fkey FOREIGN KEY (patient_id) REFERENCES public.patients(id),
   CONSTRAINT financial_installments_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id)
+);
+CREATE TABLE public.fiscal_invoices (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  clinic_id uuid,
+  transaction_id uuid,
+  patient_id uuid,
+  rps_number integer,
+  invoice_number integer,
+  issue_date timestamp with time zone DEFAULT now(),
+  verification_code text,
+  service_code text,
+  value numeric NOT NULL,
+  iss_value numeric DEFAULT 0,
+  xml_url text,
+  pdf_url text,
+  status text DEFAULT 'PENDING'::text CHECK (status = ANY (ARRAY['PENDING'::text, 'ISSUED'::text, 'CANCELLED'::text, 'ERROR'::text])),
+  error_message text,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT fiscal_invoices_pkey PRIMARY KEY (id),
+  CONSTRAINT fiscal_invoices_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id),
+  CONSTRAINT fiscal_invoices_transaction_id_fkey FOREIGN KEY (transaction_id) REFERENCES public.transactions(id),
+  CONSTRAINT fiscal_invoices_patient_id_fkey FOREIGN KEY (patient_id) REFERENCES public.patients(id)
+);
+CREATE TABLE public.fixed_cost_items (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  clinic_id uuid,
+  name text NOT NULL,
+  amount numeric NOT NULL DEFAULT 0,
+  category text CHECK (category = ANY (ARRAY['ADMINISTRATIVE'::text, 'STAFF'::text, 'INFRASTRUCTURE'::text, 'MARKETING'::text, 'PROLABORE'::text, 'OTHER'::text])),
+  is_active boolean DEFAULT true,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT fixed_cost_items_pkey PRIMARY KEY (id),
+  CONSTRAINT fixed_cost_items_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id)
 );
 CREATE TABLE public.gamification_rules (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -584,7 +718,6 @@ CREATE TABLE public.inventory_movements (
   CONSTRAINT inventory_movements_inventory_item_id_fkey FOREIGN KEY (inventory_item_id) REFERENCES public.inventory_items(id),
   CONSTRAINT inventory_movements_performed_by_fkey FOREIGN KEY (performed_by) REFERENCES public.users(id)
 );
-
 CREATE TABLE public.lab_orders (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   clinic_id uuid NOT NULL,
@@ -845,6 +978,8 @@ CREATE TABLE public.ortho_appointments (
   photos_urls ARRAY,
   created_by uuid,
   created_at timestamp with time zone DEFAULT now(),
+  current_aligner_upper integer,
+  current_aligner_lower integer,
   CONSTRAINT ortho_appointments_pkey PRIMARY KEY (id),
   CONSTRAINT ortho_appointments_appointment_id_fkey FOREIGN KEY (appointment_id) REFERENCES public.appointments(id),
   CONSTRAINT ortho_appointments_treatment_plan_id_fkey FOREIGN KEY (treatment_plan_id) REFERENCES public.ortho_treatment_plans(id),
@@ -962,7 +1097,6 @@ CREATE TABLE public.patient_documents (
   CONSTRAINT patient_documents_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id),
   CONSTRAINT patient_documents_generated_from_budget_id_fkey FOREIGN KEY (generated_from_budget_id) REFERENCES public.budgets(id)
 );
-
 CREATE TABLE public.patient_recalls (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   clinic_id uuid NOT NULL,
@@ -1160,6 +1294,10 @@ CREATE TABLE public.procedure (
   recurrence_warning_days integer DEFAULT 20,
   specialty text,
   category text NOT NULL DEFAULT 'CLINICA_GERAL'::text CHECK (category = ANY (ARRAY['CLINICA_GERAL'::text, 'ORTODONTIA'::text, 'HOF'::text])),
+  estimated_time_minutes integer DEFAULT 60,
+  commission_type text DEFAULT 'PERCENTAGE'::text CHECK (commission_type = ANY (ARRAY['PERCENTAGE'::text, 'FIXED_AMOUNT'::text])),
+  commission_base_value numeric DEFAULT 30.00,
+  estimated_lab_cost numeric DEFAULT 0,
   CONSTRAINT procedure_pkey PRIMARY KEY (id),
   CONSTRAINT procedure_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id)
 );
@@ -1200,6 +1338,7 @@ CREATE TABLE public.procedure_recipe_items (
   quantity_needed numeric NOT NULL CHECK (quantity_needed > 0::numeric),
   is_optional boolean DEFAULT false,
   notes text,
+  estimated_unit_cost numeric,
   CONSTRAINT procedure_recipe_items_pkey PRIMARY KEY (id),
   CONSTRAINT procedure_recipe_items_recipe_id_fkey FOREIGN KEY (recipe_id) REFERENCES public.procedure_recipes(id),
   CONSTRAINT procedure_recipe_items_inventory_item_id_fkey FOREIGN KEY (inventory_item_id) REFERENCES public.inventory_items(id)
@@ -1396,6 +1535,21 @@ CREATE TABLE public.reward_redemptions (
   CONSTRAINT reward_redemptions_reward_id_fkey FOREIGN KEY (reward_id) REFERENCES public.reward_catalog(id),
   CONSTRAINT reward_redemptions_approved_by_fkey FOREIGN KEY (approved_by) REFERENCES public.users(id)
 );
+CREATE TABLE public.sales_commission_rules (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  clinic_id uuid NOT NULL,
+  user_id uuid NOT NULL,
+  commission_type text NOT NULL CHECK (commission_type = ANY (ARRAY['PERCENTAGE'::text, 'FIXED'::text])),
+  commission_value numeric NOT NULL CHECK (commission_value >= 0::numeric),
+  applies_to_category text,
+  min_budget_value numeric DEFAULT 0,
+  is_active boolean DEFAULT true,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT sales_commission_rules_pkey PRIMARY KEY (id),
+  CONSTRAINT sales_commission_rules_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id),
+  CONSTRAINT sales_commission_rules_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
 CREATE TABLE public.sales_goals (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   clinic_id uuid,
@@ -1418,6 +1572,21 @@ CREATE TABLE public.sales_scripts (
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT sales_scripts_pkey PRIMARY KEY (id),
   CONSTRAINT sales_scripts_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id)
+);
+CREATE TABLE public.suppliers (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  clinic_id uuid,
+  name text NOT NULL,
+  cnpj_cpf text,
+  contact_name text,
+  phone text,
+  email text,
+  default_expense_category_id uuid,
+  is_active boolean DEFAULT true,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT suppliers_pkey PRIMARY KEY (id),
+  CONSTRAINT suppliers_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id),
+  CONSTRAINT suppliers_default_expense_category_id_fkey FOREIGN KEY (default_expense_category_id) REFERENCES public.expense_category(id)
 );
 CREATE TABLE public.system_audit_logs (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -1590,6 +1759,7 @@ CREATE TABLE public.users (
   updated_at timestamp with time zone DEFAULT now(),
   role USER-DEFINED DEFAULT 'PROFESSIONAL'::role,
   is_active boolean DEFAULT true,
+  transaction_pin_hash text,
   CONSTRAINT users_pkey PRIMARY KEY (id),
   CONSTRAINT users_clinic_id_fkey FOREIGN KEY (clinic_id) REFERENCES public.clinics(id),
   CONSTRAINT users_professional_id_fkey FOREIGN KEY (professional_id) REFERENCES public.professionals(id)

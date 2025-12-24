@@ -2,6 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
+import SmartCheckIn from '../components/SmartCheckIn';
+import { NewPatientSheet } from '../components/patients/NewPatientSheet';
+import { PatientDetailSheet } from '../components/patients/PatientDetailSheet';
+import toast from 'react-hot-toast';
 import {
     Users,
     Search,
@@ -16,8 +20,16 @@ import {
     TrendingUp,
     Filter,
     X,
-    ChevronRight
+    ChevronRight,
+    ShieldCheck
 } from 'lucide-react';
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription
+} from '../components/ui/dialog';
 
 interface Patient {
     id: string;
@@ -48,6 +60,19 @@ const PatientsList: React.FC = () => {
     const [filterStatus, setFilterStatus] = useState<string>('ALL');
     const [showFilters, setShowFilters] = useState(false);
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+
+    const [showNewPatientSheet, setShowNewPatientSheet] = useState(false);
+    const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
+    const [showDetailSheet, setShowDetailSheet] = useState(false);
+
+    const openDetailSheet = (id: string) => {
+        setSelectedPatientId(id);
+        setShowDetailSheet(true);
+    };
+    // Smart Check-in States
+    const [showSmartCheckIn, setShowSmartCheckIn] = useState(false);
+    const [canCreateNewPatient, setCanCreateNewPatient] = useState(false);
+    const [searchHasResults, setSearchHasResults] = useState(false);
 
     useEffect(() => {
         if (profile?.clinic_id) {
@@ -117,6 +142,30 @@ const PatientsList: React.FC = () => {
         setFilteredPatients(filtered);
     };
 
+    // Smart Check-in Callbacks
+    const handleSearchComplete = (hasResults: boolean) => {
+        setSearchHasResults(hasResults);
+        setCanCreateNewPatient(!hasResults);
+    };
+
+    const handleNewPatientClick = () => {
+        if (canCreateNewPatient) {
+            // Busca foi realizada e não encontrou ninguém - pode cadastrar
+            setShowSmartCheckIn(false);
+            setShowNewPatientSheet(true);
+        } else {
+            // Abrir modal de busca obrigatória
+            setShowSmartCheckIn(true);
+        }
+    };
+
+    const handleProceedToNewPatient = () => {
+        setShowSmartCheckIn(false);
+        setCanCreateNewPatient(false);
+        setSearchHasResults(false);
+        setShowNewPatientSheet(true);
+    };
+
     // Score Configuration (High-Ticket Visual Rules)
     const getScoreConfig = (score: string) => {
         switch (score) {
@@ -180,9 +229,22 @@ const PatientsList: React.FC = () => {
 
     return (
         <div className="space-y-6">
-            {/* ============================================ */}
+            {/* New Patient Sheet */}
+            <PatientDetailSheet
+                patientId={selectedPatientId}
+                open={showDetailSheet}
+                onOpenChange={setShowDetailSheet}
+            />
+            <NewPatientSheet
+                open={showNewPatientSheet}
+                onOpenChange={setShowNewPatientSheet}
+                onSuccess={() => {
+                    loadPatients();
+                    toast.success('Paciente cadastrado com sucesso!');
+                }}
+            />
+
             {/* HEADER & ACTIONS */}
-            {/* ============================================ */}
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-3xl font-bold text-slate-800 dark:text-white tracking-tight flex items-center gap-3">
@@ -194,13 +256,111 @@ const PatientsList: React.FC = () => {
                     </p>
                 </div>
                 <button
-                    onClick={() => navigate('/patients/new')}
-                    className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-3 md:px-4 md:py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors font-medium shadow-sm active:scale-[0.98]"
+                    onClick={handleNewPatientClick}
+                    disabled={searchHasResults}
+                    className={`
+                    w-full md:w-auto flex items-center justify-center gap-2 px-6 py-3 md:px-4 md:py-2 
+                    rounded-lg transition-all font-medium shadow-sm active:scale-[0.98]
+                    ${canCreateNewPatient
+                            ? 'bg-green-600 text-white hover:bg-green-700 ring-2 ring-green-500/50'
+                            : searchHasResults
+                                ? 'bg-amber-100 text-amber-700 border-2 border-amber-500 cursor-not-allowed'
+                                : 'bg-violet-600 text-white hover:bg-violet-700'
+                        }
+                `}
+                    title={searchHasResults ? 'Paciente já cadastrado - Selecione acima' : canCreateNewPatient ? 'Busca realizada - Pode cadastrar' : 'Clique para buscar antes de cadastrar'}
                 >
-                    <Plus size={18} />
-                    Novo Paciente
+                    {searchHasResults ? (
+                        <>
+                            <ShieldCheck size={18} />
+                            Paciente Já Existe
+                        </>
+                    ) : canCreateNewPatient ? (
+                        <>
+                            <Plus size={18} />
+                            ✓ Novo Paciente
+                        </>
+                    ) : (
+                        <>
+                            <Plus size={18} />
+                            Novo Paciente
+                        </>
+                    )}
                 </button>
             </div>
+
+            {/* Smart Check-in Modal */}
+            <Dialog open={showSmartCheckIn} onOpenChange={setShowSmartCheckIn}>
+                <DialogContent className="max-w-4xl p-0 overflow-hidden bg-white dark:bg-slate-900 border-none shadow-2xl">
+                    <div className="border-b border-slate-200 dark:border-slate-700 p-6 bg-white dark:bg-slate-900">
+                        <DialogHeader>
+                            <div className="flex items-center gap-3">
+                                <div className="p-3 bg-violet-100 dark:bg-violet-900/40 rounded-xl">
+                                    <ShieldCheck className="text-violet-600 dark:text-violet-400" size={28} />
+                                </div>
+                                <div>
+                                    <DialogTitle className="text-2xl font-bold text-slate-800 dark:text-white">
+                                        🔍 Smart Check-in (Holofote)
+                                    </DialogTitle>
+                                    <DialogDescription className="text-slate-500 dark:text-slate-400 mt-1">
+                                        Busque antes de cadastrar para evitar duplicidade
+                                    </DialogDescription>
+                                </div>
+                            </div>
+                        </DialogHeader>
+                    </div>
+
+                    <div className="p-6 bg-white dark:bg-slate-900">
+                        <SmartCheckIn
+                            onSearchComplete={handleSearchComplete}
+                            onPatientSelect={(id) => {
+                                setShowSmartCheckIn(false);
+                                openDetailSheet(id);
+                            }}
+                        />
+                    </div>
+
+                    <div className="border-t border-slate-200 dark:border-slate-700 p-6 bg-slate-50 dark:bg-slate-800/50">
+                        <div className="flex items-center justify-between gap-4">
+                            <p className="text-sm text-slate-600 dark:text-slate-400">
+                                {canCreateNewPatient ? (
+                                    <span className="flex items-center gap-2 text-green-600 dark:text-green-400 font-medium">
+                                        <ShieldCheck size={16} />
+                                        ✓ Busca realizada. Nenhum paciente encontrado.
+                                    </span>
+                                ) : searchHasResults ? (
+                                    <span className="flex items-center gap-2 text-amber-600 dark:text-amber-400 font-medium">
+                                        <AlertCircle size={16} />
+                                        ⚠️ Paciente já cadastrado. Selecione acima.
+                                    </span>
+                                ) : (
+                                    <span className="flex items-center gap-2">
+                                        <Search size={16} />
+                                        Digite pelo menos 3 caracteres para buscar
+                                    </span>
+                                )}
+                            </p>
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setShowSmartCheckIn(false)}
+                                    className="px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors font-medium"
+                                >
+                                    Cancelar
+                                </button>
+                                {canCreateNewPatient && (
+                                    <button
+                                        onClick={handleProceedToNewPatient}
+                                        className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium shadow-sm flex items-center gap-2"
+                                    >
+                                        <Plus size={18} />
+                                        Prosseguir com Cadastro
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
 
             {/* ============================================ */}
             {/* SEARCH & FILTERS */}
@@ -326,7 +486,7 @@ const PatientsList: React.FC = () => {
                                 return (
                                     <div
                                         key={patient.id}
-                                        onClick={() => navigate(`/patients/${patient.id}`)}
+                                        onClick={() => openDetailSheet(patient.id)}
                                         className={`
                                             bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-lg 
                                             transition-all cursor-pointer group overflow-hidden
@@ -443,7 +603,7 @@ const PatientsList: React.FC = () => {
                                     return (
                                         <div
                                             key={patient.id}
-                                            onClick={() => navigate(`/patients/${patient.id}`)}
+                                            onClick={() => openDetailSheet(patient.id)}
                                             className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm flex items-center gap-4 active:scale-[0.98] transition-all"
                                         >
                                             <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center overflow-hidden flex-shrink-0">
@@ -492,7 +652,7 @@ const PatientsList: React.FC = () => {
                                                     <tr
                                                         key={patient.id}
                                                         className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer"
-                                                        onClick={() => navigate(`/patients/${patient.id}`)}
+                                                        onClick={() => openDetailSheet(patient.id)}
                                                     >
                                                         <td className="px-6 py-4">
                                                             <div className="flex items-center gap-3">

@@ -26,8 +26,17 @@ const ScoreBadge = ({ score }: { score?: string }) => {
   );
 };
 
-const PatientDetail: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+interface PatientDetailProps {
+  patientId?: string;
+  onClose?: () => void;
+  onEdit?: (patient: any) => void;
+  onDelete?: () => void;
+}
+
+export const PatientDetailContent: React.FC<PatientDetailProps> = ({ patientId, onClose, onEdit, onDelete }) => {
+  const { id: paramId } = useParams<{ id: string }>();
+  // Prioritize prop id, then param id
+  const id = patientId || paramId;
   const navigate = useNavigate();
   const { patients } = useData();
 
@@ -157,6 +166,13 @@ const PatientDetail: React.FC = () => {
   }, [id]);
 
   const handleDeletePatient = async () => {
+    // If external handler provided (e.g. from Sheet with PIN), use it
+    if (onDelete) {
+      onDelete();
+      return;
+    }
+
+    // Fallback legacy behavior
     if (!confirm('Tem certeza que deseja excluir este paciente? Esta ação não pode ser desfeita.')) return;
 
     try {
@@ -205,7 +221,7 @@ const PatientDetail: React.FC = () => {
         <div className="max-w-7xl mx-auto px-6 py-6">
           <div className="flex items-center justify-between mb-6">
             <button
-              onClick={() => navigate('/dashboard/patients')}
+              onClick={() => onClose ? onClose() : navigate('/dashboard/patients')}
               className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
             >
               <ArrowLeft size={20} />
@@ -213,7 +229,7 @@ const PatientDetail: React.FC = () => {
             </button>
             <div className="flex gap-2">
               <button
-                onClick={() => navigate(`/dashboard/patients/${id}/edit`)}
+                onClick={() => onEdit ? onEdit(patient) : navigate(`/dashboard/patients/${id}/edit`)}
                 className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors font-medium"
               >
                 <Edit2 size={18} />
@@ -775,4 +791,6 @@ const PatientDetail: React.FC = () => {
   );
 };
 
-export default PatientDetail;
+export default function PatientDetailWrapper() {
+  return <PatientDetailContent />;
+}

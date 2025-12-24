@@ -17,6 +17,10 @@ import {
     Printer, MessageCircle
 } from 'lucide-react';
 import { DocumentGeneratorModal } from './documents/DocumentGeneratorModal';
+import { ProfitBar } from './profit/ProfitBar';
+import { MarginAlert } from './profit/MarginAlert';
+import { BudgetProfitSummary } from './profit/BudgetProfitSummary';
+import profitAnalysisService from '../services/profitAnalysisService';
 
 // Inputs larger on mobile for touch
 const inputClass = "w-full bg-white text-gray-900 border border-gray-200 rounded-lg p-3 md:p-2.5 text-base md:text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all shadow-input h-12 md:h-10";
@@ -73,6 +77,11 @@ const BudgetForm: React.FC = () => {
     const [showMobileMenu, setShowMobileMenu] = useState(false);
     const [showDocModal, setShowDocModal] = useState(false);
 
+    // Profit Analysis State
+    const [costPerMinute, setCostPerMinute] = useState<number>(0);
+    const [budgetMarginAnalysis, setBudgetMarginAnalysis] = useState<any>(null);
+    const [selectedSalesRepId, setSelectedSalesRepId] = useState('');
+
     // Initial Load - Procedure
     useEffect(() => {
         if (procedures.length > 0 && !selectedProcedure) {
@@ -113,6 +122,7 @@ const BudgetForm: React.FC = () => {
             if (existingBudget.price_table_id) setSelectedPriceTableId(existingBudget.price_table_id);
             if (existingBudget.doctor_id) setSelectedProfessionalId(existingBudget.doctor_id);
             if (existingBudget.category_id) setCategoryId(existingBudget.category_id);
+            if (existingBudget.sales_rep_id) setSelectedSalesRepId(existingBudget.sales_rep_id);
         } else if (!loadingBudget) {
             // Defaults for new budget
             if (priceTables.length > 0 && !selectedPriceTableId) {
@@ -155,6 +165,53 @@ const BudgetForm: React.FC = () => {
             setInstallments(1);
         }
     }, [paymentMethod]);
+
+    // Buscar custo por minuto da clínica
+    useEffect(() => {
+        const fetchCostPerMinute = async () => {
+            if (profile?.clinics?.id) {
+                const cost = await profitAnalysisService.getCostPerMinute(profile.clinics.id);
+                setCostPerMinute(cost);
+            }
+        };
+        fetchCostPerMinute();
+    }, [profile]);
+
+    // Calcular margem em tempo real
+    useEffect(() => {
+        const calculateMargin = async () => {
+            if (items.length === 0 || costPerMinute === 0) {
+                setBudgetMarginAnalysis(null);
+                return;
+            }
+
+            // Mapear itens para formato esperado pelo serviço
+            const itemsForAnalysis = items.map(item => {
+                const proc = procedures.find(p => p.name === item.procedure);
+                return {
+                    procedure_id: proc?.id || '',
+                    procedure_name: item.procedure,
+                    unit_price: item.unitValue,
+                    quantity: item.quantity
+                };
+            });
+
+            // Calcular margem do orçamento (incluindo comissão de venda se houver vendedor)
+            const analysis = await profitAnalysisService.calculateBudgetMargin(
+                itemsForAnalysis,
+                costPerMinute,
+                0, // taxRate - pode ser configurado futuramente
+                0, // cardFeeRate - pode ser configurado futuramente
+                selectedSalesRepId || undefined, // Vendedor selecionado
+                profile?.clinics?.id,            // ID da clínica
+                categoryId || undefined          // Categoria do orçamento
+            );
+
+            setBudgetMarginAnalysis(analysis);
+        };
+
+        calculateMargin();
+    }, [items, costPerMinute, procedures, selectedSalesRepId, profile, categoryId]);
 
     // Calculate values BEFORE early returns
     const subtotal = items.reduce((acc, item) => acc + item.total, 0);
@@ -274,6 +331,7 @@ const BudgetForm: React.FC = () => {
                 data: {
                     doctorId: selectedProfessionalId,
                     priceTableId: selectedPriceTableId,
+                    salesRepId: selectedSalesRepId || null,
                     totalValue: subtotal,
                     discount,
                     finalValue: finalTotal,
@@ -288,6 +346,7 @@ const BudgetForm: React.FC = () => {
                 data: {
                     doctorId: selectedProfessionalId,
                     priceTableId: selectedPriceTableId,
+                    salesRepId: selectedSalesRepId || null,
                     totalValue: subtotal,
                     finalValue: finalTotal,
                     discount: discount,
@@ -411,7 +470,7 @@ const BudgetForm: React.FC = () => {
                     {/* 1. DADOS DO ORÇAMENTO */}
                     <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
                         <h2 className="text-xl font-bold text-white mb-6">Dados do Orçamento</h2>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
                                 <label className={labelClass}>Tabela de Preços</label>
                                 <select className={inputClass} value={selectedPriceTableId} onChange={e => setSelectedPriceTableId(e.target.value)}>
@@ -424,6 +483,19 @@ const BudgetForm: React.FC = () => {
                                 <select className={inputClass} value={selectedProfessionalId} onChange={e => setSelectedProfessionalId(e.target.value)}>
                                     <option value="">Selecione...</option>
                                     {professionals.map(prof => <option key={prof.id} value={prof.id}>{prof.name}</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <label className={labelClass}>Vendedor / Consultor (Opcional)</label>
+                                <select
+                                    className={inputClass}
+                                    value={selectedSalesRepId}
+                                    onChange={e => setSelectedSalesRepId(e.target.value)}
+                                >
+                                    <option value="">Nenhum (sem comissão de venda)</option>
+                                    {professionals.map(p => (
+                                        <option key={p.id} value={p.id}>{p.name}</option>
+                                    ))}
                                 </select>
                             </div>
                         </div>
@@ -466,25 +538,67 @@ const BudgetForm: React.FC = () => {
                     {/* 3. LISTA DE PROCEDIMENTOS */}
                     {items.length > 0 && (
                         <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
-                            <h2 className="text-xl font-bold text-white mb-6">Procedimentos Incluídos</h2>
-                            <div className="space-y-3">
-                                {items.map(item => (
-                                    <div key={item.id} className="flex justify-between items-center bg-slate-800/50 p-4 rounded-lg">
-                                        <div className="flex-1">
-                                            <h4 className="font-bold text-white">{item.procedure}</h4>
-                                            <p className="text-sm text-slate-400">
-                                                {item.region} {item.tooth_number && `- Dente ${item.tooth_number}`} {item.face && `(${item.face})`}
-                                            </p>
-                                        </div>
-                                        <div className="flex items-center gap-4">
-                                            <span className="font-bold text-white">R$ {item.total}</span>
-                                            <button onClick={() => handleRemoveItem(item.id)} className="text-red-500 hover:text-red-400">
-                                                <Trash2 size={18} />
-                                            </button>
-                                        </div>
+                            <div className="flex items-center justify-between mb-6">
+                                <h2 className="text-xl font-bold text-white">Procedimentos Incluídos</h2>
+                                {costPerMinute === 0 && (
+                                    <div className="text-xs text-yellow-500 bg-yellow-500/10 px-3 py-1 rounded-full">
+                                        ⚠️ Configure os Custos Fixos para ver a margem
                                     </div>
-                                ))}
+                                )}
                             </div>
+                            <div className="space-y-4">
+                                {items.map((item, index) => {
+                                    const itemAnalysis = budgetMarginAnalysis?.itemsAnalysis?.[index];
+                                    return (
+                                        <div key={item.id} className="bg-slate-800/50 p-4 rounded-lg space-y-3">
+                                            <div className="flex justify-between items-start">
+                                                <div className="flex-1">
+                                                    <h4 className="font-bold text-white">{item.procedure}</h4>
+                                                    <p className="text-sm text-slate-400">
+                                                        {item.region} {item.tooth_number && `- Dente ${item.tooth_number}`} {item.face && `(${item.face})`}
+                                                    </p>
+                                                    <p className="text-xs text-slate-500 mt-1">
+                                                        {item.quantity}x R$ {item.unitValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                    </p>
+                                                </div>
+                                                <div className="flex items-center gap-4">
+                                                    <span className="font-bold text-white text-lg">R$ {item.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                                    <button onClick={() => handleRemoveItem(item.id)} className="text-red-500 hover:text-red-400">
+                                                        <Trash2 size={18} />
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            {/* Profit Bar */}
+                                            {itemAnalysis && costPerMinute > 0 && (
+                                                <div className="pt-3 border-t border-slate-700">
+                                                    <ProfitBar
+                                                        price={itemAnalysis.margin.price}
+                                                        profit={itemAnalysis.margin.profit}
+                                                        marginPercent={itemAnalysis.margin.marginPercent}
+                                                        status={itemAnalysis.margin.status}
+                                                        showDetails={true}
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Alertas de margem baixa */}
+                            {budgetMarginAnalysis && budgetMarginAnalysis.lowMarginItems.length > 0 && (
+                                <div className="mt-6 space-y-3">
+                                    {budgetMarginAnalysis.lowMarginItems.map((lowItem: any, idx: number) => (
+                                        <MarginAlert
+                                            key={idx}
+                                            status={lowItem.marginPercent < 15 ? 'danger' : 'warning'}
+                                            marginPercent={lowItem.marginPercent}
+                                            procedureName={lowItem.procedureName}
+                                        />
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -703,6 +817,18 @@ const BudgetForm: React.FC = () => {
                             installmentValue={calculatedValues.installmentValue}
                             downPayment={downPayment}
                             totalValue={finalTotal}
+                        />
+                    )}
+
+                    {/* 5.6 RESUMO DE LUCRATIVIDADE */}
+                    {budgetMarginAnalysis && costPerMinute > 0 && (
+                        <BudgetProfitSummary
+                            totalPrice={budgetMarginAnalysis.totalPrice}
+                            totalCosts={budgetMarginAnalysis.totalCosts}
+                            totalProfit={budgetMarginAnalysis.totalProfit}
+                            marginPercent={budgetMarginAnalysis.marginPercent}
+                            itemCount={items.length}
+                            lowMarginCount={budgetMarginAnalysis.lowMarginItems.length}
                         />
                     )}
 

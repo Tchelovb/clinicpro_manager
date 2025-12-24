@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import {
     ArrowUpCircle, ArrowDownCircle, DollarSign, Download, Filter,
     Wallet, FileText, TrendingUp, AlertTriangle, Lock, Unlock,
-    Plus, Calendar, CreditCard, CheckCircle, Clock, Search, X
+    Plus, Calendar, CreditCard, CheckCircle, Clock, Search, X, Calculator
 } from 'lucide-react';
 import CashClosingWizard from '../components/CashClosingWizard';
 import SangriaSuprimentoModal from '../components/SangriaSuprimentoModal';
@@ -533,6 +533,13 @@ const Financial: React.FC = () => {
                     <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Gestão Financeira</h1>
                     <p className="text-sm text-gray-500 dark:text-gray-400">Controle de caixa, contas e resultados</p>
                 </div>
+                <button
+                    onClick={() => navigate('/financial/closing')}
+                    className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium shadow-sm transition-colors"
+                >
+                    <Calculator size={18} />
+                    Fechamento Profissional
+                </button>
                 <div className="flex gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0 scrollbar-hide">
                     {[
                         { id: 'dashboard', label: 'Visão Geral', icon: TrendingUp },

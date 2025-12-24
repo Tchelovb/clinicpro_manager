@@ -6,13 +6,14 @@ import {
   Save,
   Users,
   Plus,
-  Edit,
   Trash2,
   Search,
   Stethoscope,
   UserCheck,
   UserX,
+  DollarSign
 } from "lucide-react";
+import { ProfessionalMasterSheet } from "./ProfessionalMasterSheet";
 
 // Interface para Professional baseada na tabela
 interface Professional {
@@ -33,25 +34,14 @@ const ProfessionalsSettings: React.FC = () => {
   const { profile } = useAuth();
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [showModal, setShowModal] = useState(false);
-  const [editingProfessional, setEditingProfessional] =
-    useState<Professional | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [toast, setToast] = useState<{
     message: string;
     type: "success" | "error";
   } | null>(null);
 
-  // Form data
-  const [formData, setFormData] = useState({
-    name: "",
-    crc: "",
-    specialty: "",
-    council: "",
-    color: "#3B82F6",
-    is_active: true,
-  });
+  // Master Sheet State
+  const [selectedProfessionalForSheet, setSelectedProfessionalForSheet] = useState<Professional | null>(null);
 
   useEffect(() => {
     loadProfessionals();
@@ -82,107 +72,7 @@ const ProfessionalsSettings: React.FC = () => {
     }
   };
 
-  const resetForm = () => {
-    setFormData({
-      name: "",
-      crc: "",
-      specialty: "",
-      council: "",
-      color: "#3B82F6",
-      is_active: true,
-    });
-    setEditingProfessional(null);
-  };
 
-  const handleInputChange = (field: string, value: string | boolean) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
-  const openModal = (professional?: Professional) => {
-    if (professional) {
-      setEditingProfessional(professional);
-      setFormData({
-        name: professional.name,
-        crc: professional.crc,
-        specialty: professional.specialty,
-        council: professional.council,
-        color: professional.color || "#3B82F6",
-        is_active: professional.is_active,
-      });
-    } else {
-      resetForm();
-    }
-    setShowModal(true);
-  };
-
-  const closeModal = () => {
-    setShowModal(false);
-    resetForm();
-  };
-
-  const handleSave = async () => {
-    if (!profile?.clinic_id) return;
-
-    // Basic validation
-    if (!formData.name.trim() || !formData.crc.trim()) {
-      setToast({
-        message: "Nome e CRC são obrigatórios.",
-        type: "error",
-      });
-      return;
-    }
-
-    try {
-      setSaving(true);
-
-      const professionalData = {
-        ...formData,
-        clinic_id: profile.clinic_id,
-        updated_at: new Date().toISOString(),
-      };
-
-      if (editingProfessional) {
-        const { error } = await supabase
-          .from("professionals")
-          .update(professionalData)
-          .eq("id", editingProfessional.id);
-
-        if (error) throw error;
-
-        setToast({
-          message: "Profissional atualizado com sucesso!",
-          type: "success",
-        });
-      } else {
-        const { error } = await supabase.from("professionals").insert({
-          ...professionalData,
-          created_at: new Date().toISOString(),
-        });
-
-        if (error) throw error;
-
-        setToast({
-          message: "Profissional criado com sucesso!",
-          type: "success",
-        });
-      }
-
-      setShowModal(false);
-      resetForm();
-      await loadProfessionals();
-    } catch (error) {
-      console.error("Erro ao salvar profissional:", error);
-      setToast({
-        message: "Não foi possível salvar o profissional.",
-        type: "error",
-      });
-    } finally {
-      setSaving(false);
-    }
-  };
 
   const handleDelete = async (professional: Professional) => {
     if (!confirm(`Tem certeza que deseja excluir ${professional.name}?`)) {
@@ -236,11 +126,10 @@ const ProfessionalsSettings: React.FC = () => {
       {/* Toast de feedback */}
       {toast && (
         <div
-          className={`p-4 rounded-lg border ${
-            toast.type === "success"
-              ? "bg-green-50 border-green-200 text-green-700 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400"
-              : "bg-red-50 border-red-200 text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400"
-          }`}
+          className={`p-4 rounded-lg border ${toast.type === "success"
+            ? "bg-green-50 border-green-200 text-green-700 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400"
+            : "bg-red-50 border-red-200 text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400"
+            }`}
         >
           {toast.message}
           <button
@@ -259,7 +148,7 @@ const ProfessionalsSettings: React.FC = () => {
         </div>
 
         <button
-          onClick={() => openModal()}
+          onClick={() => setSelectedProfessionalForSheet({ id: '', name: '', crc: '', specialty: '', council: '', is_active: true, color: '#3B82F6', clinic_id: '', created_at: '', updated_at: '' })}
           className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center gap-2 shadow-sm"
         >
           <Plus className="h-4 w-4" />
@@ -310,7 +199,7 @@ const ProfessionalsSettings: React.FC = () => {
               </p>
               {professionals.length === 0 && (
                 <button
-                  onClick={() => openModal()}
+                  onClick={() => setSelectedProfessionalForSheet({ id: '', name: '', crc: '', specialty: '', council: '', is_active: true, color: '#3B82F6', clinic_id: '', created_at: '', updated_at: '' })}
                   className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors flex items-center gap-2 mx-auto shadow-sm"
                 >
                   <Plus className="h-5 w-5" />
@@ -383,22 +272,14 @@ const ProfessionalsSettings: React.FC = () => {
                     </p>
                   </div>
 
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => openModal(professional)}
-                      className="flex-1 bg-gray-100 hover:bg-gray-200 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200 font-medium py-2 px-3 rounded-lg transition-colors flex items-center justify-center gap-1 text-sm"
-                    >
-                      <Edit className="h-3 w-3" />
-                      Editar
-                    </button>
-
-                    <button
-                      onClick={() => handleDelete(professional)}
-                      className="bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-700 dark:text-red-400 font-medium py-2 px-3 rounded-lg transition-colors flex items-center justify-center text-sm"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </button>
-                  </div>
+                  {/* Manage Button (Opens Master Sheet) */}
+                  <button
+                    onClick={() => setSelectedProfessionalForSheet(professional)}
+                    className="w-full bg-gradient-to-r from-purple-50 to-blue-50 hover:from-purple-100 hover:to-blue-100 dark:from-purple-900/10 dark:to-blue-900/10 dark:hover:from-purple-900/20 dark:hover:to-blue-900/20 text-purple-700 dark:text-purple-400 font-semibold py-2 px-3 rounded-lg transition-all flex items-center justify-center gap-2 text-sm border border-purple-200 dark:border-purple-800 shadow-sm"
+                  >
+                    <DollarSign className="h-4 w-4" />
+                    Gerenciar Profissional
+                  </button>
                 </div>
               ))}
             </div>
@@ -406,142 +287,17 @@ const ProfessionalsSettings: React.FC = () => {
         </div>
       </div>
 
-      {/* Modal de Criação/Edição */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-                {editingProfessional
-                  ? "Editar Profissional"
-                  : "Novo Profissional"}
-              </h3>
-            </div>
-
-            <div className="p-6 space-y-4">
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Nome *
-                </label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => handleInputChange("name", e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                  placeholder="Nome completo"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  CRC/CRO *
-                </label>
-                <input
-                  type="text"
-                  value={formData.crc}
-                  onChange={(e) => handleInputChange("crc", e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                  placeholder="Ex: 123456/SP"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Especialidade
-                </label>
-                <input
-                  type="text"
-                  value={formData.specialty}
-                  onChange={(e) =>
-                    handleInputChange("specialty", e.target.value)
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                  placeholder="Ex: Ortodontia"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Conselho
-                </label>
-                <input
-                  type="text"
-                  value={formData.council}
-                  onChange={(e) => handleInputChange("council", e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                  placeholder="Ex: CRO-SP"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Cor de Identificação
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="color"
-                    value={formData.color}
-                    onChange={(e) => handleInputChange("color", e.target.value)}
-                    className="w-12 h-10 border border-gray-300 dark:border-gray-600 rounded cursor-pointer"
-                  />
-                  <input
-                    type="text"
-                    value={formData.color}
-                    onChange={(e) => handleInputChange("color", e.target.value)}
-                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                    placeholder="#3B82F6"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="is_active"
-                  checked={formData.is_active}
-                  onChange={(e) =>
-                    handleInputChange("is_active", e.target.checked)
-                  }
-                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:bg-gray-700"
-                />
-                <label
-                  htmlFor="is_active"
-                  className="text-sm font-medium text-gray-700 dark:text-gray-300"
-                >
-                  Profissional ativo
-                </label>
-              </div>
-            </div>
-
-            <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex gap-3 justify-end">
-              <button
-                onClick={closeModal}
-                className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 font-medium"
-                disabled={saving}
-              >
-                Cancelar
-              </button>
-
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center gap-2 shadow-sm"
-              >
-                {saving ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Salvando...
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4" />
-                    Salvar
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* Professional Master Sheet */}
+      {selectedProfessionalForSheet && (
+        <ProfessionalMasterSheet
+          professionalId={selectedProfessionalForSheet.id}
+          isOpen={!!selectedProfessionalForSheet}
+          onClose={() => setSelectedProfessionalForSheet(null)}
+          onSave={() => {
+            loadProfessionals();
+            setSelectedProfessionalForSheet(null);
+          }}
+        />
       )}
     </div>
   );

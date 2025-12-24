@@ -38,6 +38,8 @@ import Lab from "./pages/Lab";
 import Inventory from "./pages/Inventory";
 import Settings from "./pages/Settings";
 import Profile from "./pages/Profile";
+import AuditLogs from "./pages/AuditLogs";
+import CostWizard from "./pages/settings/CostWizard";
 
 // ============================================
 // FORMS
@@ -54,6 +56,7 @@ import ExpenseForm from "./components/ExpenseForm";
 // ============================================
 import PayExpense from "./pages/financial/PayExpense";
 import ReceivePayment from "./pages/financial/ReceivePayment";
+import ProfessionalClosing from "./pages/financial/ProfessionalClosing";
 import Goals from "./pages/intelligence/Goals";
 import BOSIntelligence from "./pages/intelligence/BOSIntelligence";
 import ClinicHealth from "./pages/intelligence/ClinicHealth";
@@ -123,6 +126,7 @@ const App: React.FC = () => {
                     <Route path="/financial/expenses/:id" element={<ExpenseForm />} />
                     <Route path="/financial/pay/:id" element={<PayExpense />} />
                     <Route path="/financial/receive/:id" element={<ReceivePayment />} />
+                    <Route path="/financial/closing" element={<ProfessionalClosing />} />
 
                     {/* --- INTELLIGENCE MODULE --- */}
                     <Route path="/intelligence/goals" element={<Goals />} />
@@ -138,6 +142,8 @@ const App: React.FC = () => {
                     <Route path="/reports" element={<Reports />} />
                     <Route path="/chat-bos" element={<ChatBOS />} />
                     <Route path="/settings" element={<Settings />} />
+                    <Route path="/settings/costs" element={<CostWizard />} />
+                    <Route path="/audit-logs" element={<AuditLogs />} />
 
                   </Route>
 

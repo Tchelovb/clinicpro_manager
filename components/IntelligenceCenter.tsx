@@ -91,8 +91,8 @@ const IntelligenceCenter: React.FC = () => {
         const totalRevenue = financeiroMetrics.faturamentoRealizado || 0;
         const totalExpense = financeiroMetrics.despesasTotais || 0;
         const netResult = financeiroMetrics.saldoLiquido || 0;
-        const totalReceivables = patients.reduce((acc, p) => acc + (p.balanceDue || 0), 0);
-        const payingPatients = patients.filter(p => (p.totalPaid || 0) > 0).length || 1;
+        const totalReceivables = patients.reduce((acc, p) => acc + (p.balance_due || 0), 0);
+        const payingPatients = patients.filter(p => (p.total_paid || 0) > 0).length || 1;
         const ticketAvg = totalRevenue / payingPatients;
 
         // Commercial Metrics
