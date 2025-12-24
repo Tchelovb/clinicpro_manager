@@ -49,8 +49,8 @@ export const CentralDeMetasRadar = () => {
     return (
         <div className="bg-slate-900 p-6 rounded-2xl shadow-2xl border border-slate-800">
             <div className="mb-4">
-                <h2 className="text-xl font-bold text-white tracking-tight">Radar de Gestão 10x50</h2>
-                <p className="text-slate-400 text-sm">Status atual da Tríade de Poder: Blindar, Acelerar, Escalar.</p>
+                <h2 className="text-xl font-bold text-white tracking-tight">Radar de Gestão</h2>
+                <p className="text-slate-400 text-sm">Visão estratégica dos indicadores da clínica</p>
             </div>
 
             <div className="h-[400px] w-full">

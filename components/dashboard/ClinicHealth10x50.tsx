@@ -139,7 +139,7 @@ export const ClinicHealth10x50 = () => {
                 <div>
                     <h2 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
                         <Activity className="text-violet-600 dark:text-violet-400" size={20} />
-                        Clinic Health (IVC) - 10x50
+                        Saúde da Clínica
                     </h2>
                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                         Índice de Vitalidade Corporativa: <strong className={ivcScore >= 70 ? 'text-emerald-500' : 'text-amber-500'}>{ivcScore}/100</strong>
