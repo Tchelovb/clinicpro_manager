@@ -63,10 +63,20 @@ BEGIN
 
     ---------------------------------------------------------------------------
     -- 4. LUCRO (Financeiro)
-    -- Metrica: Margem média dos orçamentos aprovados
+    -- Metrica: Margem média dos orçamentos aprovados (usando potential_margin)
     ---------------------------------------------------------------------------
-    -- TODO: Implementar cálculo real baseado em custos
-    v_lucro := 25; -- Placeholder
+    SELECT COALESCE(AVG(
+        CASE 
+            WHEN final_value > 0 THEN (potential_margin / final_value) * 100
+            ELSE 0
+        END
+    ), 0) INTO v_lucro
+    FROM "budgets"
+    WHERE clinic_id = p_clinic_id
+    AND status = 'APPROVED'
+    AND created_at > (NOW() - INTERVAL '30 days')
+    AND potential_margin IS NOT NULL
+    AND final_value > 0;
 
     ---------------------------------------------------------------------------
     -- 5. INOVAÇÃO
