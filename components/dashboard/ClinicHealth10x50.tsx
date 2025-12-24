@@ -94,13 +94,13 @@ const PillarCard: React.FC<PillarCardProps> = ({ title, score, icon: Icon, color
 };
 
 export const ClinicHealth10x50 = () => {
-    const { user } = useAuth();
-    const clinicId = user?.user_metadata?.clinic_id;
+    const { user, profile } = useAuth();
+    const clinicId = profile?.clinic_id;
 
     // Debug logging
     console.log('🔍 ClinicHealth10x50 Debug:');
     console.log('  - User object:', user);
-    console.log('  - User metadata:', user?.user_metadata);
+    console.log('  - Profile object:', profile);
     console.log('  - Clinic ID:', clinicId);
 
     const { pillarData, loading, isRefetching, lastUpdated, refresh, error } = useOptimizedPillarScores(clinicId);
