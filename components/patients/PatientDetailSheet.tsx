@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { BaseSheet } from '../ui/BaseSheet';
 import { PatientDetailContent } from '../PatientDetail';
 import { NewPatientSheet } from './NewPatientSheet';
-import { SecurityPinModal } from '../security/SecurityPinModal';
+import SecurityPinModal from '../SecurityPinModal';
 import toast from 'react-hot-toast';
 
 interface PatientDetailSheetProps {
