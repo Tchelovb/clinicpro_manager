@@ -4,10 +4,10 @@ import { usePillarScores } from '../../hooks/usePillarScores';
 import { useAuth } from '../../contexts/AuthContext';
 
 export const CentralDeMetasRadar = () => {
-    const { session } = useAuth();
+    const { user } = useAuth();
     // Assuming the user belongs to a clinic; defaulting to the first one available or handling this via context is ideal. 
     // For now, using optional chaining or a safe fallback if session user metadata contains clinic_id.
-    const clinicId = session?.user?.user_metadata?.clinic_id;
+    const clinicId = user?.user_metadata?.clinic_id;
 
     const { pillarData, loading } = usePillarScores(clinicId);
 

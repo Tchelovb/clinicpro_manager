@@ -14,7 +14,7 @@ interface UserData {
 }
 
 const UserManagement: React.FC = () => {
-  const { clinicId, user: currentUser } = useAuth();
+  const { activeClinicId: clinicId, user: currentUser } = useAuth();
   const [users, setUsers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -262,8 +262,8 @@ const UserManagement: React.FC = () => {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
                       className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${user.active
-                          ? "bg-green-100 text-green-800"
-                          : "bg-red-100 text-red-800"
+                        ? "bg-green-100 text-green-800"
+                        : "bg-red-100 text-red-800"
                         }`}
                     >
                       {user.active ? "Ativo" : "Inativo"}

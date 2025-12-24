@@ -1,0 +1,94 @@
+components/Agenda.tsx(17,56): error TS2339: Property 'refreshAppointments' does not exist on type 'DataContextType'.
+components/BOSChat.tsx(223,52): error TS2339: Property 'full_name' does not exist on type 'Profile'.
+components/BudgetForm.tsx(460,13): error TS2322: Type 'string' is not assignable to type '"Alto" | "Médio" | "Baixo"'.
+components/BudgetForm.tsx(697,117): error TS2304: Cannot find name 'AlertCircle'.
+components/BudgetForm.tsx(703,33): error TS2322: Type '{ revenue: any; costs: any; profit: any; marginPercent: any; }' is not assignable to type 'IntrinsicAttributes & ProfitBarProps'.
+  Property 'revenue' does not exist on type 'IntrinsicAttributes & ProfitBarProps'.
+components/BudgetForm.tsx(711,97): error TS2322: Type '{ marginPercent: any; minMargin: number; }' is not assignable to type 'IntrinsicAttributes & MarginAlertProps'.
+  Property 'minMargin' does not exist on type 'IntrinsicAttributes & MarginAlertProps'.
+components/BudgetForm.tsx(922,18): error TS2739: Type '{ budget: any; patient: string; onClose: () => void; }' is missing the following properties from type 'Props': isOpen, items, professional
+components/budgets/BudgetApprovalSheet.tsx(274,42): error TS2304: Cannot find name 'AlertTriangle'.
+components/budgets/BudgetSheet.tsx(740,36): error TS2304: Cannot find name 'Loader2'.
+components/confirmations/ConfirmationDashboard.tsx(27,20): error TS2339: Property 'clinic_id' does not exist on type 'User'.
+components/confirmations/ConfirmationDashboard.tsx(31,81): error TS2339: Property 'clinic_id' does not exist on type 'User'.
+components/confirmations/ConfirmationDashboard.tsx(42,15): error TS2339: Property 'clinic_id' does not exist on type 'User'.
+components/dashboard/CentralDeMetasRadar.tsx(7,13): error TS2339: Property 'session' does not exist on type 'AuthContextType'.
+components/dashboard/ClinicHealth10x50.tsx(77,13): error TS2339: Property 'session' does not exist on type 'AuthContextType'.
+components/financial/ExpenseSheet.tsx(12,26): error TS2307: Cannot find module '../ui/textarea' or its corresponding type declarations.
+components/financial/ExpenseSheet.tsx(13,26): error TS2307: Cannot find module '../ui/calendar' or its corresponding type declarations.
+components/financial/ExpenseSheet.tsx(14,57): error TS2307: Cannot find module '../ui/popover' or its corresponding type declarations.
+components/FinancialPages.tsx(275,44): error TS2345: Argument of type 'string' is not assignable to parameter of type 'SetStateAction<"Pix" | "Cartão" | "Boleto" | "Dinheiro">'.
+components/lab/LabOrderList.tsx(29,43): error TS2304: Cannot find name 'user'.
+components/lab/LabOrderList.tsx(30,50): error TS2304: Cannot find name 'user'.
+components/lab/LabOrderList.tsx(31,56): error TS2304: Cannot find name 'user'.
+components/PatientPages.tsx(87,41): error TS2339: Property 'responsibleDoctor' does not exist on type 'Patient'.
+components/Patients.tsx(177,30): error TS2339: Property 'lastVisit' does not exist on type 'Patient'.
+components/Patients.tsx(262,34): error TS2339: Property 'lastVisit' does not exist on type 'Patient'.
+components/PatientTreatments.tsx(94,21): error TS2367: This comparison appears to be unintentional because the types '"error"' and '"success"' have no overlap.
+components/ProfessionalsPage.tsx(352,27): error TS2322: Type '{ className: string; title: string; }' is not assignable to type 'IntrinsicAttributes & Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>'.
+  Property 'title' does not exist on type 'IntrinsicAttributes & Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>'.
+components/ProfessionalsPage.tsx(357,27): error TS2322: Type '{ className: string; title: string; }' is not assignable to type 'IntrinsicAttributes & Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>'.
+  Property 'title' does not exist on type 'IntrinsicAttributes & Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>'.
+components/ProfessionalsSettings.tsx(33,59): error TS2554: Expected 0 arguments, but got 1.
+components/ProfessionalsSettings.tsx(70,11): error TS2353: Object literal may only specify known properties, and 'clinic_id' does not exist in type 'Omit<User, "id" | "clinic_id" | "created_at" | "updated_at">'.
+components/recalls/RecallDashboard.tsx(21,20): error TS2339: Property 'clinic_id' does not exist on type 'User'.
+components/recalls/RecallDashboard.tsx(26,59): error TS2339: Property 'clinic_id' does not exist on type 'User'.
+components/recalls/RecallDashboard.tsx(27,45): error TS2339: Property 'clinic_id' does not exist on type 'User'.
+components/recalls/RecallDashboard.tsx(42,15): error TS2339: Property 'clinic_id' does not exist on type 'User'.
+components/referrals/ReferralDashboard.tsx(24,20): error TS2339: Property 'clinic_id' does not exist on type 'User'.
+components/referrals/ReferralDashboard.tsx(29,53): error TS2339: Property 'clinic_id' does not exist on type 'User'.
+components/referrals/ReferralDashboard.tsx(30,63): error TS2339: Property 'clinic_id' does not exist on type 'User'.
+components/referrals/ReferralDashboard.tsx(31,62): error TS2339: Property 'clinic_id' does not exist on type 'User'.
+components/referrals/ReferralDashboard.tsx(50,15): error TS2339: Property 'clinic_id' does not exist on type 'User'.
+components/SecurityPinModal.tsx(116,36): error TS2345: Argument of type 'string' is not assignable to parameter of type 'SetStateAction<Date>'.
+components/settings/ProceduresSettingsNew.tsx(201,27): error TS2322: Type '{ size: number; className: string; title: string; }' is not assignable to type 'IntrinsicAttributes & Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>'.
+  Property 'title' does not exist on type 'IntrinsicAttributes & Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>'.
+components/settings/ProfessionalFeesConfig.tsx(98,35): error TS2869: Right operand of ?? is unreachable because the left operand is never nullish.
+components/settings/ProfessionalsSettings.tsx(241,27): error TS2322: Type '{ className: string; title: string; }' is not assignable to type 'IntrinsicAttributes & Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>'.
+  Property 'title' does not exist on type 'IntrinsicAttributes & Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>'.
+components/settings/ProfessionalsSettings.tsx(246,27): error TS2322: Type '{ className: string; title: string; }' is not assignable to type 'IntrinsicAttributes & Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>'.
+  Property 'title' does not exist on type 'IntrinsicAttributes & Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>'.
+components/SignUp.tsx(6,11): error TS2339: Property 'signUp' does not exist on type 'AuthContextType'.
+components/UserManagement.tsx(17,11): error TS2339: Property 'clinicId' does not exist on type 'AuthContextType'.
+components/UserProfile.tsx(22,36): error TS2339: Property 'refreshProfile' does not exist on type 'AuthContextType'.
+constants.ts(126,5): error TS2561: Object literal may only specify known properties, but 'birthDate' does not exist in type 'Patient'. Did you mean to write 'birth_date'?
+constants.ts(150,5): error TS2561: Object literal may only specify known properties, but 'birthDate' does not exist in type 'Patient'. Did you mean to write 'birth_date'?
+constants.ts(169,5): error TS2561: Object literal may only specify known properties, but 'birthDate' does not exist in type 'Patient'. Did you mean to write 'birth_date'?
+constants.ts(257,3): error TS2741: Property 'type' is missing in type '{ id: string; name: string; active: true; items: undefined[]; }' but required in type 'PriceTable'.
+constants.ts(263,3): error TS2741: Property 'type' is missing in type '{ id: string; name: string; active: true; items: { procedureId: string; price: number; }[]; }' but required in type 'PriceTable'.
+constants.ts(272,3): error TS2741: Property 'type' is missing in type '{ id: string; name: string; active: true; items: { procedureId: string; price: number; }[]; }' but required in type 'PriceTable'.
+contexts/FinancialContext.tsx(341,7): error TS2741: Property 'payExpense' is missing in type '{ financialSettings: ClinicFinancialSettings; cashRegisters: CashRegister[]; activeSession: CashRegister; expenses: Expense[]; ... 6 more ...; recordTransaction: (transaction: Omit<FinancialRecord, "id">) => void; }' but required in type 'FinancialContextType'.
+hooks/useBOSChat.ts(18,48): error TS2339: Property 'budgets' does not exist on type 'DataContextType'.
+hooks/useBOSChat.ts(90,48): error TS2367: This comparison appears to be unintentional because the types 'LeadStatus' and '"NEW"' have no overlap.
+hooks/useBOSChat.ts(90,70): error TS2367: This comparison appears to be unintentional because the types 'LeadStatus' and '"CONTACTED"' have no overlap.
+hooks/useBOSChat.ts(111,86): error TS2367: This comparison appears to be unintentional because the types 'LeadStatus.CONTACT | LeadStatus.QUALIFICATION | LeadStatus.SCHEDULED | LeadStatus.PROPOSAL | LeadStatus.NEGOTIATION | LeadStatus.WON | LeadStatus.LOST' and '"NEW"' have no overlap.
+hooks/useBOSChat.ts(206,56): error TS2339: Property 'full_name' does not exist on type 'Profile'.
+hooks/useBOSChat.ts(210,18): error TS2339: Property 'full_name' does not exist on type 'Profile'.
+hooks/useBOSChat.ts(301,55): error TS2339: Property 'full_name' does not exist on type 'Profile'.
+hooks/useDragAndDrop.ts(2,29): error TS2307: Cannot find module '../../types' or its corresponding type declarations.
+hooks/useStrategyFilter.ts(306,53): error TS2345: Argument of type 'string' is not assignable to parameter of type '"QUENTE" | "MORNO" | "FRIO"'.
+pages/Profile.tsx(18,25): error TS2339: Property 'phone' does not exist on type 'Profile'.
+scripts/migrate-mock-data.ts(110,21): error TS2551: Property 'birthDate' does not exist on type 'Patient'. Did you mean 'birth_date'?
+scripts/migrate-mock-data.ts(114,25): error TS2551: Property 'totalApproved' does not exist on type 'Patient'. Did you mean 'total_approved'?
+scripts/migrate-mock-data.ts(115,21): error TS2551: Property 'totalPaid' does not exist on type 'Patient'. Did you mean 'total_paid'?
+scripts/migrate-mock-data.ts(116,22): error TS2551: Property 'balanceDue' does not exist on type 'Patient'. Did you mean 'balance_due'?
+scripts/seed_simulation_chaos.ts(10,7): error TS2451: Cannot redeclare block-scoped variable 'colors'.
+scripts/seed_simulation_chaos.ts(21,7): error TS2451: Cannot redeclare block-scoped variable 'log'.
+scripts/seed_simulation_chaos.ts(37,10): error TS2393: Duplicate function implementation.
+scripts/seed_simulation_chaos.ts(43,10): error TS2393: Duplicate function implementation.
+scripts/seed_simulation_chaos.ts(452,7): error TS2451: Cannot redeclare block-scoped variable 'colors'.
+scripts/seed_simulation_chaos.ts(463,7): error TS2451: Cannot redeclare block-scoped variable 'log'.
+scripts/seed_simulation_chaos.ts(478,10): error TS2393: Duplicate function implementation.
+scripts/seed_simulation_chaos.ts(484,10): error TS2393: Duplicate function implementation.
+services/opportunityRadarService.ts(120,47): error TS2339: Property 'name' does not exist on type '{ name: any; phone: any; email: any; }[]'.
+services/opportunityRadarService.ts(121,48): error TS2339: Property 'phone' does not exist on type '{ name: any; phone: any; email: any; }[]'.
+services/opportunityRadarService.ts(122,48): error TS2339: Property 'email' does not exist on type '{ name: any; phone: any; email: any; }[]'.
+services/opportunityRadarService.ts(128,37): error TS2339: Property 'name' does not exist on type '{ name: any; phone: any; email: any; }[]'.
+services/opportunityRadarService.ts(184,49): error TS2339: Property 'name' does not exist on type '{ id: any; name: any; phone: any; email: any; }[]'.
+services/opportunityRadarService.ts(185,50): error TS2339: Property 'phone' does not exist on type '{ id: any; name: any; phone: any; email: any; }[]'.
+services/opportunityRadarService.ts(186,50): error TS2339: Property 'email' does not exist on type '{ id: any; name: any; phone: any; email: any; }[]'.
+services/opportunityRadarService.ts(192,39): error TS2339: Property 'name' does not exist on type '{ id: any; name: any; phone: any; email: any; }[]'.
+services/opportunityRadarService.ts(239,34): error TS2339: Property 'is_recurring' does not exist on type '{ id: any; name: any; is_recurring: any; recurrence_period_days: any; }[]'.
+services/opportunityRadarService.ts(240,34): error TS2339: Property 'recurrence_period_days' does not exist on type '{ id: any; name: any; is_recurring: any; recurrence_period_days: any; }[]'.
+services/opportunityRadarService.ts(247,48): error TS2339: Property 'recurrence_period_days' does not exist on type '{ id: any; name: any; is_recurring: any; recurrence_period_days: any; }[]'.
+services/securityService.ts(49,17): error TS2322: Type 'Date' is not assignable to type 'string'.

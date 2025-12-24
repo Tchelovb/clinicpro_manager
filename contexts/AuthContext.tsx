@@ -30,6 +30,7 @@ interface AuthContextType {
     email: string,
     password: string
   ) => Promise<void>;
+  signUp: (email: string, password: string, clinicName: string) => Promise<{ error: string | null, data?: any }>;
   signOut: () => Promise<void>;
 }
 
@@ -181,6 +182,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     await supabase.auth.signOut();
   };
 
+  const signUp = async (email: string, password: string, clinicName: string) => {
+    setLoading(true);
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          clinic_name: clinicName
+        }
+      }
+    });
+
+    if (error) {
+      setLoading(false);
+      return { error: error.message };
+    }
+
+    setLoading(false);
+    return { error: null, data };
+  };
+
   const setActiveClinic = (clinicId: string | null) => {
     setActiveClinicId(clinicId);
   };
@@ -200,7 +222,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, activeClinicId, setActiveClinic, signIn, signOut, updateProfileSettings }}>
+    <AuthContext.Provider value={{ user, profile, loading, activeClinicId, setActiveClinic, signIn, signUp, signOut, updateProfileSettings }}>
       {children}
     </AuthContext.Provider>
   );
