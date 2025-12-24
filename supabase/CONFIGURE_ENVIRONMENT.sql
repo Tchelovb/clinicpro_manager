@@ -1,5 +1,5 @@
-# Script de Configuração do Ambiente Supabase
-# Execute este script no SQL Editor do Supabase
+-- Script de Configuração do Ambiente Supabase
+-- Execute este script no SQL Editor do Supabase
 
 -- ============================================
 -- CONFIGURAÇÃO DE VARIÁVEIS DE AMBIENTE
