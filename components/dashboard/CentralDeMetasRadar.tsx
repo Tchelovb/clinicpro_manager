@@ -53,8 +53,8 @@ export const CentralDeMetasRadar = () => {
                 <p className="text-slate-400 text-sm">Visão estratégica dos indicadores da clínica</p>
             </div>
 
-            <div className="h-[400px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
+            <div className="h-[400px] min-h-[400px] w-full">
+                <ResponsiveContainer width="100%" height="100%" minHeight={400}>
                     <RadarChart cx="50%" cy="50%" outerRadius="80%" data={chartData}>
                         <PolarGrid stroke="#334155" />
                         <PolarAngleAxis dataKey="pilar" tick={{ fill: '#94a3b8', fontSize: 12 }} />
