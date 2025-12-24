@@ -42,12 +42,18 @@ const formatPillarData = (data: PillarScoresResponse): PillarScoreData[] => {
 };
 
 const fetchPillarScores = async (clinicId: string): Promise<PillarScoreData[]> => {
+    console.log('🔧 fetchPillarScores called with clinicId:', clinicId);
+
     if (!clinicId) {
+        console.error('❌ Clinic ID is missing!');
         throw new Error('Clinic ID is required');
     }
 
+    console.log('📡 Calling Supabase RPC: calculate_pillar_scores');
     const { data, error } = await supabase
         .rpc('calculate_pillar_scores', { p_clinic_id: clinicId });
+
+    console.log('📥 Supabase response:', { data, error });
 
     if (error) {
         console.error('Error fetching pillar scores:', error);
