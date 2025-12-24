@@ -345,30 +345,12 @@ export function ProcedureSheet({
                             </div>
 
                             {/* Comissão */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                                    Comissão do Profissional
-                                </label>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <select
-                                        value={formData.commission_type}
-                                        onChange={(e) => setFormData(prev => ({ ...prev, commission_type: e.target.value as 'PERCENTAGE' | 'FIXED_AMOUNT' }))}
-                                        className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                                    >
-                                        <option value="PERCENTAGE">Percentual (%)</option>
-                                        <option value="FIXED_AMOUNT">Valor Fixo (R$)</option>
-                                    </select>
-
-                                    <input
-                                        type="number"
-                                        step="0.01"
-                                        min="0"
-                                        value={formData.commission_base_value}
-                                        onChange={(e) => setFormData(prev => ({ ...prev, commission_base_value: parseFloat(e.target.value) || 0 }))}
-                                        placeholder={formData.commission_type === 'PERCENTAGE' ? 'Ex: 30' : 'Ex: 150.00'}
-                                        className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                                    />
-                                </div>
+                            {/* Commission Configuration Note */}
+                            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                                <p className="text-sm text-blue-800 dark:text-blue-300">
+                                    <span className="font-semibold block mb-1">ℹ️ Configuração de Comissões</span>
+                                    As regras de comissão (percentual ou fixo) são definidas individualmente na ficha de cada profissional (Menu Configurações {'>'} Profissionais {'>'} Aba Honorários).
+                                </p>
                             </div>
 
                             {/* Análise de Margem */}
@@ -394,7 +376,10 @@ export function ProcedureSheet({
 
                                     <div className="pt-3 border-t border-blue-300 dark:border-blue-700">
                                         <div className="flex justify-between items-center">
-                                            <span className="font-bold text-gray-900 dark:text-white">Margem Bruta:</span>
+                                            <div>
+                                                <span className="font-bold text-gray-900 dark:text-white block">Margem de Contribuição:</span>
+                                                <span className="text-xs text-gray-500 dark:text-gray-400">Disponível para comissão e lucro</span>
+                                            </div>
                                             <span className={`text-2xl font-bold ${marginColor}`}>
                                                 {margin.toFixed(1)}%
                                             </span>

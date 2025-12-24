@@ -345,7 +345,14 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
               final_value,
               payment_config,
               price_table_id,
-              users!inner (
+              doctor:users!doctor_id (
+                id,
+                professional_id,
+                professionals (
+                  name
+                )
+              ),
+              seller:users!sales_rep_id (
                 id,
                 professional_id,
                 professionals (
@@ -362,7 +369,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
               )
             `
             )
-            .in("patient_id", patientIds)
+            .eq("clinic_id", profile.clinic_id)
             .order("created_at", { ascending: false });
 
           if (budgetsError) {
@@ -374,14 +381,14 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
             await supabase
               .from("treatment_items")
               .select(`
-                *,
-                doctor:users!doctor_id (
-                  id,
-                  professional_id,
-                  professionals (
-                    name
-                  )
-                )
+            *,
+            doctor: users!doctor_id (
+              id,
+              professional_id,
+              professionals(
+                name
+              )
+            )
               `)
               .in("patient_id", patientIds);
 
@@ -410,7 +417,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
                   .map((b) => {
                     // Get professional name from the joined data
                     // users is an array when using !inner join
-                    const user = Array.isArray(b.users) ? b.users[0] : b.users;
+                    // Get professional name from the joined data (aliased as 'doctor')
+                    const user = Array.isArray(b.doctor) ? b.doctor[0] : b.doctor;
                     const professional = Array.isArray(user?.professionals) ? user.professionals[0] : user?.professionals;
                     const professionalName = professional?.name || 'Profissional não informado';
                     return {
@@ -418,7 +426,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
                       createdAt: new Date(b.created_at).toLocaleDateString(
                         "pt-BR"
                       ),
-                      doctorName: `Dr. ${professionalName}`,
+                      doctorName: `Dr.${professionalName} `,
                       doctorId: b.doctor_id,
                       status:
                         b.status === "DRAFT"
@@ -462,7 +470,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
                               ? "Concluído"
                               : t.status,
                       budgetId: t.budget_id,
-                      doctorName: `Dr. ${professionalName}`,
+                      doctorName: `Dr.${professionalName} `,
                       executionDate: t.execution_date ? new Date(t.execution_date).toLocaleDateString("pt-BR") : undefined,
                     };
                   }) || [],
@@ -759,7 +767,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         id: budget.id,
         createdAt: new Date().toLocaleDateString("pt-BR"),
         status: "Em Análise",
-        doctorName: `Dr. ${profile?.name || 'Não informado'}`,
+        doctorName: `Dr.${profile?.name || 'Não informado'} `,
         ...budgetData,
         totalValue: totalValue,
         finalValue: finalValue,
@@ -907,7 +915,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         .from("financial_installments")
         .select("id, amount_paid")
         .eq("patient_id", patientId)
-        .ilike("description", `%${budgetId}%`);
+        .ilike("description", `% ${budgetId}% `);
 
       let totalPaidOnInstallments = 0;
       if (installmentsToDelete && installmentsToDelete.length > 0) {
@@ -974,7 +982,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         (t) => t.budgetId !== budgetId
       );
       const updatedFinancials = (patient.financials || []).filter((f) =>
-        !f.description?.includes(`#${budgetId}`)
+        !f.description?.includes(`#${budgetId} `)
       );
 
       // Revert totals locally if approved
@@ -1057,7 +1065,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         installmentsData.push({
           patient_id: patientId,
           clinic_id: profile.clinic_id,
-          description: `OrÃ§amento #${budgetId} - Parc. ${i + 1
+          description: `OrÃ§amento #${budgetId} - Parc.${i + 1
             }/${installmentsCount}`,
           due_date: dueDate.toISOString().split("T")[0],
           amount: installmentValue,

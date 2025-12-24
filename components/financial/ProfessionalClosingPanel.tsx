@@ -127,15 +127,15 @@ export const ProfessionalClosingPanel: React.FC<ProfessionalClosingPanelProps> =
         try {
             const { data, error } = await supabase
                 .from('clinics')
-                .select('federal_tax_rate, avg_card_fee')
+                .select('tax_rate_percent') // Correct column
                 .eq('id', profile.clinic_id)
                 .single();
 
             if (error) throw error;
             if (data) {
                 setClinicConfig({
-                    federal_tax_rate: Number(data.federal_tax_rate || 0.11),
-                    avg_card_fee: Number(data.avg_card_fee || 0.03)
+                    federal_tax_rate: (data.tax_rate_percent || 0) / 100, // Convert percentage to decimal
+                    avg_card_fee: 0.03 // Default to 3% as column doesn't exist
                 });
             }
         } catch (error) {
@@ -160,7 +160,17 @@ export const ProfessionalClosingPanel: React.FC<ProfessionalClosingPanelProps> =
             const startDate = `${year}-${month}-01`;
             const endDate = new Date(Number(year), Number(month), 0).toISOString().split('T')[0];
 
-            // Fetch completed treatments
+            // 1. Fetch available procedures for mapping (to get ID and Lab Cost by name)
+            const { data: proceduresList } = await supabase
+                .from('procedure')
+                .select('id, name, estimated_lab_cost');
+
+            const procedureMap = new Map();
+            if (proceduresList) {
+                proceduresList.forEach(p => procedureMap.set(p.name, p));
+            }
+
+            // 2. Fetch completed treatments (Removed budgets join which caused 400)
             const { data: treatmentsData, error: treatmentsError } = await supabase
                 .from('treatment_items')
                 .select(`
@@ -171,11 +181,10 @@ export const ProfessionalClosingPanel: React.FC<ProfessionalClosingPanelProps> =
                     total_value,
                     patient_id,
                     patients(name),
-                    budget_id,
-                    budgets(procedure_id)
+                    budget_id
                 `)
-                .eq('doctor_id', selectedProfessional)
-                .eq('status', 'COMPLETED')
+                .eq('doctor_id', selectedProfessional) // Filter by the selected professional's user ID
+                .eq('status', 'COMPLETED') // TRAVA DE CONCLUSÃO: Only completed items
                 .gte('execution_date', startDate)
                 .lte('execution_date', endDate)
                 .order('execution_date', { ascending: false });
@@ -188,7 +197,7 @@ export const ProfessionalClosingPanel: React.FC<ProfessionalClosingPanelProps> =
                 return;
             }
 
-            // Fetch payments (installments) for relevant budgets
+            // 3. Fetch payments (installments) for relevant budgets
             const budgetIds = [...new Set(treatmentsData.map(t => t.budget_id).filter(Boolean))];
 
             let budgetProgressMap: Record<string, number> = {};
@@ -213,13 +222,14 @@ export const ProfessionalClosingPanel: React.FC<ProfessionalClosingPanelProps> =
                 }
             }
 
-            // For each treatment, fetch fee configuration and calculate
+            // 4. Calculate for each treatment
             const calculatedTreatments: CalculatedItem[] = [];
 
             for (const treatment of treatmentsData) {
-                // Get procedure_id from budget_items if available
-                const budget = (Array.isArray(treatment.budgets) ? treatment.budgets[0] : treatment.budgets) as any;
-                const procedureId = budget?.procedure_id || null;
+                // Resolve procedure data by name
+                const proc = procedureMap.get(treatment.procedure_name);
+                const procedureId = proc?.id || null;
+                const labCost = Number(proc?.estimated_lab_cost || 0);
 
                 // Fetch fee configuration
                 let feeConfig: FeeConfig = { fee_type: 'PERCENTAGE', fee_value: 30 }; // Default
@@ -234,20 +244,6 @@ export const ProfessionalClosingPanel: React.FC<ProfessionalClosingPanelProps> =
 
                     if (feeData) {
                         feeConfig = feeData as FeeConfig;
-                    }
-                }
-
-                // Fetch lab cost from procedure
-                let labCost = 0;
-                if (procedureId) {
-                    const { data: procedureData } = await supabase
-                        .from('procedure')
-                        .select('estimated_lab_cost')
-                        .eq('id', procedureId)
-                        .single();
-
-                    if (procedureData) {
-                        labCost = Number(procedureData.estimated_lab_cost || 0);
                     }
                 }
 
@@ -303,7 +299,7 @@ export const ProfessionalClosingPanel: React.FC<ProfessionalClosingPanelProps> =
                     baseFee,
                     paymentProgress,
                     futureReceivable,
-                    totalPaid: 0, // Placeholder, specific installment matching is complex
+                    totalPaid: 0, // Placeholder
                     totalDue: 0   // Placeholder
                 });
             }

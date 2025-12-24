@@ -25,6 +25,7 @@ import { useDashboardData } from "../hooks/useDashboardData";
 import { supabase } from "../lib/supabase";
 import { WarRoomCard } from "../components/WarRoomCard";
 import { HealthPillars } from "../components/dashboard/HealthPillars";
+import ClinicHealthScoreCard from "../components/ClinicHealthScoreCard";
 
 const Dashboard: React.FC = () => {
     const navigate = useNavigate();
@@ -195,25 +196,8 @@ const Dashboard: React.FC = () => {
                 </div>
 
                 {/* C. SAÚDE DA CLÍNICA (Score) */}
-                <div onClick={() => navigate('/reports')} className="relative bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden cursor-pointer group hover:border-emerald-500/30 transition-all flex flex-col justify-between h-full">
-                    <div className="absolute top-0 right-0 p-4 opacity-5">
-                        <Activity size={120} />
-                    </div>
-                    <div>
-                        <div className="flex items-center gap-3 mb-6">
-                            <div className="p-2.5 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
-                                <Activity size={20} className="text-emerald-500" />
-                            </div>
-                            <h2 className="text-lg font-bold text-slate-800 dark:text-white">Health Score</h2>
-                        </div>
-                        <div className="flex flex-col items-center justify-center my-2">
-                            <div className="text-5xl font-black text-emerald-500 tracking-tighter">{healthScore}</div>
-                            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Pontos</span>
-                        </div>
-                    </div>
-                    <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700 text-center">
-                        <span className="text-xs text-slate-500">Baseado em 5 pilares operacionais</span>
-                    </div>
+                <div className="h-full">
+                    <ClinicHealthScoreCard />
                 </div>
             </div>
 

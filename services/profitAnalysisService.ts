@@ -14,7 +14,7 @@ import { supabase } from '../lib/supabase';
 export interface ProcedureData {
     id: string;
     name: string;
-    estimated_duration: number; // minutos
+    estimated_duration: number; // Mapeado de 'estimated_time_minutes'
     estimated_lab_cost: number;
     commission_type: 'PERCENTAGE' | 'FIXED_AMOUNT';
     commission_base_value: number;
@@ -90,14 +90,21 @@ class ProfitAnalysisService {
      */
     async getProcedureData(procedureId: string): Promise<ProcedureData | null> {
         try {
+            if (!procedureId || procedureId.length < 10) return null; // Validação básica
+
             const { data, error } = await supabase
-                .from('procedures')
-                .select('id, name, estimated_duration, estimated_lab_cost, commission_type, commission_base_value')
+                .from('procedure')
+                .select('id, name, estimated_time_minutes, estimated_lab_cost, commission_type, commission_base_value')
                 .eq('id', procedureId)
                 .single();
 
             if (error) throw error;
-            return data;
+
+            // Map table column 'estimated_time_minutes' to 'estimated_duration' for internal compatibility
+            return {
+                ...data,
+                estimated_duration: data.estimated_time_minutes || 0
+            };
         } catch (error) {
             console.error('Erro ao buscar dados do procedimento:', error);
             return null;

@@ -217,21 +217,70 @@ export const useBudgetOperations = () => {
 
     const updateBudget = useMutation({
         mutationFn: async ({ budgetId, data }: { budgetId: string, data: any }) => {
+            console.log('🔵 Updating budget:', { budgetId, data });
+
+            // RESOLVE DOCTOR_ID (Same logic as createBudget)
+            let userIdToSave = null;
+            if (data.doctorId) {
+                // Tenta achar um usuário que tenha esse professional_id
+                const { data: userByProf } = await supabase
+                    .from('users')
+                    .select('id')
+                    .eq('professional_id', data.doctorId)
+                    .single();
+
+                if (userByProf) {
+                    userIdToSave = userByProf.id;
+                } else {
+                    // Fallback: Talvez o ID passado JÁ SEJA um ID de usuário?
+                    const { data: userdById } = await supabase
+                        .from('users')
+                        .select('id')
+                        .eq('id', data.doctorId)
+                        .single();
+
+                    if (userdById) {
+                        userIdToSave = userdById.id;
+                    }
+                }
+            }
+
+            // Fallback for current user
+            if (!userIdToSave && profile?.email) {
+                const { data: userData } = await supabase
+                    .from('users')
+                    .select('id')
+                    .eq('email', profile.email)
+                    .single();
+                if (userData) userIdToSave = userData.id;
+            }
+
+            if (!userIdToSave) {
+                throw new Error('Erro: Não foi possível vincular um Usuário válido a este Profissional.');
+            }
+
             // Update Budget Header
+            const updatePayload: any = {
+                doctor_id: userIdToSave,
+                price_table_id: data.priceTableId,
+                total_value: data.totalValue,
+                discount: data.discount,
+                final_value: data.finalValue,
+                payment_config: data.paymentConfig,
+                sales_rep_id: data.salesRepId || null, // Add Sales Rep
+                category_id: data.categoryId || null,  // Add Category
+                updated_at: new Date().toISOString()
+            };
+
             const { error: budgetError } = await supabase
                 .from('budgets')
-                .update({
-                    doctor_id: data.doctorId,
-                    price_table_id: data.priceTableId,
-                    total_value: data.totalValue,
-                    discount: data.discount,
-                    final_value: data.finalValue,
-                    payment_config: data.paymentConfig,
-                    updated_at: new Date().toISOString()
-                })
+                .update(updatePayload)
                 .eq('id', budgetId);
 
-            if (budgetError) throw budgetError;
+            if (budgetError) {
+                console.error('❌ Budget Update Error:', budgetError);
+                throw budgetError;
+            }
 
             // Replace Items (Delete All + Insert New) - Simple approach
             await supabase.from('budget_items').delete().eq('budget_id', budgetId);
@@ -246,7 +295,8 @@ export const useBudgetOperations = () => {
                     total_value: item.total
                 }));
 
-                await supabase.from('budget_items').insert(itemsPayload);
+                const { error: itemsError } = await supabase.from('budget_items').insert(itemsPayload);
+                if (itemsError) throw itemsError;
             }
         },
         onSuccess: (_, vars) => {

@@ -35,6 +35,8 @@ interface User {
   role: string;
   color: string;
   active: boolean;
+  is_sales_rep?: boolean;
+  is_clinical_provider?: boolean;
   professional_id?: string;
   professional?: {
     id: string;
@@ -62,6 +64,7 @@ const UsersSettings: React.FC = () => {
     role: "PROFESSIONAL",
     color: "#3b82f6",
     active: true,
+    isSales: false,
   });
 
   // Clinical Profile State
@@ -92,6 +95,7 @@ const UsersSettings: React.FC = () => {
           role: editingUser.role,
           color: editingUser.color || "#3b82f6",
           active: editingUser.active,
+          isSales: editingUser.is_sales_rep || false,
         });
 
         // Determine clinical state
@@ -127,6 +131,7 @@ const UsersSettings: React.FC = () => {
           role: "PROFESSIONAL",
           color: "#3b82f6",
           active: true,
+          isSales: false,
         });
         setIsClinical(true); // Default to professional/clinical
         setProfessionalMode('CREATE');
@@ -207,22 +212,20 @@ const UsersSettings: React.FC = () => {
       if (!clinicId) throw new Error("Clínica não encontrada");
 
       // Prepare payload
-      // Logic:
-      // If isClinical is true:
-      //    If mode CREATE: send professional_data
-      //    If mode LINK: send link_professional_id
-      // If isClinical is false: send neither
+      // Logic: 
+      // Always construct pro metadata with flags
+      // If isClinical, include professional details
 
-      let finalProfData = null;
-      let finalLinkId = null;
+      const finalProfData = {
+        ...profData,
+        is_clinical_provider: isClinical,
+        is_sales_rep: formData.isSales
+      };
 
-      if (isClinical) {
-        if (professionalMode === 'CREATE') {
-          finalProfData = profData;
-        } else {
-          finalLinkId = selectedProfessionalId;
-          if (!finalLinkId) throw new Error("Selecione um profissional para vincular");
-        }
+      const finalLinkId = isClinical && professionalMode === 'LINK' ? selectedProfessionalId : null;
+
+      if (isClinical && professionalMode === 'LINK' && !finalLinkId) {
+        throw new Error("Selecione um profissional para vincular");
       }
 
       // Transactional RPC call
@@ -235,10 +238,12 @@ const UsersSettings: React.FC = () => {
         p_color: formData.color,
         p_active: formData.active,
         p_professional_data: finalProfData,
-        p_link_professional_id: finalLinkId
+        p_link_professional_id: finalLinkId || null
       });
 
       if (error) throw error;
+
+      // Removed manual update of is_sales_rep since RPC handles it now
 
       setModalOpen(false);
       setEditingUser(null);
@@ -575,6 +580,17 @@ const UsersSettings: React.FC = () => {
                 </div>
               )}
 
+              {/* SALES ROLE TOGGLE */}
+              <div className="flex items-center gap-3 p-4 bg-orange-50 dark:bg-orange-900/10 rounded-lg border border-orange-100 dark:border-orange-800/30">
+                <div className={`w-10 h-5 rounded-full relative cursor-pointer transition-colors ${formData.isSales ? 'bg-orange-500' : 'bg-gray-300'}`} onClick={() => setFormData(prev => ({ ...prev, isSales: !prev.isSales }))}>
+                  <div className={`absolute top-1 left-1 bg-white w-3 h-3 rounded-full transition-transform ${formData.isSales ? 'translate-x-5' : ''}`}></div>
+                </div>
+                <div className="cursor-pointer" onClick={() => setFormData(prev => ({ ...prev, isSales: !prev.isSales }))}>
+                  <span className="font-medium text-gray-900 dark:text-white text-sm">Atua no Setor Comercial? (Vendedor)</span>
+                  <p className="text-xs text-gray-500">Habilita este usuário para ser selecionado como vendedor em orçamentos.</p>
+                </div>
+              </div>
+
               <div className="flex items-center gap-2 pt-4">
                 <input
                   type="checkbox"
@@ -607,9 +623,9 @@ const UsersSettings: React.FC = () => {
               </div>
             </form>
           </div>
-        </div>
+        </div >
       )}
-    </div>
+    </div >
   );
 };
 

@@ -83,17 +83,24 @@ export const PatientInstallments: React.FC<PatientInstallmentsProps> = ({ patien
         }
     };
 
-    const handlePayInstallment = async (installmentId: string, source: string) => {
+    const handlePayInstallment = async (installmentId: string, source: string, amount: number) => {
         try {
             const tableName = source === 'NEW' ? 'installments' : 'financial_installments';
 
+            const updateData: any = { status: 'PAID' };
+
+            if (source === 'NEW') {
+                updateData.paid_date = new Date().toISOString();
+                updateData.updated_at = new Date().toISOString();
+            } else {
+                // For legacy financial_installments
+                updateData.amount_paid = amount;
+                // Do not set updated_at or paid_date as they might not exist/differ
+            }
+
             const { error } = await supabase
                 .from(tableName)
-                .update({
-                    status: 'PAID',
-                    ...(source === 'NEW' ? { paid_date: new Date().toISOString() } : {}),
-                    updated_at: new Date().toISOString()
-                })
+                .update(updateData)
                 .eq('id', installmentId);
 
             if (error) throw error;
@@ -206,7 +213,7 @@ export const PatientInstallments: React.FC<PatientInstallmentsProps> = ({ patien
                                         <button
                                             onClick={() => {
                                                 if (confirm(`Confirmar pagamento de R$ ${installment.amount.toLocaleString('pt-BR')}?`)) {
-                                                    handlePayInstallment(installment.id, installment.source || 'NEW');
+                                                    handlePayInstallment(installment.id, installment.source || 'NEW', installment.amount);
                                                 }
                                             }}
                                             className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-3 sm:py-2 rounded-lg transition-colors font-medium text-sm flex-1 sm:flex-none justify-center"

@@ -59,7 +59,7 @@ import ReceivePayment from "./pages/financial/ReceivePayment";
 import ProfessionalClosing from "./pages/financial/ProfessionalClosing";
 import Goals from "./pages/intelligence/Goals";
 import BOSIntelligence from "./pages/intelligence/BOSIntelligence";
-import ClinicHealth from "./pages/intelligence/ClinicHealth";
+import ClinicHealthDetails from "./components/ClinicHealthDetails";
 
 // Wrapper to adapt AppLayout for Router Outlet
 const LayoutWrapper = () => (
@@ -131,7 +131,8 @@ const App: React.FC = () => {
                     {/* --- INTELLIGENCE MODULE --- */}
                     <Route path="/intelligence/goals" element={<Goals />} />
                     <Route path="/intelligence/bos" element={<BOSIntelligence />} />
-                    <Route path="/intelligence/clinic-health" element={<ClinicHealth />} />
+                    <Route path="/clinichealth" element={<ClinicHealthDetails />} />
+                    <Route path="/intelligence/clinic-health" element={<Navigate to="/clinichealth" replace />} />
 
                     {/* --- USER PROFILE --- */}
                     <Route path="/profile" element={<Profile />} />

@@ -21,6 +21,9 @@ import { ProfitBar } from './profit/ProfitBar';
 import { MarginAlert } from './profit/MarginAlert';
 import { BudgetProfitSummary } from './profit/BudgetProfitSummary';
 import profitAnalysisService from '../services/profitAnalysisService';
+import { fetchBudgetById } from '../services/budgetService';
+import SecurityPinModal from './SecurityPinModal';
+
 
 // Inputs larger on mobile for touch
 const inputClass = "w-full bg-white text-gray-900 border border-gray-200 rounded-lg p-3 md:p-2.5 text-base md:text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all shadow-input h-12 md:h-10";
@@ -67,6 +70,8 @@ const BudgetForm: React.FC = () => {
     const [qty, setQty] = useState(1);
     const [categoryId, setCategoryId] = useState('');
     const [isSavedLocally, setIsSavedLocally] = useState(false);
+    const [budgetLoaded, setBudgetLoaded] = useState(false);
+    const isInitialMount = React.useRef(true);
 
     // Financial Anticipation Engine
     const [enableAnticipation, setEnableAnticipation] = useState(false);
@@ -90,58 +95,75 @@ const BudgetForm: React.FC = () => {
         }
     }, [procedures, selectedProcedure]);
 
-    // Initial Load - Existing Budget
+    // Initial Load - Existing Budget (Stable)
     useEffect(() => {
-        if (existingBudget) {
-            console.log('📋 Loading existing budget:', existingBudget);
+        // Impede que o efeito rode se já carregou ou se não há ID
+        if (!budgetId || budgetLoaded) return;
 
-            // Map budget_items to BudgetItem format
-            if (existingBudget.items && existingBudget.items.length > 0) {
-                const mappedItems = existingBudget.items.map((item: any) => ({
-                    id: item.id || Math.random().toString(36).substr(2, 9),
-                    procedure: item.procedure_name || item.procedure || '',
-                    region: item.region || 'Geral',
-                    tooth_number: item.tooth_number || '',
-                    face: item.face || '',
-                    quantity: item.quantity || 1,
-                    unitValue: item.unit_value || 0,
-                    total: item.total_value || 0
-                }));
-                console.log('✅ Mapped items:', mappedItems);
-                setItems(mappedItems);
-            }
+        const loadData = async () => {
+            try {
+                const data = await fetchBudgetById(budgetId);
+                if (data) {
+                    // Mapeamento dos itens com flag de proteção e ID temporário estável
+                    if (data.items && data.items.length > 0) {
+                        const mappedItems = data.items.map((item: any) => ({
+                            id: item.id || Math.random().toString(36).substr(2, 9),
+                            procedure: item.procedure_name || item.procedure || '',
+                            region: item.region || 'Geral',
+                            tooth_number: item.tooth_number || '',
+                            face: item.face || '',
+                            quantity: item.quantity || 1,
+                            unitValue: item.unit_value || 0,
+                            total: item.total_value || 0,
+                            tempId: crypto.randomUUID(), // Estabiliza a lista no React
+                            isExisting: true
+                        }));
+                        setItems(mappedItems);
+                        console.log("✅ Budget stable load completed.");
+                    }
 
-            setDiscount(existingBudget.discount || 0);
-            setDownPayment(existingBudget.down_payment_value || 0);
+                    if (data.discount) setDiscount(data.discount);
+                    if (data.down_payment_value) setDownPayment(data.down_payment_value);
+                    if (data.payment_config) {
+                        setPaymentMethod(data.payment_config.method || 'Cartão');
+                        setInstallments(data.payment_config.installments || 1);
+                    }
+                    if (data.price_table_id) setSelectedPriceTableId(data.price_table_id);
+                    if (data.doctor_id) setSelectedProfessionalId(data.doctor_id);
+                    if (data.category_id) setCategoryId(data.category_id);
+                    if (data.sales_rep_id) setSelectedSalesRepId(data.sales_rep_id);
 
-            if (existingBudget.payment_config) {
-                setPaymentMethod(existingBudget.payment_config.method || 'Cartão');
-                setInstallments(existingBudget.payment_config.installments || 1);
-            }
-
-            if (existingBudget.price_table_id) setSelectedPriceTableId(existingBudget.price_table_id);
-            if (existingBudget.doctor_id) setSelectedProfessionalId(existingBudget.doctor_id);
-            if (existingBudget.category_id) setCategoryId(existingBudget.category_id);
-            if (existingBudget.sales_rep_id) setSelectedSalesRepId(existingBudget.sales_rep_id);
-        } else if (!loadingBudget) {
-            // Defaults for new budget
-            if (priceTables.length > 0 && !selectedPriceTableId) {
-                const particularTable = priceTables.find(pt => pt.type === 'PARTICULAR');
-                if (particularTable) setSelectedPriceTableId(particularTable.id);
-            }
-            // Auto-select logged user or first professional
-            if (!selectedProfessionalId && professionals.length > 0) {
-                // Try to find current user in professionals list
-                const currentUserAsProf = professionals.find(p => p.id === profile?.id);
-                if (currentUserAsProf) {
-                    setSelectedProfessionalId(currentUserAsProf.id);
-                } else {
-                    // Fallback to first professional
-                    setSelectedProfessionalId(professionals[0].id);
+                    setBudgetLoaded(true);
+                    isInitialMount.current = false;
                 }
+            } catch (err) {
+                console.error("❌ Error in stable load:", err);
+            }
+        };
+
+        loadData();
+    }, [budgetId, budgetLoaded]);
+
+    // Defaults for New Budget
+    useEffect(() => {
+        if (budgetId) return; // Only for new budgets
+
+        // Auto-select particular price table
+        if (priceTables.length > 0 && !selectedPriceTableId) {
+            const particularTable = priceTables.find(pt => pt.type === 'PARTICULAR');
+            if (particularTable) setSelectedPriceTableId(particularTable.id);
+        }
+
+        // Auto-select logged user or first professional
+        if (!selectedProfessionalId && professionals.length > 0) {
+            const currentUserAsProf = professionals.find(p => p.id === profile?.id);
+            if (currentUserAsProf) {
+                setSelectedProfessionalId(currentUserAsProf.id);
+            } else {
+                setSelectedProfessionalId(professionals[0].id);
             }
         }
-    }, [existingBudget, loadingBudget, priceTables, profile, professionals]);
+    }, [budgetId, priceTables, professionals, profile, selectedPriceTableId, selectedProfessionalId]);
 
     // Pricing Logic
     useEffect(() => {
@@ -179,9 +201,11 @@ const BudgetForm: React.FC = () => {
 
     // Calcular margem em tempo real
     useEffect(() => {
+        let isMounted = true;
+
         const calculateMargin = async () => {
             if (items.length === 0 || costPerMinute === 0) {
-                setBudgetMarginAnalysis(null);
+                if (isMounted) setBudgetMarginAnalysis(null);
                 return;
             }
 
@@ -196,22 +220,47 @@ const BudgetForm: React.FC = () => {
                 };
             });
 
-            // Calcular margem do orçamento (incluindo comissão de venda se houver vendedor)
+            // Filter out items without procedure IDs to prevent errors
+            const validItemsForAnalysis = itemsForAnalysis.filter(i => i.procedure_id && i.procedure_id.length > 5);
+
+            if (validItemsForAnalysis.length === 0) return;
+
+            // Calcular margem
             const analysis = await profitAnalysisService.calculateBudgetMargin(
-                itemsForAnalysis,
+                validItemsForAnalysis,
                 costPerMinute,
-                0, // taxRate - pode ser configurado futuramente
-                0, // cardFeeRate - pode ser configurado futuramente
-                selectedSalesRepId || undefined, // Vendedor selecionado
-                profile?.clinics?.id,            // ID da clínica
-                categoryId || undefined          // Categoria do orçamento
+                0, // taxRate
+                0, // cardFeeRate
+                selectedSalesRepId || undefined,
+                profile?.clinics?.id,
+                categoryId || undefined
             );
 
-            setBudgetMarginAnalysis(analysis);
+            if (isMounted) {
+                // Prevent state update if analysis hasn't changed meaningfully to stop loops
+                setBudgetMarginAnalysis((prev: any) => {
+                    if (JSON.stringify(prev) === JSON.stringify(analysis)) return prev;
+                    return analysis;
+                });
+            }
         };
 
-        calculateMargin();
-    }, [items, costPerMinute, procedures, selectedSalesRepId, profile, categoryId]);
+        const timeoutId = setTimeout(calculateMargin, 500); // Debounce 500ms
+        return () => {
+            isMounted = false;
+            clearTimeout(timeoutId);
+        };
+    }, [
+        // Use stringified versions for deep comparison stability
+        JSON.stringify(items.map(i => ({ id: i.id, p: i.procedure, q: i.quantity, v: i.unitValue }))),
+        costPerMinute,
+        // Procedures usually don't change often, but if reference is unstable, we check length or ID hash?
+        // JSON.stringify is safer for now if list is not huge.
+        // Assuming procedures list is stable enough or we debounce.
+        selectedSalesRepId,
+        profile?.clinics?.id,
+        categoryId
+    ]);
 
     // Calculate values BEFORE early returns
     const subtotal = items.reduce((acc, item) => acc + item.total, 0);
@@ -363,15 +412,41 @@ const BudgetForm: React.FC = () => {
         }
     };
 
-    const handleApprove = async () => {
+
+    // Security PIN State
+    const [showPinModal, setShowPinModal] = useState(false);
+
+    const handleSecureApprove = async () => {
         if (!budgetId || !patient?.id) {
             console.error("❌ Tentativa de aprovar sem ID válido (BudgetForm)", { budgetId, patientId: patient?.id });
             alert("Erro: Dados incompletos para aprovação.");
             return;
         }
-        console.log('✅ Approving from BudgetForm:', { budgetId, patientId: patient.id });
-        await approveBudget({ budgetId, patientId: patient.id });
-        navigate(`/patients/${patient.id}`);
+
+        // 1. Verificação do Profit Guardian (Margem < 20%)
+        const marginPercent = budgetMarginAnalysis?.marginPercent ?? 0;
+
+        // Regra de Ouro: Bloqueia se margem < 20%
+        if (marginPercent < 20) {
+            setShowPinModal(true);
+            return;
+        }
+
+        // Se margem OK, aprova direto
+        await performApproval();
+    };
+
+    const performApproval = async () => {
+        try {
+            console.log('✅ Approving from BudgetForm:', { budgetId, patientId: patient?.id });
+            if (budgetId && patient?.id) {
+                await approveBudget({ budgetId, patientId: patient.id });
+                navigate(`/patients/${patient.id}`);
+            }
+        } catch (error) {
+            console.error("Erro na aprovação:", error);
+            alert("Erro ao aprovar orçamento.");
+        }
     };
 
     const handleCreateOpportunity = () => {
@@ -437,7 +512,7 @@ const BudgetForm: React.FC = () => {
                         {isCreating || isUpdating ? <Loader size={18} className="animate-spin" /> : <Save size={18} />} Salvar
                     </button>
                     {existingBudget && (existingBudget.status === 'Em Análise' || existingBudget.status === 'Em Negociação' || existingBudget.status === 'Enviado') && (
-                        <button onClick={handleApprove} className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 shadow-sm text-sm">
+                        <button onClick={handleSecureApprove} className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 shadow-sm text-sm">
                             <CheckCircle size={18} /> Aprovar
                         </button>
                     )}
@@ -485,19 +560,24 @@ const BudgetForm: React.FC = () => {
                                     {professionals.map(prof => <option key={prof.id} value={prof.id}>{prof.name}</option>)}
                                 </select>
                             </div>
-                            <div>
-                                <label className={labelClass}>Vendedor / Consultor (Opcional)</label>
-                                <select
-                                    className={inputClass}
-                                    value={selectedSalesRepId}
-                                    onChange={e => setSelectedSalesRepId(e.target.value)}
-                                >
-                                    <option value="">Nenhum (sem comissão de venda)</option>
-                                    {professionals.map(p => (
-                                        <option key={p.id} value={p.id}>{p.name}</option>
-                                    ))}
-                                </select>
-                            </div>
+                            {/* Exibe Vendedor apenas se não for 'NOVO' (tem ID) ou se já tiver vendedor selecionado */}
+                            {existingBudget && (
+                                <div>
+                                    <label className={labelClass}>Vendedor / Consultor (Opcional)</label>
+                                    <select
+                                        className={inputClass}
+                                        value={selectedSalesRepId}
+                                        onChange={e => setSelectedSalesRepId(e.target.value)}
+                                    >
+                                        <option value="">Nenhum (sem comissão de venda)</option>
+                                        {professionals
+                                            .filter(p => (p as any).users?.is_sales_rep) // Filter by role
+                                            .map(p => (
+                                                <option key={p.id} value={p.id}>{p.name}</option>
+                                            ))}
+                                    </select>
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -546,231 +626,201 @@ const BudgetForm: React.FC = () => {
                                     </div>
                                 )}
                             </div>
-                            <div className="space-y-4">
-                                {items.map((item, index) => {
-                                    const itemAnalysis = budgetMarginAnalysis?.itemsAnalysis?.[index];
-                                    return (
-                                        <div key={item.id} className="bg-slate-800/50 p-4 rounded-lg space-y-3">
-                                            <div className="flex justify-between items-start">
-                                                <div className="flex-1">
-                                                    <h4 className="font-bold text-white">{item.procedure}</h4>
-                                                    <p className="text-sm text-slate-400">
-                                                        {item.region} {item.tooth_number && `- Dente ${item.tooth_number}`} {item.face && `(${item.face})`}
-                                                    </p>
-                                                    <p className="text-xs text-slate-500 mt-1">
-                                                        {item.quantity}x R$ {item.unitValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                                    </p>
-                                                </div>
-                                                <div className="flex items-center gap-4">
-                                                    <span className="font-bold text-white text-lg">R$ {item.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                                                    <button onClick={() => handleRemoveItem(item.id)} className="text-red-500 hover:text-red-400">
+                            <div className="overflow-x-auto">
+                                <table className="w-full">
+                                    <thead>
+                                        <tr className="border-b border-slate-800 text-left">
+                                            <th className="py-3 px-4 text-slate-400 font-medium text-sm">Procedimento</th>
+                                            <th className="py-3 px-4 text-slate-400 font-medium text-sm">Região</th>
+                                            <th className="py-3 px-4 text-slate-400 font-medium text-sm text-right">Qtd</th>
+                                            <th className="py-3 px-4 text-slate-400 font-medium text-sm text-right">Valor Unit.</th>
+                                            <th className="py-3 px-4 text-slate-400 font-medium text-sm text-right">Total</th>
+                                            <th className="py-3 px-4 text-slate-400 font-medium text-sm text-center">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {items.map((item, index) => (
+                                            <tr key={item.id || index} className="border-b border-slate-800/50 hover:bg-slate-800/30">
+                                                <td className="py-3 px-4">
+                                                    <p className="text-slate-200 font-medium">{item.procedure}</p>
+                                                    {(item.tooth_number || item.face) && (
+                                                        <p className="text-xs text-slate-500">
+                                                            {item.tooth_number && `Dente: ${item.tooth_number} `}
+                                                            {item.face && `Face: ${item.face}`}
+                                                        </p>
+                                                    )}
+                                                </td>
+                                                <td className="py-3 px-4 text-slate-400 text-sm">{item.region}</td>
+                                                <td className="py-3 px-4 text-right text-slate-300">{item.quantity}</td>
+                                                <td className="py-3 px-4 text-right text-slate-300">
+                                                    R$ {item.unitValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                </td>
+                                                <td className="py-3 px-4 text-right text-white font-medium">
+                                                    R$ {item.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                </td>
+                                                <td className="py-3 px-4 text-center">
+                                                    <button onClick={() => handleRemoveItem(item.id)} className="p-2 text-slate-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors">
                                                         <Trash2 size={18} />
                                                     </button>
-                                                </div>
-                                            </div>
-
-                                            {/* Profit Bar */}
-                                            {itemAnalysis && costPerMinute > 0 && (
-                                                <div className="pt-3 border-t border-slate-700">
-                                                    <ProfitBar
-                                                        price={itemAnalysis.margin.price}
-                                                        profit={itemAnalysis.margin.profit}
-                                                        marginPercent={itemAnalysis.margin.marginPercent}
-                                                        status={itemAnalysis.margin.status}
-                                                        showDetails={true}
-                                                    />
-                                                </div>
-                                            )}
-                                        </div>
-                                    );
-                                })}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                    <tfoot>
+                                        <tr>
+                                            <td colSpan={4} className="py-4 px-4 text-right text-slate-400 font-medium">Subtotal:</td>
+                                            <td className="py-4 px-4 text-right text-white font-bold text-lg">
+                                                R$ {subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                            </td>
+                                            <td></td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
                             </div>
-
-                            {/* Alertas de margem baixa */}
-                            {budgetMarginAnalysis && budgetMarginAnalysis.lowMarginItems.length > 0 && (
-                                <div className="mt-6 space-y-3">
-                                    {budgetMarginAnalysis.lowMarginItems.map((lowItem: any, idx: number) => (
-                                        <MarginAlert
-                                            key={idx}
-                                            status={lowItem.marginPercent < 15 ? 'danger' : 'warning'}
-                                            marginPercent={lowItem.marginPercent}
-                                            procedureName={lowItem.procedureName}
-                                        />
-                                    ))}
-                                </div>
-                            )}
                         </div>
                     )}
 
-                    {/* 4. FORMAS DE PAGAMENTO */}
+
+                    {/* 3.1 PROFIT BAR (GUARDIÃO DO LUCRO) */}
+                    {budgetMarginAnalysis && costPerMinute > 0 && (
+                        <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden p-6 md:p-8">
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-slate-200 font-medium flex items-center gap-2">
+                                    <TrendingUp className="text-emerald-500" size={20} />
+                                    Análise de Lucratividade (BOS Artificial Intelligence)
+                                </h3>
+                                {/* SELO DE SEGURANÇA */}
+                                <div className={`hidden md:flex px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider items-center gap-1 ${(budgetMarginAnalysis.marginPercent ?? 0) >= 20
+                                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                    : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                                    }`}>
+                                    {(budgetMarginAnalysis.marginPercent ?? 0) >= 20 ? <CheckCircle size={12} /> : <AlertCircle size={12} />}
+                                    {(budgetMarginAnalysis.marginPercent ?? 0) >= 20 ? 'APROVADO' : 'REQUIRES PIN'}
+                                </div>
+                            </div>
+
+                            <ProfitBar
+                                revenue={budgetMarginAnalysis.totalPrice}
+                                costs={budgetMarginAnalysis.totalCosts}
+                                profit={budgetMarginAnalysis.totalProfit}
+                                marginPercent={budgetMarginAnalysis.marginPercent}
+                            />
+
+                            {/* Alert for low margin will be handled by MarginAlert component inside ProfitBar or separately if needed */}
+                            <div className="mt-4">
+                                <MarginAlert marginPercent={budgetMarginAnalysis.marginPercent} minMargin={20} />
+                            </div>
+                        </div>
+                    )}
+
+
+
+                    {/* 4. CONDIÇÕES DE PAGAMENTO */}
                     <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
-                        <h2 className="text-xl font-bold text-white mb-6">Formas de Pagamento</h2>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div>
-                                <label className={labelClass}>Entrada (R$)</label>
-                                <input
-                                    type="number"
-                                    className={inputClass}
-                                    value={downPayment}
-                                    onChange={e => setDownPayment(parseFloat(e.target.value) || 0)}
-                                    placeholder="0,00"
-                                />
-                            </div>
-
-                            <div>
-                                <label className={labelClass}>Desconto (R$)</label>
-                                <input
-                                    type="number"
-                                    className={inputClass}
-                                    value={discount}
-                                    onChange={e => setDiscount(parseFloat(e.target.value) || 0)}
-                                />
-                            </div>
-
-                            <div>
-                                <label className={labelClass}>Parcelas</label>
-                                <select
-                                    className={inputClass}
-                                    value={installments}
-                                    onChange={e => setInstallments(parseInt(e.target.value))}
-                                    disabled={paymentMethod === 'Pix' || paymentMethod === 'Dinheiro'}
-                                >
-                                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(n => (
-                                        <option key={n} value={n}>{n}x</option>
-                                    ))}
-                                </select>
-                            </div>
-                        </div>
-
-                        <div className="mt-6">
-                            <label className={labelClass}>Método de Pagamento</label>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                {['Pix', 'Cartão', 'Boleto', 'Dinheiro'].map(m => (
-                                    <button
-                                        key={m}
-                                        onClick={() => setPaymentMethod(m as any)}
-                                        className={`p-3 border rounded-lg text-sm font-medium transition-all ${paymentMethod === m
-                                            ? 'bg-blue-600 text-white border-blue-600'
-                                            : 'border-slate-700 text-slate-300 hover:bg-slate-800'
-                                            }`}
-                                    >
-                                        {m}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* BOS 2.0: Simulador de Antecipação */}
-                        {paymentMethod === 'Cartão' && installments > 1 && (
-                            <div className="mt-6 border-t border-slate-800 pt-6">
-                                <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-xl font-bold text-white mb-6">Condições de Pagamento</h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* Coluna Esquerda: Inputs */}
+                            <div className="space-y-4">
+                                <div>
+                                    <label className={labelClass}>Desconto (R$)</label>
+                                    <input type="number" className={inputClass} value={discount} onChange={e => setDiscount(parseFloat(e.target.value))} />
+                                </div>
+                                <div>
+                                    <label className={labelClass}>Entrada (R$)</label>
+                                    <input type="number" className={inputClass} value={downPayment} onChange={e => setDownPayment(parseFloat(e.target.value))} />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <h3 className="text-lg font-bold text-white">Simular Antecipação de Recebíveis</h3>
-                                        <p className="text-sm text-slate-400">Veja quanto você recebe em 24h se antecipar o valor</p>
+                                        <label className={labelClass}>Forma de Pagamento</label>
+                                        <select className={inputClass} value={paymentMethod} onChange={e => setPaymentMethod(e.target.value as any)}>
+                                            <option value="Cartão">Cartão de Crédito</option>
+                                            <option value="Boleto">Boleto</option>
+                                            <option value="Pix">Pix</option>
+                                            <option value="Dinheiro">Dinheiro</option>
+                                        </select>
                                     </div>
-                                    <button
-                                        onClick={() => setEnableAnticipation(!enableAnticipation)}
-                                        className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${enableAnticipation ? 'bg-emerald-600' : 'bg-slate-700'
-                                            }`}
-                                    >
-                                        <span
-                                            className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${enableAnticipation ? 'translate-x-7' : 'translate-x-1'
-                                                }`}
-                                        />
-                                    </button>
+                                    <div>
+                                        <label className={labelClass}>Parcelas</label>
+                                        <select className={inputClass} value={installments} onChange={e => setInstallments(parseInt(e.target.value))} disabled={paymentMethod === 'Pix' || paymentMethod === 'Dinheiro'}>
+                                            {[...Array(12)].map((_, i) => <option key={i + 1} value={i + 1}>{i + 1}x</option>)}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Coluna Direita: Antecipação Engine */}
+                            <div className="bg-slate-950 rounded-lg p-5 border border-slate-800 flex flex-col justify-between">
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className="flex items-center gap-2 text-slate-300 font-medium">
+                                        <DollarSign size={18} className="text-blue-500" />
+                                        Simular Antecipação
+                                    </div>
+                                    <label className="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" className="sr-only peer" checked={enableAnticipation} onChange={() => setEnableAnticipation(!enableAnticipation)} />
+                                        <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                    </label>
                                 </div>
 
-                                {enableAnticipation && (
-                                    <div className="space-y-4">
-                                        {/* Configuração de Taxas */}
-                                        <div className="grid grid-cols-2 gap-4 p-4 bg-slate-800/50 rounded-lg">
+                                {enableAnticipation && finalTotal > 0 && (
+                                    <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+                                        <div className="text-xs text-slate-500">
+                                            Configure as taxas da sua maquininha para ver o custo real.
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-3">
                                             <div>
-                                                <label className="block text-xs font-medium text-slate-400 mb-2">
-                                                    Taxa Intermediação (%)
-                                                </label>
+                                                <label className="text-[10px] uppercase text-slate-500 font-bold">Taxa Intermediação (%)</label>
                                                 <input
                                                     type="number"
-                                                    step="0.1"
-                                                    className="w-full bg-slate-900 text-white border border-slate-700 rounded-lg p-2 text-sm"
+                                                    className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-slate-300 text-sm mt-1"
                                                     value={intermediationFee}
-                                                    onChange={e => setIntermediationFee(parseFloat(e.target.value) || 0)}
+                                                    onChange={e => setIntermediationFee(parseFloat(e.target.value))}
                                                 />
                                             </div>
                                             <div>
-                                                <label className="block text-xs font-medium text-slate-400 mb-2">
-                                                    Taxa Antecipação/Parcela (%)
-                                                </label>
+                                                <label className="text-[10px] uppercase text-slate-500 font-bold">Taxa Antecipação (%/mês)</label>
                                                 <input
                                                     type="number"
-                                                    step="0.1"
-                                                    className="w-full bg-slate-900 text-white border border-slate-700 rounded-lg p-2 text-sm"
+                                                    className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-slate-300 text-sm mt-1"
                                                     value={anticipationFeePerInstallment}
-                                                    onChange={e => setAnticipationFeePerInstallment(parseFloat(e.target.value) || 0)}
+                                                    onChange={e => setAnticipationFeePerInstallment(parseFloat(e.target.value))}
                                                 />
                                             </div>
                                         </div>
 
-                                        {/* Painel de Comparação */}
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            {/* Recebimento Normal */}
-                                            <div className="p-4 bg-slate-800/30 border border-slate-700 rounded-lg">
-                                                <div className="flex items-center gap-2 mb-3">
-                                                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                                                    <h4 className="font-semibold text-white">Recebimento Normal</h4>
+                                        <div className="pt-3 border-t border-slate-800">
+                                            <div className="flex flex-col gap-1 text-sm">
+                                                <div className="flex justify-between">
+                                                    <span className="text-slate-400">Total Venda:</span>
+                                                    <span className="text-slate-200 font-semibold">
+                                                        R$ {anticipationCalculation.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                    </span>
                                                 </div>
-                                                <div className="space-y-2 text-sm">
-                                                    <div className="flex justify-between">
-                                                        <span className="text-slate-400">Valor Total:</span>
-                                                        <span className="text-white font-medium">
-                                                            R$ {finalTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex justify-between">
-                                                        <span className="text-slate-400">Parcelas:</span>
-                                                        <span className="text-white">{installments}x de R$ {(finalTotal / installments).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                                                    </div>
-                                                    <div className="flex justify-between pt-2 border-t border-slate-700">
-                                                        <span className="text-slate-400">Prazo Médio:</span>
-                                                        <span className="text-white font-medium">~{Math.ceil(installments / 2)} meses</span>
-                                                    </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-slate-400">Taxa Intermediação:</span>
+                                                    <span className="text-red-400">
+                                                        -R$ {anticipationCalculation.intermediationCost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                    </span>
                                                 </div>
-                                            </div>
-
-                                            {/* Antecipação */}
-                                            <div className="p-4 bg-emerald-900/20 border border-emerald-700/50 rounded-lg">
-                                                <div className="flex items-center gap-2 mb-3">
-                                                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-                                                    <h4 className="font-semibold text-emerald-400">Antecipação (24h)</h4>
+                                                <div className="flex justify-between">
+                                                    <span className="text-slate-400">Taxa Antecipação:</span>
+                                                    <span className="text-red-400">
+                                                        -R$ {anticipationCalculation.anticipationCost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                    </span>
                                                 </div>
-                                                <div className="space-y-2 text-sm">
-                                                    <div className="flex justify-between">
-                                                        <span className="text-slate-400">Taxa Intermediação:</span>
-                                                        <span className="text-red-400">
-                                                            -R$ {anticipationCalculation.intermediationCost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex justify-between">
-                                                        <span className="text-slate-400">Taxa Antecipação:</span>
-                                                        <span className="text-red-400">
-                                                            -R$ {anticipationCalculation.anticipationCost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex justify-between pt-2 border-t border-emerald-700/50">
-                                                        <span className="text-emerald-400 font-semibold">Líquido na Conta:</span>
-                                                        <span className="text-emerald-400 font-bold text-lg">
-                                                            R$ {anticipationCalculation.netReceive24h.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex justify-between text-xs">
-                                                        <span className="text-slate-500">Perda Efetiva:</span>
-                                                        <span className="text-red-400">
-                                                            {anticipationCalculation.effectiveLossPercent.toFixed(2)}% (R$ {anticipationCalculation.effectiveLoss.toLocaleString('pt-BR', { minimumFractionDigits: 2 })})
-                                                        </span>
-                                                    </div>
+                                                <div className="flex justify-between pt-2 border-t border-emerald-700/50">
+                                                    <span className="text-emerald-400 font-semibold">Líquido na Conta:</span>
+                                                    <span className="text-emerald-400 font-bold text-lg">
+                                                        R$ {anticipationCalculation.netReceive24h.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                    </span>
+                                                </div>
+                                                <div className="flex justify-between text-xs">
+                                                    <span className="text-slate-500">Perda Efetiva:</span>
+                                                    <span className="text-red-400">
+                                                        {anticipationCalculation.effectiveLossPercent.toFixed(2)}% (R$ {anticipationCalculation.effectiveLoss.toLocaleString('pt-BR', { minimumFractionDigits: 2 })})
+                                                    </span>
                                                 </div>
                                             </div>
                                         </div>
-
                                         {/* Alerta de Decisão */}
                                         <div className={`p-4 rounded-lg border ${anticipationCalculation.effectiveLossPercent > 10
                                             ? 'bg-red-900/20 border-red-700/50'
@@ -786,8 +836,9 @@ const BudgetForm: React.FC = () => {
                                         </div>
                                     </div>
                                 )}
+
                             </div>
-                        )}
+                        </div>
                     </div>
 
                     {/* 5. RESUMO FINANCEIRO */}
@@ -857,7 +908,7 @@ const BudgetForm: React.FC = () => {
                         </button>
 
                         {(existingBudget || isSavedLocally) && (existingBudget?.status === 'Em Análise' || existingBudget?.status === 'Em Negociação' || existingBudget?.status === 'Enviado' || existingBudget?.status === 'DRAFT' || isSavedLocally) && (
-                            <button onClick={handleApprove} className="px-6 py-3 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 flex items-center gap-2">
+                            <button onClick={handleSecureApprove} className="px-6 py-3 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 flex items-center gap-2">
                                 <CheckCircle size={18} /> Aprovar
                             </button>
                         )}
@@ -866,13 +917,27 @@ const BudgetForm: React.FC = () => {
                 </div>
             </div>
 
+            {/* Document Modal */}
             {showDocModal && existingBudget && (
                 <DocumentGeneratorModal
-                    budgetId={existingBudget.id}
-                    patientId={patient.id}
+                    budget={existingBudget.id}
+                    patient={patient.id}
                     onClose={() => setShowDocModal(false)}
                 />
             )}
+
+            {/* Security PIN Modal (Fort Knox) */}
+            <SecurityPinModal
+                isOpen={showPinModal}
+                onClose={() => setShowPinModal(false)}
+                onSuccess={performApproval}
+                title="Profit Guardian Lock"
+                description={`Margem Crítica detectada (${(budgetMarginAnalysis?.marginPercent ?? 0).toFixed(1)}%). Autorização do Gestor necessária.`}
+                actionType="BUDGET_OVERRIDE"
+                entityType="BUDGET"
+                entityId={existingBudget?.id}
+                entityName={`Orçamento ${patient.name}`}
+            />
         </div>
     );
 };

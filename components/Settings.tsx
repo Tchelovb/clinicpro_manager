@@ -9,7 +9,10 @@ import {
   Shield,
   FileText,
   Target,
-  Settings as SettingsIcon,
+  Bell,
+  Network,
+  ShieldCheck,
+  Lock
 } from "lucide-react";
 import ClinicSettings from "./settings/ClinicSettings";
 import UsersSettings from "./settings/UsersSettings";
@@ -26,9 +29,9 @@ import ClinicalSettings from "./settings/clinical/ClinicalSettings";
 import AutomationsSettings from "./settings/automations/AutomationsSettings";
 import IntegrationsSettings from "./settings/integrations/IntegrationsSettings";
 import BusinessGoalsSettings from "./settings/goals/BusinessGoalsSettings";
-import { ShieldCheck, Bell, Network } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { MasterSettings } from "./MasterSettings";
+import { ModernSettingsLayout } from "./settings/ModernSettingsLayout";
 
 const Settings: React.FC = () => {
   const { profile } = useAuth();
@@ -39,156 +42,90 @@ const Settings: React.FC = () => {
   }
 
   // Other roles get clinic settings
-  const [activeSection, setActiveSection] = useState<
-    | "clinic"
-    | "branding"
-    | "security"
-    | "clinical"
-    | "automations"
-    | "integrations"
-    | "goals"
-    | "crm"
-    | "Users"
-    | "professionals"
-    | "procedure"
-    | "price-tables"
-    | "insurance-plans"
-    | "cash-rules"
-    | "financial-rules"
-  >("clinic");
+  const [activeSection, setActiveSection] = useState<string>("clinic");
 
-  const sections = [
+  // Configuration of all available setting components
+  const componentsMap: Record<string, React.ComponentType<any>> = {
+    clinic: ClinicSettings,
+    branding: BrandingSettings,
+    security: SecuritySettings,
+    clinical: ClinicalSettings,
+    automations: AutomationsSettings,
+    integrations: IntegrationsSettings,
+    goals: BusinessGoalsSettings,
+    users: UsersSettings,
+    "financial-rules": FinancialRulesSettings,
+    "cash-rules": CashRulesSettings,
+    professionals: ProfessionalsSettings,
+    procedure: ProceduresSettings,
+    "price-tables": PriceTablesSettings,
+    "insurance-plans": InsurancePlansSettings,
+    crm: CRMSettings,
+  };
+
+  const groups = [
     {
-      key: "clinic" as const,
-      label: "Clínica",
-      icon: Building,
-      component: ClinicSettings,
+      title: "Workspace",
+      items: [
+        { key: "clinic", label: "Clínica", icon: Building },
+        { key: "branding", label: "Identidade Visual", icon: Palette },
+        { key: "automations", label: "Notificações & Automações", icon: Bell },
+        { key: "integrations", label: "Integrações & Backup", icon: Network },
+        { key: "security", label: "Segurança & Auditoria", icon: Shield },
+      ]
     },
     {
-      key: "branding" as const,
-      label: "Identidade Visual",
-      icon: Palette,
-      component: BrandingSettings,
+      title: "Comercial & CRM",
+      items: [
+        { key: "crm", label: "Configuração CRM", icon: Users },
+        { key: "goals", label: "Metas (10x50)", icon: Target },
+        { key: "price-tables", label: "Tabelas de Preço", icon: DollarSign },
+        { key: "insurance-plans", label: "Convênios", icon: Heart },
+      ]
     },
     {
-      key: "security" as const,
-      label: "Segurança & Auditoria",
-      icon: Shield,
-      component: SecuritySettings,
+      title: "Operação Clínica",
+      items: [
+        { key: "procedure", label: "Procedimentos", icon: Stethoscope },
+        { key: "professionals", label: "Profissionais", icon: Stethoscope },
+        { key: "clinical", label: "Prontuário & Anamnese", icon: FileText },
+      ]
     },
     {
-      key: "clinical" as const,
-      label: "Formulários Clínicos",
-      icon: FileText,
-      component: ClinicalSettings,
+      title: "Controle Financeiro",
+      items: [
+        { key: "financial-rules", label: "Regras Financeiras", icon: ShieldCheck },
+        { key: "cash-rules", label: "Fort Knox (Caixa)", icon: Lock },
+      ]
     },
     {
-      key: "automations" as const,
-      label: "Notificações & Automações",
-      icon: Bell,
-      component: AutomationsSettings,
-    },
-    {
-      key: "integrations" as const,
-      label: "Integrações & Backup",
-      icon: Network,
-      component: IntegrationsSettings,
-    },
-    {
-      key: "goals" as const,
-      label: "Metas de Negócio",
-      icon: Target,
-      component: BusinessGoalsSettings,
-    },
-    {
-      key: "Users" as const,
-      label: "Usuários",
-      icon: Users,
-      component: UsersSettings,
-    },
-    {
-      key: "financial-rules" as const,
-      label: "Regras Financeiras",
-      icon: ShieldCheck,
-      component: FinancialRulesSettings,
-    },
-    {
-      key: "cash-rules" as const,
-      label: "Regras de Caixa (Fort Knox)",
-      icon: DollarSign,
-      component: CashRulesSettings,
-    },
-    {
-      key: "professionals" as const,
-      label: "Profissionais",
-      icon: Stethoscope,
-      component: ProfessionalsSettings,
-    },
-    {
-      key: "procedure" as const,
-      label: "Procedimentos",
-      icon: Stethoscope,
-      component: ProceduresSettings,
-    },
-    {
-      key: "price-tables" as const,
-      label: "Tabelas de Preço",
-      icon: DollarSign,
-      component: PriceTablesSettings,
-    },
-    {
-      key: "insurance-plans" as const,
-      label: "Convênios",
-      icon: Heart,
-      component: InsurancePlansSettings,
-    },
-    {
-      key: "crm" as const,
-      label: "CRM",
-      icon: Users,
-      component: CRMSettings,
-    },
+      title: "Acesso",
+      items: [
+        { key: "users", label: "Gerenciar Usuários", icon: Users },
+      ]
+    }
   ];
 
-  const ActiveComponent =
-    sections.find((s) => s.key === activeSection)?.component || ClinicSettings;
+  const ActiveComponent = componentsMap[activeSection] || ClinicSettings;
+
+  // Find label for active section
+  const findLabel = () => {
+    for (const group of groups) {
+      const item = group.items.find(i => i.key === activeSection);
+      if (item) return item.label;
+    }
+    return "Configurações";
+  };
 
   return (
-    <div className="flex h-full">
-      {/* Sidebar */}
-      <div className="w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700">
-        <div className="p-6">
-          <h1 className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
-            <SettingsIcon size={20} />
-            Configurações
-          </h1>
-        </div>
-
-        <nav className="px-4 space-y-1">
-          {sections.map((section) => {
-            const Icon = section.icon;
-            return (
-              <button
-                key={section.key}
-                onClick={() => setActiveSection(section.key)}
-                className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeSection === section.key
-                  ? "bg-blue-50 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 border-r-2 border-blue-500"
-                  : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-200"
-                  }`}
-              >
-                <Icon size={18} />
-                {section.label}
-              </button>
-            );
-          })}
-        </nav>
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 p-6 overflow-y-auto">
-        <ActiveComponent />
-      </div>
-    </div>
+    <ModernSettingsLayout
+      groups={groups}
+      activeKey={activeSection}
+      onSelect={setActiveSection}
+      activeLabel={findLabel()}
+    >
+      <ActiveComponent />
+    </ModernSettingsLayout>
   );
 };
 
