@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { sentinels } from '../config/sentinels';
 import { Search, Activity, DollarSign, Users, Award, Shield, Smartphone, Eye, CheckCircle, AlertTriangle } from 'lucide-react';
-import ClinicHealth10x50 from './ClinicHealthCenter'; // Import Radar Component
+import { ClinicHealth10x50 } from './dashboard/ClinicHealth10x50'; // Fixed import
 
 import { useNavigate } from 'react-router-dom';
 
@@ -36,6 +36,19 @@ const ClinicHealthDetails: React.FC = () => {
         6: Activity, 7: Shield, 8: Users, 9: Smartphone, 10: Eye
     };
 
+    const pillarNames: Record<number, string> = {
+        1: 'Atração',
+        2: 'Conversão',
+        3: 'Produção',
+        4: 'Lucro',
+        5: 'Inovação',
+        6: 'Retenção',
+        7: 'Encantamento',
+        8: 'Gente',
+        9: 'Processos',
+        10: 'Compliance'
+    };
+
     return (
         <div className="bg-[#09090b] min-h-screen text-slate-200 p-8 font-sans overflow-x-hidden">
             {/* Header */}
@@ -43,10 +56,10 @@ const ClinicHealthDetails: React.FC = () => {
                 <div>
                     <h1 className="text-3xl font-bold text-white flex items-center gap-3">
                         <Activity className="text-blue-500" />
-                        ClinicHealth - Gestão Estratégica BOS
+                        ClinicHealth Intelligence Center
                     </h1>
                     <p className="text-slate-500 mt-2">
-                        Painel de Controle 10x50 (Radar + 50 Sentinelas).
+                        Visão Omnipotente - Radar de Gestão
                     </p>
                 </div>
                 <div className="flex gap-4 items-center">
@@ -63,7 +76,7 @@ const ClinicHealthDetails: React.FC = () => {
                 </div>
             </div>
 
-            {/* RADAR 10x50 INTEGRATION (Topo) */}
+            {/* RADAR INTEGRATION (Topo) */}
             <div className="mb-10 animate-in fade-in slide-in-from-top-4 duration-700">
                 <ClinicHealth10x50 />
             </div>
@@ -85,7 +98,7 @@ const ClinicHealthDetails: React.FC = () => {
                     <Search className="absolute left-3 top-2.5 text-slate-500" size={18} />
                     <input
                         type="text"
-                        placeholder="Buscar por sentinela (S1...), meta ou ação..."
+                        placeholder="Buscar por sentinela, meta ou ação..."
                         className="w-full bg-slate-900 border border-slate-800 text-slate-200 pl-10 pr-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
@@ -99,7 +112,7 @@ const ClinicHealthDetails: React.FC = () => {
                 >
                     <option value="ALL">Todos os Pilares</option>
                     {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
-                        <option key={n} value={n}>Pilar {n}</option>
+                        <option key={n} value={n}>{pillarNames[n]}</option>
                     ))}
                 </select>
             </div>
@@ -174,7 +187,7 @@ const ClinicHealthDetails: React.FC = () => {
             </div>
 
             <div className="mt-8 text-center text-xs text-slate-600">
-                ClinicHealth OS v2.0 • Powered by 10x50 Method • HarmonyFace
+                ClinicHealth OS v2.0 • HarmonyFace
             </div>
         </div>
     );
