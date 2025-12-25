@@ -29,6 +29,9 @@ import CardMachineConfig from '../components/settings/CardMachineConfig';
 import TaxConfiguration from '../components/settings/TaxConfiguration';
 import PriceTablesSettings from '../components/settings/PriceTablesSettings';
 import ProceduresManager from '../components/settings/ProceduresManager';
+import { AIIntegrationsSettings } from '../src/components/settings/AIIntegrationsSettings';
+import FinancialRulesSettings from '../components/settings/financial-rules/FinancialRulesSettings';
+import { TeamSettings } from '../src/components/settings/TeamSettings';
 
 const Settings: React.FC = () => {
     const navigate = useNavigate();
@@ -41,7 +44,7 @@ const Settings: React.FC = () => {
     useEffect(() => {
         switch (activeTab) {
             case 'foundation': setSubTab('clinic'); break;
-            case 'financial': setSubTab('categories'); break;
+            case 'financial': setSubTab('rules'); break;
             case 'commercial': setSubTab('pricetables'); break;
             case 'stock': setSubTab('inventory'); break;
             case 'clinical': setSubTab('templates'); break;
@@ -122,13 +125,14 @@ const Settings: React.FC = () => {
                         )}
                         {activeTab === 'financial' && (
                             <>
+                                <SubTab active={subTab === 'rules'} onClick={() => setSubTab('rules')} label="Regras Avançadas" />
                                 <SubTab active={subTab === 'categories'} onClick={() => setSubTab('categories')} label="Planos de Contas" />
                                 <SubTab active={subTab === 'banks'} onClick={() => setSubTab('banks')} label="Contas Bancárias" />
                                 <SubTab active={subTab === 'cards'} onClick={() => setSubTab('cards')} label="Maquininhas & Taxas" />
                                 <SubTab active={subTab === 'taxes'} onClick={() => setSubTab('taxes')} label="Impostos" />
                                 <SubTab active={subTab === 'commissions'} onClick={() => setSubTab('commissions')} label="Comissões de Venda" />
                                 <SubTab active={subTab === 'payouts'} onClick={() => setSubTab('payouts')} label="Repasses Clínicos" />
-                                <SubTab active={isWizardOpen} onClick={() => setIsWizardOpen(true)} label="Wizard de Custos" highlight />
+                                <SubTab active={isWizardOpen} onClick={() => setSubTab('wizard')} label="Wizard de Custos" highlight />
                             </>
                         )}
                         {activeTab === 'commercial' && (
@@ -158,11 +162,12 @@ const Settings: React.FC = () => {
 
                         {/* FOUNDATION TAB */}
                         {activeTab === 'foundation' && subTab === 'clinic' && <ClinicSettings />}
-                        {activeTab === 'foundation' && subTab === 'users' && <UsersSettings />}
+                        {activeTab === 'foundation' && subTab === 'users' && <TeamSettings />}
                         {activeTab === 'foundation' && subTab === 'professionals' && <ProfessionalsSettings />}
                         {activeTab === 'foundation' && subTab === 'security' && <SetupSecurityPin />}
 
                         {/* FINANCIAL TAB */}
+                        {activeTab === 'financial' && subTab === 'rules' && <FinancialRulesSettings />}
                         {activeTab === 'financial' && subTab === 'categories' && <CategoriesManager />}
                         {activeTab === 'financial' && subTab === 'banks' && <BankAccountsManager />}
                         {activeTab === 'financial' && subTab === 'cards' && <CardMachineConfig />}
@@ -196,11 +201,7 @@ const Settings: React.FC = () => {
 
                         {/* INTEGRATIONS TAB */}
                         {activeTab === 'integrations' && (
-                            <div className="text-center py-12 bg-white rounded-lg border border-dashed border-slate-300">
-                                <Zap size={48} className="mx-auto text-slate-300 mb-4" />
-                                <h3 className="text-lg font-medium text-slate-900">Integrações</h3>
-                                <p className="text-slate-500">Webhooks e APIs em breve.</p>
-                            </div>
+                            <AIIntegrationsSettings />
                         )}
 
                     </div>

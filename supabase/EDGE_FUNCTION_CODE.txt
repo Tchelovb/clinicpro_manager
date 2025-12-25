@@ -1,0 +1,68 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+serve(async (req) => {
+  // Handle CORS
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
+
+  try {
+    // 1. Recebe os dados do Trigger
+    const { agent, event, data } = await req.json()
+    console.log(`🚀 [BOS SQUAD] Agente Acionado: ${agent} | Evento: ${event}`)
+    console.log(`📋 Dados:`, JSON.stringify(data))
+
+    // 2. Conecta ao Supabase
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    )
+
+    // 3. Lógica do Agente SNIPER
+    if (agent === 'sniper') {
+      const isVip = data.tags?.includes('HIGH_TICKET') || data.priority === 'HIGH';
+      if (isVip) {
+        console.log(`💎 [SNIPER] LEAD VIP DETECTADO! ${data.name} - ${data.procedure}`);
+      } else {
+        console.log(`👤 [SNIPER] Lead Standard: ${data.name}`);
+      }
+    }
+
+    // 4. ATUALIZA O LOG PARA "DELIVERED"
+    const { error: logError } = await supabaseClient
+      .from('agent_logs')
+      .update({
+        status: 'DELIVERED',
+        message_sent: `Processado pelo Agente ${agent}. Prioridade: ${data.priority || 'N/A'}`,
+        updated_at: new Date().toISOString()
+      })
+      .eq('entity_id', data.lead_id || data.installment_id || data.treatment_id)
+      .eq('agent_name', agent)
+      .order('created_at', { ascending: false })
+      .limit(1)
+
+    if (logError) {
+      console.error('❌ Erro ao atualizar log:', logError)
+    } else {
+      console.log('✅ Log atualizado para DELIVERED')
+    }
+
+    return new Response(JSON.stringify({ success: true, agent, event }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200,
+    })
+
+  } catch (error) {
+    console.error("❌ ERRO NO AGENTE:", error)
+    return new Response(JSON.stringify({ error: error.message }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 400,
+    })
+  }
+})

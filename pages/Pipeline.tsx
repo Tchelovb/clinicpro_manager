@@ -362,6 +362,40 @@ export const PipelinePage: React.FC = () => {
                                                         )}
                                                     </div>
 
+                                                    {/* AI Generated Message */}
+                                                    {lead.agent_logs && lead.agent_logs.length > 0 && lead.agent_logs[0].message_sent && (
+                                                        <div className="mt-3 bg-purple-50 dark:bg-purple-900/20 p-3 rounded-lg border border-purple-200 dark:border-purple-800 relative group/msg">
+                                                            <div className="flex items-center gap-1 mb-2">
+                                                                <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider">
+                                                                    🤖 Sugestão da IA
+                                                                </span>
+                                                            </div>
+                                                            <p className="text-xs text-gray-700 dark:text-gray-300 italic line-clamp-3 pr-6">
+                                                                "{lead.agent_logs[0].message_sent}"
+                                                            </p>
+
+                                                            {/* Copy Button */}
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    navigator.clipboard.writeText(lead.agent_logs[0].message_sent);
+                                                                    // Simple feedback
+                                                                    const btn = e.currentTarget;
+                                                                    const originalHTML = btn.innerHTML;
+                                                                    btn.innerHTML = '✓';
+                                                                    setTimeout(() => btn.innerHTML = originalHTML, 1000);
+                                                                }}
+                                                                className="absolute top-2 right-2 opacity-0 group-hover/msg:opacity-100 bg-white dark:bg-gray-800 shadow-sm p-1.5 rounded text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-all"
+                                                                title="Copiar mensagem"
+                                                            >
+                                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                                                </svg>
+                                                            </button>
+                                                        </div>
+                                                    )}
+
                                                     {/* Footer */}
                                                     <div className="border-t border-slate-100 pt-3 flex justify-between items-center">
                                                         <div className="flex gap-1.5">

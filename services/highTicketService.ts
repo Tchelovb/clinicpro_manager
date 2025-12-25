@@ -15,6 +15,10 @@ export interface HighTicketLead {
     last_interaction: string;
     lead_score: number;
     priority: string;
+    agent_logs?: Array<{
+        message_sent: string;
+        created_at: string;
+    }>;
 }
 
 export interface HighTicketBudget {
@@ -56,13 +60,21 @@ export const highTicketService = {
     async getHighTicketLeads(clinicId: string): Promise<HighTicketLead[]> {
         const { data, error } = await supabase
             .from('leads')
-            .select('*')
+            .select(`
+                *,
+                agent_logs (
+                    message_sent,
+                    created_at
+                )
+            `)
             .eq('clinic_id', clinicId)
             .in('status', ['NEW', 'CONTACT', 'SCHEDULED', 'PROPOSAL', 'NEGOTIATION', 'WON', 'LOST'])
-            .order('lead_score', { ascending: false })
             .order('created_at', { ascending: false });
 
-        if (error) throw error;
+        if (error) {
+            console.error('Error fetching leads:', error);
+            throw error;
+        }
 
         // Filtrar apenas leads com interesse em procedimentos high-ticket
         const filtered = data?.filter(lead => {
@@ -75,7 +87,8 @@ export const highTicketService = {
             );
         }) || [];
 
-        return filtered;
+        // Sort by lead_score after filtering
+        return filtered.sort((a, b) => (b.lead_score || 0) - (a.lead_score || 0));
     },
 
     // Buscar orçamentos high-ticket (>= R$ 5.000)
