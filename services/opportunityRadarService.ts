@@ -236,19 +236,22 @@ export const opportunityRadarService = {
 
         treatmentItems?.forEach(item => {
             // Verificar se é recorrente
-            if (!item.procedure?.is_recurring) return;
-            if (!item.procedure?.recurrence_period_days) return;
+            // Cast or check if procedure is array because Supabase might return it as such
+            const procedure = Array.isArray(item.procedure) ? item.procedure[0] : item.procedure;
+
+            if (!procedure?.is_recurring) return;
+            if (!procedure?.recurrence_period_days) return;
 
             // Calcular dias passados
             const dataTratamento = new Date(item.execution_date);
             const diasPassados = Math.floor((hoje.getTime() - dataTratamento.getTime()) / (1000 * 60 * 60 * 24));
 
             // Verificar se atingiu o período de recorrência
-            if (diasPassados >= item.procedure.recurrence_period_days) {
+            if (diasPassados >= procedure.recurrence_period_days) {
                 // Evitar duplicatas (pegar apenas o mais recente por paciente)
                 const key = `${item.patient_id}-${item.procedure_id}`;
                 if (!recurrentMap.has(key) || recurrentMap.get(key).execution_date < item.execution_date) {
-                    recurrentMap.set(key, item);
+                    recurrentMap.set(key, { ...item, procedure }); // Normalize procedure structure
                 }
             }
         });

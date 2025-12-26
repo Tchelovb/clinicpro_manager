@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { BaseSheet } from '../ui/BaseSheet';
-import { PatientDetailContent } from '../PatientDetail';
+import { PatientDetailSheet as NewPatientDetailSheet } from '../PatientDetail';
 import { NewPatientSheet } from './NewPatientSheet';
 import SecurityPinModal from '../SecurityPinModal';
 import toast from 'react-hot-toast';
@@ -31,30 +30,20 @@ export function PatientDetailSheet({ patientId, open, onOpenChange }: PatientDet
     }
 
     const handleSecuritySuccess = () => {
-        // Mock deletion logic
         toast.success("Paciente arquivado com segurança!");
         onOpenChange(false);
     };
 
     return (
         <>
-            <BaseSheet
+            <NewPatientDetailSheet
+                key={refreshKey}
+                patientId={patientId || undefined}
                 open={open}
-                onOpenChange={onOpenChange}
-                title="Dossiê do Paciente"
-                size="full"
-                hideHeader={true}
-            >
-                {open && patientId && (
-                    <PatientDetailContent
-                        key={refreshKey}
-                        patientId={patientId}
-                        onClose={() => onOpenChange(false)}
-                        onEdit={handleEdit}
-                        onDelete={handleDeleteRequest}
-                    />
-                )}
-            </BaseSheet>
+                onClose={() => onOpenChange(false)}
+                onEdit={handleEdit}
+                onDelete={handleDeleteRequest}
+            />
 
             <NewPatientSheet
                 open={showEditSheet}

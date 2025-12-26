@@ -14,7 +14,7 @@ import { InstallmentSchedule } from './budget/InstallmentSchedule';
 import {
     ArrowLeft, Plus, Trash2, Save, CheckCircle,
     DollarSign, Briefcase, TrendingUp, MoreVertical, Loader, FileText,
-    Printer, MessageCircle
+    Printer, MessageCircle, AlertCircle
 } from 'lucide-react';
 import { DocumentGeneratorModal } from './documents/DocumentGeneratorModal';
 import { ProfitBar } from './profit/ProfitBar';
@@ -29,17 +29,31 @@ import SecurityPinModal from './SecurityPinModal';
 const inputClass = "w-full bg-white text-gray-900 border border-gray-200 rounded-lg p-3 md:p-2.5 text-base md:text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all shadow-input h-12 md:h-10";
 const labelClass = "block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1.5 uppercase";
 
-const BudgetForm: React.FC = () => {
+interface BudgetFormProps {
+    patientId?: string;
+    initialBudget?: any;
+    onCancel?: () => void;
+    onSaveSuccess?: () => void;
+    isInline?: boolean;
+}
+
+const BudgetForm: React.FC<BudgetFormProps> = ({
+    patientId: propPatientId,
+    initialBudget,
+    onCancel,
+    onSaveSuccess,
+    isInline = false
+}) => {
     const { id, budgetId: routeBudgetId } = useParams<{ id: string, budgetId?: string }>();
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
     const { profile } = useAuth();
 
-    // Get patient_id from query params or route params
-    const patientId = searchParams.get('patient_id') || searchParams.get('patient') || id || '';
+    // Get patient_id from props, query params or route params
+    const patientId = propPatientId || searchParams.get('patient_id') || searchParams.get('patient') || id || '';
 
-    // Get budget_id from query params (for edit mode) or route params
-    const budgetId = searchParams.get('id') || routeBudgetId;
+    // Get budget_id from props, query params (for edit mode) or route params
+    const budgetId = initialBudget?.id || searchParams.get('id') || routeBudgetId;
 
     // Hooks
     const { data: patient, isLoading: loadingPatient } = usePatient(patientId);
@@ -86,6 +100,9 @@ const BudgetForm: React.FC = () => {
     const [costPerMinute, setCostPerMinute] = useState<number>(0);
     const [budgetMarginAnalysis, setBudgetMarginAnalysis] = useState<any>(null);
     const [selectedSalesRepId, setSelectedSalesRepId] = useState('');
+
+    // Security PIN State
+    const [showPinModal, setShowPinModal] = useState(false);
 
     // Initial Load - Procedure
     useEffect(() => {
@@ -405,6 +422,10 @@ const BudgetForm: React.FC = () => {
             }, {
                 onSuccess: (data: any) => {
                     setIsSavedLocally(true);
+                    if (isInline && onSaveSuccess) {
+                        onSaveSuccess();
+                        return;
+                    }
                     // Navigate to same page but with ID to enable "Edit Mode" and show action buttons
                     navigate(`/budgets/new?id=${data.id}&patient_id=${patient.id}`, { replace: true });
                 }
@@ -413,8 +434,7 @@ const BudgetForm: React.FC = () => {
     };
 
 
-    // Security PIN State
-    const [showPinModal, setShowPinModal] = useState(false);
+
 
     const handleSecureApprove = async () => {
         if (!budgetId || !patient?.id) {
@@ -476,55 +496,68 @@ const BudgetForm: React.FC = () => {
     };
 
     return (
-        <div className="flex flex-col min-h-screen bg-slate-950 pb-20">
-            {/* HEADER */}
-            <div className="sticky top-0 z-30 flex items-center justify-between px-4 md:px-8 py-4 border-b border-slate-800 bg-slate-900/95 backdrop-blur-sm">
-                <div className="flex items-center gap-4">
-                    <button onClick={() => navigate(-1)} className="p-2 hover:bg-slate-800 rounded-lg">
-                        <ArrowLeft size={24} className="text-slate-300" />
+        <div className={`flex flex-col ${isInline ? 'bg-transparent pb-0' : 'min-h-screen bg-slate-950 pb-20'}`}>
+            {/* INLINE HEADER - STICKY */}
+            {isInline && (
+                <div className="sticky top-0 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-b border-slate-200 dark:border-slate-800 px-4 py-3 flex items-center gap-2 mb-4">
+                    <button onClick={onCancel} className="flex items-center gap-2 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors text-sm font-medium">
+                        <ArrowLeft size={16} />
+                        <span>Voltar para Lista</span>
                     </button>
-                    <div>
-                        <h1 className="text-xl md:text-2xl font-bold text-white">
-                            {existingBudget ? 'Editar Orçamento' : 'Novo Orçamento'}
-                        </h1>
-                        <p className="text-sm text-slate-400">{patient.name}</p>
-                    </div>
                 </div>
+            )}
 
-                <div className="hidden md:flex items-center gap-3">
-                    {existingBudget && (
-                        <>
-                            <button onClick={() => setShowDocModal(true)} className="flex items-center gap-2 px-4 py-2 border border-slate-700 text-slate-300 rounded-lg text-sm font-medium hover:bg-slate-800">
-                                <FileText size={16} /> Documentos
+            {/* HEADER */}
+            {!isInline && (
+                <div className="sticky top-0 z-30 flex items-center justify-between px-4 md:px-8 py-4 border-b border-slate-800 bg-slate-900/95 backdrop-blur-sm">
+                    <div className="flex items-center gap-4">
+                        <button onClick={() => navigate(-1)} className="p-2 hover:bg-slate-800 rounded-lg">
+                            <ArrowLeft size={24} className="text-slate-300" />
+                        </button>
+                        <div>
+                            <h1 className="text-xl md:text-2xl font-bold text-white">
+                                {existingBudget ? 'Editar Orçamento' : 'Novo Orçamento'}
+                            </h1>
+                            <p className="text-sm text-slate-400">{patient.name}</p>
+                        </div>
+                    </div>
+
+                    <div className="hidden md:flex items-center gap-3">
+                        {existingBudget && (
+                            <>
+                                <button onClick={() => setShowDocModal(true)} className="flex items-center gap-2 px-4 py-2 border border-slate-700 text-slate-300 rounded-lg text-sm font-medium hover:bg-slate-800">
+                                    <FileText size={16} /> Documentos
+                                </button>
+                                {existingOpportunity ? (
+                                    <button onClick={() => navigate(`/crm/${existingOpportunity.id}`)} className="flex items-center gap-2 px-4 py-2 border border-green-200 bg-green-50 text-green-700 rounded-lg text-sm font-medium hover:bg-green-100">
+                                        <Briefcase size={16} /> Ver CRM
+                                    </button>
+                                ) : (
+                                    <button onClick={handleCreateOpportunity} className="flex items-center gap-2 px-4 py-2 border border-yellow-200 bg-yellow-50 text-yellow-700 rounded-lg text-sm font-medium hover:bg-yellow-100">
+                                        <Briefcase size={16} /> Criar CRM
+                                    </button>
+                                )}
+                            </>
+                        )}
+                        <button onClick={handleSave} disabled={isCreating || isUpdating} className="flex items-center gap-2 px-6 py-2 border border-blue-600 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 text-sm shadow-sm">
+                            {isCreating || isUpdating ? <Loader size={18} className="animate-spin" /> : <Save size={18} />} Salvar
+                        </button>
+                        {/* 6. BOTÕES DE AÇÃO - APENAS FULL SCREEN */}
+                        {!isInline && (existingBudget && (existingBudget.status === 'Em Análise' || existingBudget.status === 'Em Negociação' || existingBudget.status === 'Enviado')) && (
+                            <button onClick={handleSecureApprove} className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 shadow-sm text-sm">
+                                <CheckCircle size={18} /> Aprovar
                             </button>
-                            {existingOpportunity ? (
-                                <button onClick={() => navigate(`/crm/${existingOpportunity.id}`)} className="flex items-center gap-2 px-4 py-2 border border-green-200 bg-green-50 text-green-700 rounded-lg text-sm font-medium hover:bg-green-100">
-                                    <Briefcase size={16} /> Ver CRM
-                                </button>
-                            ) : (
-                                <button onClick={handleCreateOpportunity} className="flex items-center gap-2 px-4 py-2 border border-yellow-200 bg-yellow-50 text-yellow-700 rounded-lg text-sm font-medium hover:bg-yellow-100">
-                                    <Briefcase size={16} /> Criar CRM
-                                </button>
-                            )}
-                        </>
-                    )}
-                    <button onClick={handleSave} disabled={isCreating || isUpdating} className="flex items-center gap-2 px-6 py-2 border border-blue-600 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 text-sm shadow-sm">
-                        {isCreating || isUpdating ? <Loader size={18} className="animate-spin" /> : <Save size={18} />} Salvar
-                    </button>
-                    {existingBudget && (existingBudget.status === 'Em Análise' || existingBudget.status === 'Em Negociação' || existingBudget.status === 'Enviado') && (
-                        <button onClick={handleSecureApprove} className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 shadow-sm text-sm">
-                            <CheckCircle size={18} /> Aprovar
+                        )}
+                    </div>
+
+                    {/* MOBILE MENU TRIGGER */}
+                    {existingBudget && (
+                        <button className="md:hidden p-2 text-gray-600" onClick={() => setShowMobileMenu(!showMobileMenu)}>
+                            <MoreVertical size={24} />
                         </button>
                     )}
                 </div>
-
-                {/* MOBILE MENU TRIGGER */}
-                {existingBudget && (
-                    <button className="md:hidden p-2 text-gray-600" onClick={() => setShowMobileMenu(!showMobileMenu)}>
-                        <MoreVertical size={24} />
-                    </button>
-                )}
-            </div>
+            )}
 
             {/* MOBILE DROPDOWN */}
             {showMobileMenu && existingBudget && (
@@ -884,44 +917,45 @@ const BudgetForm: React.FC = () => {
                     )}
 
                     {/* 6. BOTÕES DE AÇÃO */}
-                    <div className="flex flex-wrap gap-3 justify-end pt-6 border-t border-slate-800">
-                        <button
-                            onClick={() => navigate(`/patients/${patient.id}`)}
-                            className="px-6 py-3 border border-slate-700 text-slate-300 rounded-lg font-medium hover:bg-slate-800 flex items-center gap-2"
-                        >
-                            <ArrowLeft size={18} /> Voltar ao Paciente
-                        </button>
-
-                        {(existingBudget || isSavedLocally) && (
-                            <>
-                                <button onClick={() => setShowDocModal(true)} className="px-6 py-3 border border-slate-700 text-slate-300 rounded-lg font-medium hover:bg-slate-800 flex items-center gap-2">
-                                    <Printer size={18} /> Imprimir
-                                </button>
-                                <button onClick={handleWhatsApp} className="px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-500 flex items-center gap-2">
-                                    <MessageCircle size={18} /> WhatsApp
-                                </button>
-                            </>
-                        )}
-
-                        <button onClick={handleSave} disabled={isCreating || isUpdating} className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 flex items-center gap-2">
-                            {isCreating || isUpdating ? <Loader size={18} className="animate-spin" /> : <Save size={18} />} Salvar
-                        </button>
-
-                        {(existingBudget || isSavedLocally) && (existingBudget?.status === 'Em Análise' || existingBudget?.status === 'Em Negociação' || existingBudget?.status === 'Enviado' || existingBudget?.status === 'DRAFT' || isSavedLocally) && (
-                            <button onClick={handleSecureApprove} className="px-6 py-3 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 flex items-center gap-2">
-                                <CheckCircle size={18} /> Aprovar
+                    {!isInline && (
+                        <div className="flex flex-wrap gap-3 justify-end pt-6 border-t border-slate-800">
+                            <button
+                                onClick={() => navigate(`/patients/${patient.id}`)}
+                                className="px-6 py-3 border border-slate-700 text-slate-300 rounded-lg font-medium hover:bg-slate-800 flex items-center gap-2"
+                            >
+                                <ArrowLeft size={18} /> Voltar ao Paciente
                             </button>
-                        )}
 
-                    </div>
+                            {(existingBudget || isSavedLocally) && (
+                                <>
+                                    <button onClick={() => setShowDocModal(true)} className="px-6 py-3 border border-slate-700 text-slate-300 rounded-lg font-medium hover:bg-slate-800 flex items-center gap-2">
+                                        <Printer size={18} /> Imprimir
+                                    </button>
+                                    <button onClick={handleWhatsApp} className="px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-500 flex items-center gap-2">
+                                        <MessageCircle size={18} /> WhatsApp
+                                    </button>
+                                </>
+                            )}
+
+                            <button onClick={handleSave} disabled={isCreating || isUpdating} className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 flex items-center gap-2">
+                                {isCreating || isUpdating ? <Loader size={18} className="animate-spin" /> : <Save size={18} />} Salvar
+                            </button>
+
+                        </div>
+                    )}
+
+
                 </div>
             </div>
 
             {/* Document Modal */}
             {showDocModal && existingBudget && (
                 <DocumentGeneratorModal
-                    budget={existingBudget.id}
-                    patient={patient.id}
+                    isOpen={true}
+                    budget={existingBudget}
+                    patient={patient}
+                    items={items}
+                    professional={{ name: professionals?.find(p => p.id === selectedProfessionalId)?.name || 'Profissional' }}
                     onClose={() => setShowDocModal(false)}
                 />
             )}
@@ -938,6 +972,29 @@ const BudgetForm: React.FC = () => {
                 entityId={existingBudget?.id}
                 entityName={`Orçamento ${patient.name}`}
             />
+            {/* INLINE FOOTER ACTION BAR */}
+            {isInline && (
+                <div className="sticky bottom-0 w-full bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 p-4 flex gap-3 justify-end shadow-[0_-5px_20px_rgba(0,0,0,0.1)] z-[60]">
+                    <button
+                        onClick={onCancel}
+                        className="px-5 py-2.5 rounded-xl font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                    >
+                        Cancelar
+                    </button>
+                    <button
+                        onClick={handleSave}
+                        disabled={isCreating || isUpdating}
+                        className="bg-green-600 hover:bg-green-700 text-white px-8 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-green-600/20 transition-all active:scale-95"
+                    >
+                        {isCreating || isUpdating ? <Loader size={18} className="animate-spin" /> : <Save size={18} />}
+                        {existingBudget ? 'Salvar Alterações' : 'Salvar Rascunho'}
+                    </button>
+                    {/* More options placeholder */}
+                    <button className="p-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                        <MoreVertical size={20} />
+                    </button>
+                </div>
+            )}
         </div>
     );
 };

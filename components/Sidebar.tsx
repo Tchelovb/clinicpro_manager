@@ -58,6 +58,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar }) => {
     // =====================================================
     // MENU OPERACIONAL (Admin, Professional, CRC, Receptionist)
     // =====================================================
+    // OPERATIONAL SECTION
     const OPERATIONAL_ITEMS = [
         { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
         // INTELLIGENCE SECTION (PRIORITY)
@@ -80,6 +81,19 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar }) => {
         { path: "/patients", label: "Pacientes", icon: Users },
         { path: "/agenda", label: "Agenda", icon: Calendar },
         { path: "/financial", label: "Financeiro", icon: DollarSign },
+        // FINTECH MODULES
+        { path: "/receivables", label: "Contas a Receber", icon: BarChart3 },
+        ...(profile?.role === 'ADMIN' || profile?.role === 'MANAGER' ? [{
+            path: "/professional-financial",
+            label: "Extrato Profissional",
+            icon: UserCog
+        }] : []),
+        ...(profile?.role === 'ADMIN' || profile?.role === 'MANAGER' ? [{
+            path: "/cfo",
+            label: "CFO Dashboard",
+            icon: TrendingUp,
+            highlight: true
+        }] : []),
         { path: "/documents", label: "Central Docs", icon: FileText },
         { path: "/reports", label: "Relatórios", icon: PieChart },
         { path: "/settings", label: "Configurações", icon: Settings },

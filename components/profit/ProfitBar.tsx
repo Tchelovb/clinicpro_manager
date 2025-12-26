@@ -57,6 +57,14 @@ export const ProfitBar: React.FC<ProfitBarProps> = ({
                     icon: TrendingDown,
                     label: 'Risco'
                 };
+            default:
+                return {
+                    bg: 'bg-gray-100',
+                    bar: 'bg-gray-400',
+                    text: 'text-gray-600',
+                    icon: AlertTriangle,
+                    label: 'Indefinido'
+                };
         }
     };
 

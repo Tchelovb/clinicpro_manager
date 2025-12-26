@@ -14,7 +14,7 @@ import { useDragAndDrop } from '../hooks/useDragAndDrop';
 
 const Agenda: React.FC = () => {
     const navigate = useNavigate();
-    const { appointments, professionals, agendaConfig, refreshAppointments } = useData();
+    const { appointments, professionals, agendaConfig, updateAppointment } = useData();
     const professionalNames = useMemo(() => professionals.filter(p => p.active).map(p => p.name), [professionals]);
 
     const [currentDate, setCurrentDate] = useState(new Date());
@@ -22,131 +22,7 @@ const Agenda: React.FC = () => {
 
     // Filters
     const [selectedProfessionals, setSelectedProfessionals] = useState<string[]>([]);
-    const [selectedStatuses, setSelectedStatuses] = useState<string[]>(['Confirmado', 'Pendente', 'Concluído', 'Cancelado', 'Faltou']);
-    const [selectedTypes, setSelectedTypes] = useState<string[]>(['Avaliação', 'Procedimento', 'Retorno', 'Urgência']);
-
-    useEffect(() => {
-        setSelectedProfessionals(professionals.filter(p => p.active).map(p => p.name));
-    }, [professionals]);
-
-    // --- DATE HELPERS ---
-    const formatDate = (date: Date) => date.toISOString().split('T')[0];
-
-    const getWeekDates = (baseDate: Date) => {
-        const dates = [];
-        const start = new Date(baseDate);
-        const day = start.getDay();
-        const diff = start.getDate() - day + (day === 0 ? -6 : 1);
-        const monday = new Date(start.setDate(diff));
-
-        for (let i = 0; i < 7; i++) {
-            const d = new Date(monday);
-            d.setDate(monday.getDate() + i);
-            dates.push(d);
-        }
-        return dates;
-    };
-
-    const getMonthDays = (baseDate: Date) => {
-        const year = baseDate.getFullYear();
-        const month = baseDate.getMonth();
-        const firstDay = new Date(year, month, 1);
-        const lastDay = new Date(year, month + 1, 0);
-
-        const days = [];
-        const startPad = firstDay.getDay();
-        for (let i = 0; i < startPad; i++) days.push(null);
-        for (let i = 1; i <= lastDay.getDate(); i++) days.push(new Date(year, month, i));
-        return days;
-    };
-
-    // --- TIME SLOTS GENERATOR ---
-    const timeSlots = useMemo(() => {
-        const slots = [];
-        const [startHour] = agendaConfig.startHour.split(':').map(Number);
-        const [endHour] = agendaConfig.endHour.split(':').map(Number);
-        const duration = agendaConfig.slotDuration;
-
-        let currentMinutes = startHour * 60;
-        const endMinutes = endHour * 60;
-
-        while (currentMinutes < endMinutes) {
-            const h = Math.floor(currentMinutes / 60);
-            const m = currentMinutes % 60;
-            slots.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
-            currentMinutes += duration;
-        }
-        return slots;
-    }, [agendaConfig]);
-
-    // --- FILTER LOGIC ---
-    const filteredAppointments = useMemo(() => {
-        return appointments.filter(apt =>
-            selectedProfessionals.includes(apt.doctorName) &&
-            selectedStatuses.includes(apt.status) &&
-            selectedTypes.includes(apt.type)
-        );
-    }, [appointments, selectedProfessionals, selectedStatuses, selectedTypes]);
-
-    // Check if there are appointments in current view
-    const hasAppointmentsInView = useMemo(() => {
-        const todayStr = formatDate(currentDate);
-
-        if (view === 'day') {
-            return filteredAppointments.some(a => a.date === todayStr);
-        } else if (view === 'week') {
-            const weekDates = getWeekDates(currentDate).map(d => formatDate(d));
-            return filteredAppointments.some(a => weekDates.includes(a.date));
-        } else {
-            const monthStr = currentDate.toISOString().slice(0, 7);
-            return filteredAppointments.some(a => a.date.startsWith(monthStr));
-        }
-    }, [filteredAppointments, currentDate, view]);
-
-    // --- KPI LOGIC ---
-    const rangeKPIs = useMemo(() => {
-        let rangeApts: Appointment[] = [];
-        const todayStr = formatDate(currentDate);
-
-        if (view === 'day') {
-            rangeApts = filteredAppointments.filter(a => a.date === todayStr);
-        } else if (view === 'week') {
-            const weekDates = getWeekDates(currentDate).map(d => formatDate(d));
-            rangeApts = filteredAppointments.filter(a => weekDates.includes(a.date));
-        } else {
-            const monthStr = currentDate.toISOString().slice(0, 7);
-            rangeApts = filteredAppointments.filter(a => a.date.startsWith(monthStr));
-        }
-
-        const total = rangeApts.length;
-        const confirmed = rangeApts.filter(a => a.status === 'Confirmado').length;
-        const noShows = rangeApts.filter(a => a.status === 'Faltou').length;
-        const noShowRate = total > 0 ? (noShows / total) * 100 : 0;
-        const occupancy = total > 0 ? ((confirmed + rangeApts.filter(a => a.status === 'Concluído').length) / total) * 100 : 0;
-
-        return { total, confirmed, noShows, noShowRate, occupancy };
-    }, [filteredAppointments, currentDate, view]);
-
-    // --- NAVIGATION HANDLERS ---
-    const handlePrev = () => {
-        const newDate = new Date(currentDate);
-        if (view === 'day') newDate.setDate(currentDate.getDate() - 1);
-        if (view === 'week') newDate.setDate(currentDate.getDate() - 7);
-        if (view === 'month') newDate.setMonth(currentDate.getMonth() - 1);
-        setCurrentDate(newDate);
-    };
-
-    const handleNext = () => {
-        const newDate = new Date(currentDate);
-        if (view === 'day') newDate.setDate(currentDate.getDate() + 1);
-        if (view === 'week') newDate.setDate(currentDate.getDate() + 7);
-        if (view === 'month') newDate.setMonth(currentDate.getMonth() + 1);
-        setCurrentDate(newDate);
-    };
-
-    const handleNewAppointment = (date?: string, time?: string) => {
-        navigate('/agenda/new');
-    };
+    // ... existing code ...
 
     // --- QUICK ACTIONS HANDLERS ---
     const handleConfirmAppointment = async (id: string) => {
@@ -155,21 +31,13 @@ const Agenda: React.FC = () => {
                 .from('appointments')
                 .update({ status: 'Confirmado' })
                 .eq('id', id);
-            refreshAppointments?.();
+            updateAppointment(id, { status: 'Confirmado' });
         } catch (error) {
             console.error('Erro ao confirmar:', error);
             alert('Erro ao confirmar agendamento');
         }
     };
-
-    const handleSendReminder = async (id: string) => {
-        const apt = appointments.find(a => a.id === id);
-        if (!apt) return;
-
-        // TODO: Integração real com Pilar 5 (Notificações)
-        alert(`✅ Lembrete enviado via WhatsApp para ${apt.patientName}!\n\n(Integração com API será implementada)`);
-    };
-
+    // ...
     const handleCancelAppointment = async (id: string) => {
         if (!confirm('Tem certeza que deseja cancelar este agendamento?')) return;
 
@@ -178,7 +46,7 @@ const Agenda: React.FC = () => {
                 .from('appointments')
                 .update({ status: 'Cancelado' })
                 .eq('id', id);
-            refreshAppointments?.();
+            updateAppointment(id, { status: 'Cancelado' });
         } catch (error) {
             console.error('Erro ao cancelar:', error);
             alert('Erro ao cancelar agendamento');
@@ -191,7 +59,7 @@ const Agenda: React.FC = () => {
                 .from('appointments')
                 .update({ status: 'Concluído' })
                 .eq('id', id);
-            refreshAppointments?.();
+            updateAppointment(id, { status: 'Concluído' });
         } catch (error) {
             console.error('Erro ao concluir:', error);
             alert('Erro ao marcar como concluído');
@@ -210,7 +78,7 @@ const Agenda: React.FC = () => {
                 })
                 .eq('id', aptId);
 
-            refreshAppointments?.();
+            updateAppointment(aptId, { date: newDate, time: newTime, doctorName: newProfessional });
             alert('✅ Agendamento reagendado com sucesso!');
         } catch (error) {
             console.error('Erro ao reagendar:', error);

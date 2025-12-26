@@ -21,13 +21,7 @@ export const crmService = {
     async getLeads(clinicId?: string) {
         let query = supabase
             .from('leads')
-            .select(`
-        *,
-        agent_logs (
-          message_sent,
-          created_at
-        )
-      `)
+            .select('*')
             .order('created_at', { ascending: false });
 
         if (clinicId) {
@@ -38,10 +32,10 @@ export const crmService = {
 
         if (error) throw error;
 
-        // Tratamento para pegar a mensagem mais recente da IA
+        // Agent logs are in a separate table
         return (data || []).map((lead: any) => ({
             ...lead,
-            message_sent: lead.agent_logs?.[0]?.message_sent || null
+            message_sent: null
         })) as Lead[];
     },
 

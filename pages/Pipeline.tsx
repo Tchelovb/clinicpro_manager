@@ -4,84 +4,67 @@ import {
     TrendingUp, Users, DollarSign, Target, Phone, Mail, Calendar,
     CheckCircle, XCircle, Clock, Zap, MessageSquare, MoreVertical,
     Filter, AlertCircle, Plus, Crown, Star, Sparkles, Instagram,
-    Briefcase, ChevronRight
+    Briefcase, ChevronRight, ChevronDown // Imported ChevronDown
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { highTicketService, HighTicketLead, PipelineStats } from '../services/highTicketService';
+import { highTicketService, HighTicketLead, PipelineStats, Pipeline, PipelineStage } from '../services/highTicketService';
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
 import { Card, CardContent } from "../components/ui/card";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "../components/ui/dropdown-menu";
 import { cn } from "../lib/utils";
-
-// Status Columns Configuration (High-Ticket Flow)
-const COLUMNS = [
-    {
-        id: 'NEW',
-        label: 'Novo Lead',
-        color: 'border-blue-500',
-        bg: 'bg-blue-50',
-        icon: Sparkles,
-        description: 'Leads recém-capturados'
-    },
-    {
-        id: 'CONTACT',
-        label: 'Em Contato',
-        color: 'border-violet-500',
-        bg: 'bg-violet-50',
-        icon: MessageSquare,
-        description: 'Primeiro contato realizado'
-    },
-    {
-        id: 'SCHEDULED',
-        label: 'Avaliação Agendada',
-        color: 'border-teal-500',
-        bg: 'bg-teal-50',
-        icon: Calendar,
-        description: 'Consulta marcada'
-    },
-    {
-        id: 'PROPOSAL',
-        label: 'Orçamento Enviado',
-        color: 'border-amber-500',
-        bg: 'bg-amber-50',
-        icon: DollarSign,
-        description: 'Proposta em análise'
-    },
-    {
-        id: 'WON',
-        label: 'Fechado ✨',
-        color: 'border-green-500',
-        bg: 'bg-green-50',
-        icon: CheckCircle,
-        description: 'Orçamento aprovado'
-    },
-    {
-        id: 'LOST',
-        label: 'Perdido',
-        color: 'border-slate-400',
-        bg: 'bg-slate-50',
-        icon: XCircle,
-        description: 'Não convertido'
-    },
-];
+import { LeadDetailsSheet } from "../components/pipeline/LeadDetailsSheet";
 
 // Priority Badge Configuration
 const getPriorityConfig = (priority: string) => {
     switch (priority) {
         case 'HIGH':
-            return { bg: 'bg-rose-50', text: 'text-rose-700', border: 'border-rose-200', label: 'Alta 🔥' };
+            return { bg: 'bg-rose-50 dark:bg-rose-900/30', text: 'text-rose-700 dark:text-rose-300', border: 'border-rose-200 dark:border-rose-800', label: 'Alta 🔥' };
         case 'MEDIUM':
-            return { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', label: 'Média ⚡' };
+            return { bg: 'bg-amber-50 dark:bg-amber-900/30', text: 'text-amber-700 dark:text-amber-300', border: 'border-amber-200 dark:border-amber-800', label: 'Média ⚡' };
         default:
-            return { bg: 'bg-slate-50', text: 'text-slate-600', border: 'border-slate-200', label: 'Normal' };
+            return { bg: 'bg-slate-50 dark:bg-slate-800', text: 'text-slate-600 dark:text-slate-400', border: 'border-slate-200 dark:border-slate-700', label: 'Normal' };
     }
 };
 
 // Value Tier Badge (DIAMOND, GOLD, STANDARD)
 const getValueTier = (value: number) => {
-    if (value >= 10000) return { label: 'DIAMOND', icon: Crown, color: 'text-purple-600', bg: 'bg-purple-50' };
-    if (value >= 5000) return { label: 'GOLD', icon: Star, color: 'text-amber-600', bg: 'bg-amber-50' };
-    return { label: 'STANDARD', icon: Target, color: 'text-slate-500', bg: 'bg-slate-50' };
+    if (value >= 10000) return { label: 'DIAMOND', icon: Crown, color: 'text-purple-600 dark:text-purple-400', bg: 'bg-purple-50 dark:bg-purple-900/30' };
+    if (value >= 5000) return { label: 'GOLD', icon: Star, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-900/30' };
+    return { label: 'STANDARD', icon: Target, color: 'text-slate-500 dark:text-slate-400', bg: 'bg-slate-50 dark:bg-slate-800' };
+};
+
+// Icon mapping for stages
+const getStageIcon = (stageName: string) => {
+    const name = stageName.toLowerCase();
+    if (name.includes('novo') || name.includes('new')) return Sparkles;
+    if (name.includes('contato') || name.includes('contact')) return MessageSquare;
+    if (name.includes('agend') || name.includes('schedul')) return Calendar;
+    if (name.includes('orça') || name.includes('proposal')) return DollarSign;
+    if (name.includes('fech') || name.includes('won') || name.includes('ganho')) return CheckCircle;
+    if (name.includes('perd') || name.includes('lost')) return XCircle;
+    return Target;
+};
+
+// Color mapping for stages
+const getStageColor = (color?: string) => {
+    if (!color) return 'border-slate-300 dark:border-slate-600';
+    // Map database colors to Tailwind border classes
+    const colorMap: Record<string, string> = {
+        'bg-blue-100': 'border-blue-400 dark:border-blue-600',
+        'bg-yellow-100': 'border-yellow-400 dark:border-yellow-600',
+        'bg-purple-100': 'border-purple-400 dark:border-purple-600',
+        'bg-orange-100': 'border-orange-400 dark:border-orange-600',
+        'bg-green-100': 'border-green-400 dark:border-green-600',
+        'bg-red-100': 'border-red-400 dark:border-red-600',
+        'bg-gray-100': 'border-gray-300 dark:border-gray-600'
+    };
+    return colorMap[color] || 'border-slate-300 dark:border-slate-600';
 };
 
 export const PipelinePage: React.FC = () => {
@@ -91,8 +74,21 @@ export const PipelinePage: React.FC = () => {
     const [leads, setLeads] = useState<HighTicketLead[]>([]);
     const [stats, setStats] = useState<PipelineStats | null>(null);
 
+    // NEW: Dynamic Pipeline State
+    const [allPipelines, setAllPipelines] = useState<Pipeline[]>([]);
+    const [pipeline, setPipeline] = useState<Pipeline | null>(null);
+    const [stages, setStages] = useState<PipelineStage[]>([]);
+
+    // Sheet State
+    const [isSheetOpen, setIsSheetOpen] = useState(false);
+    const [selectedLead, setSelectedLead] = useState<HighTicketLead | null>(null);
+
     // Filter State
     const [filterPriority, setFilterPriority] = useState<'ALL' | 'HIGH' | 'MEDIUM' | 'LOW'>('ALL');
+    const [filterStage, setFilterStage] = useState<string>('ALL');
+
+    // View Mode State
+    const [viewMode, setViewMode] = useState<'board' | 'list'>('board');
 
     useEffect(() => {
         if (profile?.clinic_id) {
@@ -100,15 +96,41 @@ export const PipelinePage: React.FC = () => {
         }
     }, [profile?.clinic_id]);
 
-    const loadData = async () => {
+    const loadData = async (pipelineIdToLoad?: string) => {
         try {
             setLoading(true);
             const clinicId = profile?.clinic_id!;
+
+            // 1. Load All Pipelines (if not already loaded)
+            let pipelinesList = allPipelines;
+            if (pipelinesList.length === 0) {
+                pipelinesList = await highTicketService.getAllPipelines(clinicId);
+                setAllPipelines(pipelinesList);
+            }
+
+            // 2. Determine Active Pipeline
+            let activePipeline = pipeline;
+
+            if (pipelineIdToLoad) {
+                // User switched pipeline
+                activePipeline = pipelinesList.find(p => p.id === pipelineIdToLoad) || null;
+            } else if (!activePipeline && pipelinesList.length > 0) {
+                // Initial Load
+                activePipeline = pipelinesList.find(p => p.is_default) || pipelinesList[0];
+            }
+
+            if (!activePipeline) return; // Should not happen if seeded correctly
+
+            setPipeline(activePipeline);
+            setStages(activePipeline.stages);
+
+            // 3. Load Leads for this pipeline
             const [leadsData, , statsData] = await Promise.all([
-                highTicketService.getHighTicketLeads(clinicId),
+                highTicketService.getHighTicketLeads(clinicId, activePipeline.id),
                 highTicketService.getHighTicketBudgets(clinicId),
-                highTicketService.getPipelineStats(clinicId)
+                highTicketService.getPipelineStats(clinicId, activePipeline.id)
             ]);
+
             setLeads(leadsData);
             setStats(statsData);
         } catch (error) {
@@ -116,6 +138,20 @@ export const PipelinePage: React.FC = () => {
         } finally {
             setLoading(false);
         }
+    };
+
+    const handlePipelineChange = (pipelineId: string) => {
+        loadData(pipelineId);
+    };
+
+    const handleNewLead = () => {
+        setSelectedLead(null);
+        setIsSheetOpen(true);
+    };
+
+    const handleEditLead = (lead: HighTicketLead) => {
+        setSelectedLead(lead);
+        setIsSheetOpen(true);
     };
 
     // Drag & Drop Logic
@@ -129,17 +165,17 @@ export const PipelinePage: React.FC = () => {
         e.preventDefault();
     };
 
-    const handleDrop = async (status: string) => {
-        if (draggedLead && draggedLead.status !== status) {
+    const handleDrop = async (stageId: string) => {
+        if (draggedLead && draggedLead.stage_id !== stageId) {
             try {
                 // Optimistic UI update
                 const updatedLeads = leads.map(l =>
-                    l.id === draggedLead.id ? { ...l, status: status as any } : l
+                    l.id === draggedLead.id ? { ...l, stage_id: stageId } : l
                 );
                 setLeads(updatedLeads);
 
-                // API Update
-                await highTicketService.updateLeadStatus(draggedLead.id, status as any);
+                // API Update (NEW METHOD)
+                await highTicketService.moveLeadToStage(draggedLead.id, stageId);
             } catch (error) {
                 console.error('Erro ao mover card:', error);
                 loadData(); // Revert on error
@@ -148,9 +184,15 @@ export const PipelinePage: React.FC = () => {
         setDraggedLead(null);
     };
 
-    const filteredLeads = leads.filter(l =>
-        filterPriority === 'ALL' || l.priority === filterPriority
-    );
+    const filteredLeads = leads.filter(l => {
+        // Priority filter
+        const matchesPriority = filterPriority === 'ALL' || l.priority === filterPriority;
+
+        // Stage filter (only applies in list view)
+        const matchesStage = filterStage === 'ALL' || l.stage_id === filterStage;
+
+        return matchesPriority && matchesStage;
+    });
 
     // Loading State
     if (loading) {
@@ -162,271 +204,371 @@ export const PipelinePage: React.FC = () => {
         );
     }
 
+
     return (
-        <div className="flex flex-col h-[calc(100vh-6rem)] space-y-6">
+        <div className="flex flex-col h-full space-y-4 p-4">
 
             {/* ============================================ */}
-            {/* HEADER */}
+            {/* HEADER - JIRA STYLE */}
             {/* ============================================ */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm shrink-0 transition-colors">
                 <div>
-                    <h1 className="text-3xl font-bold text-slate-800 tracking-tight flex items-center gap-3">
-                        <Sparkles className="text-amber-600" size={32} />
-                        Pipeline High-Ticket
-                    </h1>
-                    <p className="text-slate-500 mt-2">Funil de conversão de procedimentos premium</p>
+                    <div className="flex items-center gap-2">
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="p-0 h-auto hover:bg-transparent text-xl font-bold text-slate-800 dark:text-white tracking-tight flex items-center gap-2">
+                                    <Sparkles className="text-amber-500 fill-amber-500" size={20} />
+                                    {pipeline?.name || 'Pipeline'}
+                                    <ChevronDown size={18} className="text-slate-400" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start" className="w-56 dark:bg-slate-800 dark:border-slate-700">
+                                {allPipelines.map(p => (
+                                    <DropdownMenuItem
+                                        key={p.id}
+                                        onClick={() => handlePipelineChange(p.id)}
+                                        className={cn("cursor-pointer font-medium dark:text-slate-200 dark:focus:bg-slate-700", p.id === pipeline?.id && "bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300")}
+                                    >
+                                        {p.name}
+                                        {p.is_default && <span className="ml-auto text-[10px] text-slate-400">Padrão</span>}
+                                    </DropdownMenuItem>
+                                ))}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
+                    <div className="flex items-center gap-2 mt-1 text-xs text-slate-500 dark:text-slate-400">
+                        <span>Funil de Vendas</span>
+                        <span className="w-1 h-1 bg-slate-300 dark:bg-slate-600 rounded-full" />
+                        <span>{leads.length} leads ativos</span>
+                    </div>
                 </div>
-                <Button
-                    onClick={() => navigate('/pipeline/leads/new')}
-                    className="bg-violet-600 hover:bg-violet-700 text-white shadow-sm"
-                >
-                    <Plus size={18} className="mr-2" />
-                    Novo Lead
-                </Button>
+
+                <div className="flex items-center gap-2">
+                    {/* View Toggles */}
+                    <div className="hidden lg:flex bg-slate-100 dark:bg-slate-700 p-0.5 rounded-lg">
+                        <button
+                            onClick={() => setViewMode('board')}
+                            className={`px-2 py-1 rounded text-[10px] font-bold flex items-center gap-1 transition-all ${viewMode === 'board'
+                                ? 'bg-white dark:bg-slate-600 text-slate-800 dark:text-white shadow'
+                                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                                }`}
+                        >
+                            <Briefcase size={12} /> Board
+                        </button>
+                        <button
+                            onClick={() => setViewMode('list')}
+                            className={`px-2 py-1 rounded text-[10px] font-bold flex items-center gap-1 transition-all ${viewMode === 'list'
+                                ? 'bg-white dark:bg-slate-600 text-slate-800 dark:text-white shadow'
+                                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                                }`}
+                        >
+                            <Users size={12} /> Lista
+                        </button>
+                    </div>
+
+                    <Button
+                        onClick={handleNewLead}
+                        className="bg-violet-600 hover:bg-violet-700 text-white shadow-md hover:shadow-lg transition-all h-9 px-4 font-bold text-sm"
+                    >
+                        <Plus size={16} className="mr-1" />
+                        NOVO LEAD
+                    </Button>
+                </div>
             </div>
 
             {/* ============================================ */}
-            {/* KPI CARDS */}
+            {/* KPI CARDS (Compact) */}
             {/* ============================================ */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-4 gap-3 shrink-0">
                 {/* Pipeline Total */}
-                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-                    <div className="flex items-center gap-3 mb-2">
-                        <div className="p-2 bg-violet-50 rounded-lg">
-                            <DollarSign className="text-violet-600" size={20} />
-                        </div>
-                        <p className="text-xs font-bold text-slate-500 uppercase">Pipeline Total</p>
+                <div className="bg-white dark:bg-slate-800 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between transition-colors">
+                    <div>
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Pipeline</p>
+                        <p className="text-lg font-bold text-violet-600 dark:text-violet-400">
+                            {stats ? `R$ ${(stats.totalValue / 1000).toFixed(1)}k` : '...'}
+                        </p>
                     </div>
-                    <p className="text-2xl font-bold text-violet-600">
-                        {stats ? `R$ ${(stats.totalValue / 1000).toFixed(1)}k` : '...'}
-                    </p>
+                    <div className="p-1.5 bg-violet-50 dark:bg-violet-900/20 rounded">
+                        <DollarSign className="text-violet-600 dark:text-violet-400" size={14} />
+                    </div>
                 </div>
 
                 {/* Leads Quentes */}
-                <Card className="hover:shadow-md transition-shadow">
-                    <CardContent className="p-4 flex items-center justify-between">
-                        <div>
-                            <div className="flex items-center gap-2 mb-2">
-                                <span className="p-1.5 bg-rose-50 rounded text-rose-600">
-                                    <Zap size={16} />
-                                </span>
-                                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Leads Quentes</span>
-                            </div>
-                            <p className="text-2xl font-bold text-rose-600">{stats?.hotLeads || 0}</p>
-                        </div>
-                    </CardContent>
-                </Card>
+                <div className="bg-white dark:bg-slate-800 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between hover:border-rose-200 dark:hover:border-rose-800 transition-colors cursor-pointer" onClick={() => setFilterPriority('HIGH')}>
+                    <div>
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Quentes</p>
+                        <p className="text-lg font-bold text-rose-600 dark:text-rose-400">{stats?.hotLeads || 0}</p>
+                    </div>
+                    <div className="p-1.5 bg-rose-50 dark:bg-rose-900/20 rounded">
+                        <Zap className="text-rose-600 dark:text-rose-400 fill-rose-600 dark:fill-rose-400" size={14} />
+                    </div>
+                </div>
 
                 {/* Taxa de Conversão */}
-                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-                    <div className="flex items-center gap-3 mb-2">
-                        <div className="p-2 bg-teal-50 rounded-lg">
-                            <TrendingUp className="text-teal-600" size={20} />
-                        </div>
-                        <p className="text-xs font-bold text-slate-500 uppercase">Conversão</p>
+                <div className="bg-white dark:bg-slate-800 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between transition-colors">
+                    <div>
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Conversão</p>
+                        <p className="text-lg font-bold text-teal-600 dark:text-teal-400">
+                            {stats?.conversionRate.toFixed(1) || 0}%
+                        </p>
                     </div>
-                    <p className="text-2xl font-bold text-teal-600">
-                        {stats?.conversionRate.toFixed(1) || 0}%
-                    </p>
+                    <div className="p-1.5 bg-teal-50 dark:bg-teal-900/20 rounded">
+                        <TrendingUp className="text-teal-600 dark:text-teal-400" size={14} />
+                    </div>
                 </div>
 
                 {/* Total de Leads */}
-                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-                    <div className="flex items-center gap-3 mb-2">
-                        <div className="p-2 bg-blue-50 rounded-lg">
-                            <Users className="text-blue-600" size={20} />
-                        </div>
-                        <p className="text-xs font-bold text-slate-500 uppercase">Total Leads</p>
+                <div className="bg-white dark:bg-slate-800 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between transition-colors">
+                    <div>
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Total</p>
+                        <p className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                            {leads.length}
+                        </p>
                     </div>
-                    <p className="text-2xl font-bold text-blue-600">
-                        {leads.length}
-                    </p>
+                    <div className="p-1.5 bg-blue-50 dark:bg-blue-900/20 rounded">
+                        <Users className="text-blue-600 dark:text-blue-400" size={14} />
+                    </div>
                 </div>
             </div>
 
             {/* ============================================ */}
-            {/* FILTERS */}
+            {/* FILTERS & BOARD */}
             {/* ============================================ */}
-            <div className="flex items-center gap-2 bg-white p-1 rounded-lg border border-slate-200 shadow-sm w-fit">
+            <div className="flex items-center gap-2 px-1 shrink-0">
+                <span className="text-[10px] font-bold text-slate-400 uppercase">Filtros:</span>
+
+                {/* Priority Filter */}
                 <button
                     onClick={() => setFilterPriority('ALL')}
-                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${filterPriority === 'ALL'
-                        ? 'bg-violet-50 text-violet-700 shadow-sm'
-                        : 'text-slate-500 hover:text-slate-700'
+                    className={`px-2 py-1 rounded-full text-[10px] font-bold transition-all border ${filterPriority === 'ALL'
+                        ? 'bg-slate-800 text-white border-slate-800 dark:bg-slate-200 dark:text-slate-900 dark:border-slate-200'
+                        : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
                         }`}
                 >
                     Todos
                 </button>
                 <button
                     onClick={() => setFilterPriority('HIGH')}
-                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${filterPriority === 'HIGH'
-                        ? 'bg-rose-50 text-rose-700 shadow-sm'
-                        : 'text-slate-500 hover:text-rose-600'
+                    className={`px-2 py-1 rounded-full text-[10px] font-bold transition-all border ${filterPriority === 'HIGH'
+                        ? 'bg-rose-100 text-rose-700 border-rose-200 dark:bg-rose-900/30 dark:text-rose-300 dark:border-rose-800'
+                        : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-rose-200 hover:text-rose-600'
                         }`}
                 >
                     Alta 🔥
                 </button>
-                <button
-                    onClick={() => setFilterPriority('MEDIUM')}
-                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${filterPriority === 'MEDIUM'
-                        ? 'bg-amber-50 text-amber-700 shadow-sm'
-                        : 'text-slate-500 hover:text-amber-600'
-                        }`}
-                >
-                    Média ⚡
-                </button>
+
+                {/* Stage Filter (Only in List View) */}
+                {viewMode === 'list' && (
+                    <>
+                        <div className="h-4 w-[1px] bg-slate-300 dark:bg-slate-600 mx-1" />
+                        <select
+                            value={filterStage}
+                            onChange={(e) => setFilterStage(e.target.value)}
+                            className="px-2 py-1 rounded border border-slate-200 dark:border-slate-700 text-[10px] font-bold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 hover:border-violet-300 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all"
+                        >
+                            <option value="ALL">Todas Etapas</option>
+                            {stages.map(stage => (
+                                <option key={stage.id} value={stage.id}>
+                                    {stage.name}
+                                </option>
+                            ))}
+                        </select>
+                    </>
+                )}
             </div>
 
-            {/* ============================================ */}
-            {/* KANBAN BOARD */}
-            {/* ============================================ */}
-            <div className="flex-1 overflow-x-auto pb-4">
-                <div className="flex gap-4 min-w-[1400px] h-full">
-                    {COLUMNS.map(col => {
-                        const Icon = col.icon;
-                        const columnLeads = filteredLeads.filter(l => l.status === col.id);
 
-                        return (
-                            <div
-                                key={col.id}
-                                className={`flex flex-col flex-1 min-w-[280px] bg-white rounded-xl border-t-4 ${col.color} shadow-sm`}
-                                onDragOver={handleDragOver}
-                                onDrop={() => handleDrop(col.id)}
-                            >
-                                {/* Column Header */}
-                                <div className="p-4 border-b border-slate-100">
-                                    <div className="flex items-center justify-between mb-1">
-                                        <div className="flex items-center gap-2">
-                                            <Icon size={18} className={col.id === 'WON' ? 'text-green-600' : 'text-slate-600'} />
-                                            <span className={`font-bold ${col.id === 'WON' ? 'text-green-700' : 'text-slate-700'}`}>
-                                                {col.label}
+            {/* BOARD OR LIST VIEW */}
+            {viewMode === 'board' ? (
+                // KANBAN BOARD VIEW
+                <div className="flex-1 overflow-x-auto overflow-y-hidden pb-2">
+                    <div className="flex gap-3 h-full">
+                        {stages.map(stage => {
+                            const Icon = getStageIcon(stage.name);
+                            const columnLeads = filteredLeads.filter(l => l.stage_id === stage.id);
+                            const borderColor = getStageColor(stage.color);
+
+                            return (
+                                <div
+                                    key={stage.id}
+                                    className={`flex flex-col flex-1 min-w-[280px] bg-slate-50/50 dark:bg-slate-900/50 rounded-xl border-t-4 ${borderColor} border-x border-b border-slate-200/60 dark:border-slate-800/60 shadow-sm transition-colors`}
+                                    onDragOver={handleDragOver}
+                                    onDrop={() => handleDrop(stage.id)}
+                                >
+                                    {/* Column Header */}
+                                    <div className="p-3 border-b border-slate-100 dark:border-slate-800 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm rounded-t-lg transition-colors">
+                                        <div className="flex items-center justify-between mb-1">
+                                            <div className="flex items-center gap-2">
+                                                <Icon size={16} className="text-slate-500 dark:text-slate-400" />
+                                                <span className="font-bold text-sm text-slate-700 dark:text-slate-200">
+                                                    {stage.name}
+                                                </span>
+                                            </div>
+                                            <span className="text-[10px] font-bold bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-300 px-2 py-0.5 rounded-full shadow-sm transition-colors">
+                                                {columnLeads.length}
                                             </span>
                                         </div>
-                                        <span className="text-xs font-bold bg-slate-100 text-slate-600 px-2 py-1 rounded-full">
-                                            {columnLeads.length}
-                                        </span>
                                     </div>
-                                    <p className="text-xs text-slate-500">{col.description}</p>
-                                </div>
 
-                                {/* Cards Container */}
-                                <div className="p-3 flex-1 overflow-y-auto space-y-3 bg-slate-50/50">
-                                    {columnLeads.length > 0 ? (
-                                        columnLeads.map(lead => {
-                                            const priorityConfig = getPriorityConfig(lead.priority);
-                                            const valueTier = lead.value ? getValueTier(lead.value) : null;
-                                            const TierIcon = valueTier?.icon;
+                                    {/* Cards Container */}
+                                    <div className="p-2 flex-1 overflow-y-auto space-y-2">
+                                        {columnLeads.length > 0 ? (
+                                            columnLeads.map(lead => {
+                                                const priorityConfig = getPriorityConfig(lead.priority);
+                                                const valueTier = lead.value ? getValueTier(lead.value) : null;
+                                                const TierIcon = valueTier?.icon;
 
-                                            return (
-                                                <div
-                                                    key={lead.id}
-                                                    draggable
-                                                    onDragStart={() => handleDragStart(lead)}
-                                                    className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm cursor-grab active:cursor-grabbing hover:shadow-md transition-all group"
-                                                >
-                                                    {/* Card Header */}
-                                                    <div className="flex justify-between items-start mb-3">
-                                                        <h4 className="font-bold text-slate-800 text-sm truncate pr-2 flex-1">
-                                                            {lead.name}
-                                                        </h4>
-                                                        <button className="text-slate-300 hover:text-violet-600 transition-colors opacity-0 group-hover:opacity-100">
-                                                            <MoreVertical size={16} />
-                                                        </button>
-                                                    </div>
-
-                                                    {/* Value & Tier Badge */}
-                                                    {lead.value && valueTier && (
-                                                        <div className="flex items-center gap-2 mb-3">
-                                                            <Badge variant="outline" className={`gap-1 ${valueTier.bg} ${valueTier.color} border-${valueTier.color.replace('text-', '')}-200`}>
-                                                                {TierIcon && <TierIcon size={10} />}
-                                                                {valueTier.label}
-                                                            </Badge>
-                                                            <div className="flex items-center text-teal-600 text-sm font-bold">
-                                                                <DollarSign size={12} className="mr-0.5" />
-                                                                {lead.value.toLocaleString('pt-BR')}
+                                                return (
+                                                    <div
+                                                        key={lead.id}
+                                                        draggable
+                                                        onDragStart={() => handleDragStart(lead)}
+                                                        onClick={() => handleEditLead(lead)}
+                                                        className="bg-white dark:bg-slate-800 p-3 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm cursor-grab active:cursor-grabbing hover:shadow-md hover:border-violet-200 dark:hover:border-violet-700 transition-all group relative animate-in fade-in duration-300"
+                                                    >
+                                                        {/* Card Header */}
+                                                        <div className="flex justify-between items-start mb-2">
+                                                            <h4 className="font-bold text-slate-800 dark:text-slate-100 text-sm truncate pr-6 leading-tight">
+                                                                {lead.name}
+                                                            </h4>
+                                                            <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                <MoreVertical size={14} className="text-slate-400 hover:text-violet-600 dark:hover:text-violet-400" />
                                                             </div>
                                                         </div>
-                                                    )}
 
-                                                    {/* Contact Info */}
-                                                    <div className="space-y-2 mb-3">
-                                                        <div className="flex items-center text-slate-600 text-xs">
-                                                            <Phone size={12} className="mr-2 text-slate-400" />
-                                                            {lead.phone}
-                                                        </div>
-                                                        {lead.desired_treatment && (
-                                                            <div className="flex items-center text-slate-600 text-xs">
-                                                                <Target size={12} className="mr-2 text-slate-400" />
-                                                                {lead.desired_treatment}
+                                                        {/* Value & Tier Badge */}
+                                                        {lead.value && valueTier && (
+                                                            <div className="flex items-center gap-2 mb-2">
+                                                                <div className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border ${valueTier.bg} ${valueTier.color} border-${valueTier.color.replace('text-', '')}-200/50`}>
+                                                                    {TierIcon && <TierIcon size={10} />}
+                                                                    <span className="font-bold">{valueTier.label}</span>
+                                                                </div>
+                                                                <span className="text-xs font-bold text-slate-600 dark:text-slate-400">
+                                                                    R$ {lead.value.toLocaleString('pt-BR', { notation: 'compact' })}
+                                                                </span>
                                                             </div>
                                                         )}
-                                                    </div>
 
-                                                    {/* AI Generated Message */}
-                                                    {lead.agent_logs && lead.agent_logs.length > 0 && lead.agent_logs[0].message_sent && (
-                                                        <div className="mt-3 bg-purple-50 dark:bg-purple-900/20 p-3 rounded-lg border border-purple-200 dark:border-purple-800 relative group/msg">
-                                                            <div className="flex items-center gap-1 mb-2">
-                                                                <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider">
-                                                                    🤖 Sugestão da IA
-                                                                </span>
+                                                        {/* Contact Info (Compact) */}
+                                                        <div className="space-y-1 mb-2">
+                                                            <div className="flex items-center text-slate-500 dark:text-slate-400 text-[11px]">
+                                                                <Phone size={10} className="mr-1.5 opacity-70" />
+                                                                {lead.phone}
                                                             </div>
-                                                            <p className="text-xs text-gray-700 dark:text-gray-300 italic line-clamp-3 pr-6">
-                                                                "{lead.agent_logs[0].message_sent}"
-                                                            </p>
-
-                                                            {/* Copy Button */}
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    navigator.clipboard.writeText(lead.agent_logs[0].message_sent);
-                                                                    // Simple feedback
-                                                                    const btn = e.currentTarget;
-                                                                    const originalHTML = btn.innerHTML;
-                                                                    btn.innerHTML = '✓';
-                                                                    setTimeout(() => btn.innerHTML = originalHTML, 1000);
-                                                                }}
-                                                                className="absolute top-2 right-2 opacity-0 group-hover/msg:opacity-100 bg-white dark:bg-gray-800 shadow-sm p-1.5 rounded text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-all"
-                                                                title="Copiar mensagem"
-                                                            >
-                                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                                                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                                                                </svg>
-                                                            </button>
-                                                        </div>
-                                                    )}
-
-                                                    {/* Footer */}
-                                                    <div className="border-t border-slate-100 pt-3 flex justify-between items-center">
-                                                        <div className="flex gap-1.5">
-                                                            {lead.priority === 'HIGH' && (
-                                                                <span className={`text-[10px] px-2 py-0.5 rounded font-bold border ${priorityConfig.bg} ${priorityConfig.text} ${priorityConfig.border}`}>
-                                                                    {priorityConfig.label}
-                                                                </span>
+                                                            {lead.desired_treatment && (
+                                                                <div className="flex items-center text-slate-500 dark:text-slate-400 text-[11px]">
+                                                                    <Target size={10} className="mr-1.5 opacity-70" />
+                                                                    <span className="truncate max-w-[180px]">{lead.desired_treatment}</span>
+                                                                </div>
                                                             )}
-                                                            <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded">
-                                                                Score: {lead.lead_score}
-                                                            </span>
                                                         </div>
-                                                        <div className="text-[10px] text-slate-400">
-                                                            {new Date(lead.last_interaction).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+
+                                                        {/* Footer */}
+                                                        <div className="border-t border-slate-50 dark:border-slate-700/50 pt-2 flex justify-between items-center mt-2">
+                                                            <div className="flex gap-1">
+                                                                {lead.priority === 'HIGH' && (
+                                                                    <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold border ${priorityConfig.bg} ${priorityConfig.text} ${priorityConfig.border}`}>
+                                                                        {priorityConfig.label}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <div className="text-[9px] text-slate-300 dark:text-slate-600 font-medium">
+                                                                {new Date(lead.last_interaction).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+                                                            </div>
                                                         </div>
                                                     </div>
+                                                );
+                                            })
+                                        ) : (
+                                            <div className="flex flex-col items-center justify-center text-center py-10 opacity-50 hover:opacity-100 transition-opacity">
+                                                <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-2 transition-colors">
+                                                    <Plus className="text-slate-400" size={20} />
                                                 </div>
-                                            );
-                                        })
-                                    ) : (
-                                        <div className="flex flex-col items-center justify-center text-center p-8 text-slate-400">
-                                            <Icon size={32} className="mb-2 opacity-30" />
-                                            <p className="text-xs">Nenhum lead nesta etapa</p>
-                                        </div>
-                                    )}
+                                                <p className="text-xs text-slate-400 font-medium">Arraste leads aqui</p>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
-                        );
-                    })}
+                            );
+                        })}
+                    </div>
                 </div>
-            </div>
+            ) : (
+                // LIST/TABLE VIEW
+                <div className="flex-1 overflow-auto bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 transition-colors">
+                    <table className="w-full">
+                        <thead className="bg-slate-50 dark:bg-slate-900 sticky top-0 z-10 transition-colors">
+                            <tr className="border-b border-slate-200 dark:border-slate-700">
+                                <th className="text-left p-3 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">Nome</th>
+                                <th className="text-left p-3 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">Telefone</th>
+                                <th className="text-left p-3 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">Tratamento</th>
+                                <th className="text-left p-3 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">Valor</th>
+                                <th className="text-left p-3 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">Etapa</th>
+                                <th className="text-left p-3 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">Prioridade</th>
+                                <th className="text-left p-3 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">Última Interação</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {filteredLeads.map(lead => {
+                                const stage = stages.find(s => s.id === lead.stage_id);
+                                const priorityConfig = getPriorityConfig(lead.priority);
+
+                                return (
+                                    <tr
+                                        key={lead.id}
+                                        onClick={() => handleEditLead(lead)}
+                                        className="border-b border-slate-100 dark:border-slate-800 hover:bg-violet-50 dark:hover:bg-violet-900/10 cursor-pointer transition-colors"
+                                    >
+                                        <td className="p-3">
+                                            <div className="font-bold text-sm text-slate-800 dark:text-slate-200">{lead.name}</div>
+                                        </td>
+                                        <td className="p-3 text-sm text-slate-600 dark:text-slate-400">{lead.phone}</td>
+                                        <td className="p-3 text-sm text-slate-600 dark:text-slate-400">{lead.desired_treatment || '-'}</td>
+                                        <td className="p-3">
+                                            {lead.value ? (
+                                                <span className="text-sm font-bold text-green-600 dark:text-green-400">
+                                                    R$ {lead.value.toLocaleString('pt-BR')}
+                                                </span>
+                                            ) : '-'}
+                                        </td>
+                                        <td className="p-3">
+                                            <Badge variant="outline" className="text-[10px] dark:border-slate-600 dark:text-slate-300">
+                                                {stage?.name || 'N/A'}
+                                            </Badge>
+                                        </td>
+                                        <td className="p-3">
+                                            {lead.priority === 'HIGH' && (
+                                                <span className={`text-[10px] px-2 py-1 rounded font-bold border ${priorityConfig.bg} ${priorityConfig.text} ${priorityConfig.border}`}>
+                                                    {priorityConfig.label}
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td className="p-3 text-xs text-slate-400">
+                                            {new Date(lead.last_interaction).toLocaleDateString('pt-BR')}
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                    {filteredLeads.length === 0 && (
+                        <div className="text-center py-10 text-slate-400">
+                            <Users size={32} className="mx-auto mb-2 opacity-20" />
+                            <p className="text-sm">Nenhum lead encontrado</p>
+                        </div>
+                    )}
+                </div>
+            )}
+
+
+            {/* Lead Details Sheet */}
+            <LeadDetailsSheet
+                isOpen={isSheetOpen}
+                onClose={() => setIsSheetOpen(false)}
+                lead={selectedLead}
+                onSave={loadData}
+                pipeline={pipeline}
+            />
         </div>
     );
 };

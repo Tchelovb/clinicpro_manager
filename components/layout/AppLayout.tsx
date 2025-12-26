@@ -17,7 +17,8 @@ import {
     Package,
     BarChart3,
     Sun,
-    Moon
+    Moon,
+    UserCheck
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -52,6 +53,13 @@ const MENU_ITEMS: MenuItem[] = [
         icon: Calendar,
         roles: ['MASTER', 'ADMIN', 'PROFESSIONAL', 'RECEPTIONIST'],
         color: 'text-violet-600'
+    },
+    {
+        path: '/attendance-queue',
+        label: 'Fila de Atendimento',
+        icon: UserCheck,
+        roles: ['MASTER', 'ADMIN', 'PROFESSIONAL', 'RECEPTIONIST'],
+        color: 'text-green-600'
     },
     {
         path: '/patients',

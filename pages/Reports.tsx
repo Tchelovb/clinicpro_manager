@@ -1,446 +1,764 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { useReactToPrint } from 'react-to-print';
-import {
-    BarChart3, Calendar, DollarSign, Users, TrendingUp, Download,
-    Filter, Loader2, Target, Activity, Printer, FileText, CheckCircle, AlertTriangle
-} from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
+import {
+    Search, Filter, Download, Printer, ChevronDown, ChevronRight,
+    FileText, DollarSign, Users, TrendingUp, Calendar, X, Loader2,
+    ArrowUpDown, Eye, AlertCircle, CheckCircle
+} from 'lucide-react';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '../components/ui/sheet';
 import toast from 'react-hot-toast';
 
-interface Intelligence360Data {
-    clinic_id: string;
-    clinic_name: string;
-    // Marketing
-    total_leads: number;
-    taxa_qualificacao: number;
-    // Sales
-    valor_pipeline: number;
-    ticket_medio: number;
-    taxa_conversao_orcamentos: number;
-    ltv_medio: number;
-    taxa_fidelizacao: number;
-    // Clinical
-    procedimentos_concluidos: number;
-    valor_producao_total: number;
-    margem_media_procedimento: number;
-    // Operational
-    total_agendamentos: number;
-    taxa_no_show: number;
-    taxa_conclusao: number;
-    // Financial
-    faturamento_realizado: number;
-    despesas_totais: number;
-    resultado_liquido: number;
-    margem_ebitda: number;
-    inadimplencia_total: number;
+// ============================================
+// CONFIGURATION SCHEMA - The "BI Brain"
+// ============================================
+interface FilterConfig {
+    id: string;
+    label: string;
+    type: 'text' | 'select' | 'date' | 'daterange' | 'number';
+    options?: { value: string; label: string }[];
+    placeholder?: string;
 }
 
+interface DataSource {
+    id: string;
+    label: string;
+    table: string;
+    columns: { key: string; label: string; type?: 'currency' | 'date' | 'status' | 'text' }[];
+    filters: FilterConfig[];
+    defaultSort?: string;
+}
+
+interface Pillar {
+    id: string;
+    label: string;
+    icon: any;
+    color: string;
+    sources: DataSource[];
+}
+
+const REPORT_CONFIG: Pillar[] = [
+    {
+        id: 'FINANCIAL',
+        label: 'Financeiro',
+        icon: DollarSign,
+        color: 'blue',
+        sources: [
+            {
+                id: 'receivables',
+                label: 'Contas a Receber (Parcelas)',
+                table: 'financial_installments',
+                columns: [
+                    { key: 'due_date', label: 'Vencimento', type: 'date' },
+                    { key: 'patient_name', label: 'Paciente' },
+                    { key: 'description', label: 'Descrição' },
+                    { key: 'amount', label: 'Valor', type: 'currency' },
+                    { key: 'amount_paid', label: 'Pago', type: 'currency' },
+                    { key: 'status', label: 'Status', type: 'status' },
+                    { key: 'payment_method', label: 'Forma' }
+                ],
+                filters: [
+                    {
+                        id: 'status', label: 'Status', type: 'select', options: [
+                            { value: 'PENDING', label: 'Pendente' },
+                            { value: 'PAID', label: 'Pago' },
+                            { value: 'OVERDUE', label: 'Atrasado' },
+                            { value: 'PARTIAL', label: 'Parcial' }
+                        ]
+                    },
+                    { id: 'due_date_start', label: 'Vencimento (De)', type: 'date' },
+                    { id: 'due_date_end', label: 'Vencimento (Até)', type: 'date' },
+                    { id: 'patient_name', label: 'Paciente', type: 'text', placeholder: 'Nome do paciente...' },
+                    { id: 'min_amount', label: 'Valor Mínimo', type: 'number' }
+                ],
+                defaultSort: 'due_date'
+            },
+            {
+                id: 'payables',
+                label: 'Contas a Pagar (Despesas)',
+                table: 'expenses',
+                columns: [
+                    { key: 'due_date', label: 'Vencimento', type: 'date' },
+                    { key: 'provider', label: 'Fornecedor' },
+                    { key: 'description', label: 'Descrição' },
+                    { key: 'category', label: 'Categoria' },
+                    { key: 'amount', label: 'Valor', type: 'currency' },
+                    { key: 'status', label: 'Status', type: 'status' }
+                ],
+                filters: [
+                    {
+                        id: 'status', label: 'Status', type: 'select', options: [
+                            { value: 'PENDING', label: 'Pendente' },
+                            { value: 'PAID', label: 'Pago' }
+                        ]
+                    },
+                    { id: 'due_date_start', label: 'Vencimento (De)', type: 'date' },
+                    { id: 'due_date_end', label: 'Vencimento (Até)', type: 'date' },
+                    { id: 'provider', label: 'Fornecedor', type: 'text', placeholder: 'Nome do fornecedor...' },
+                    { id: 'category', label: 'Categoria', type: 'text' }
+                ],
+                defaultSort: 'due_date'
+            },
+            {
+                id: 'transactions',
+                label: 'Fluxo de Caixa (Realizado)',
+                table: 'transactions',
+                columns: [
+                    { key: 'date', label: 'Data', type: 'date' },
+                    { key: 'description', label: 'Descrição' },
+                    { key: 'type', label: 'Tipo' },
+                    { key: 'category', label: 'Categoria' },
+                    { key: 'amount', label: 'Valor', type: 'currency' },
+                    { key: 'payment_method', label: 'Forma' }
+                ],
+                filters: [
+                    {
+                        id: 'type', label: 'Tipo', type: 'select', options: [
+                            { value: 'INCOME', label: 'Entrada' },
+                            { value: 'EXPENSE', label: 'Saída' }
+                        ]
+                    },
+                    { id: 'date_start', label: 'Data (De)', type: 'date' },
+                    { id: 'date_end', label: 'Data (Até)', type: 'date' },
+                    { id: 'category', label: 'Categoria', type: 'text' },
+                    { id: 'payment_method', label: 'Forma de Pagamento', type: 'text' }
+                ],
+                defaultSort: 'date'
+            }
+        ]
+    },
+    {
+        id: 'COMMERCIAL',
+        label: 'Comercial',
+        icon: TrendingUp,
+        color: 'violet',
+        sources: [
+            {
+                id: 'leads',
+                label: 'Leads (Pipeline)',
+                table: 'leads',
+                columns: [
+                    { key: 'name', label: 'Nome' },
+                    { key: 'phone', label: 'Telefone' },
+                    { key: 'source', label: 'Origem' },
+                    { key: 'status', label: 'Status', type: 'status' },
+                    { key: 'value', label: 'Valor', type: 'currency' },
+                    { key: 'created_at', label: 'Criado em', type: 'date' }
+                ],
+                filters: [
+                    {
+                        id: 'status', label: 'Status', type: 'select', options: [
+                            { value: 'NEW', label: 'Novo' },
+                            { value: 'CONTACTED', label: 'Contatado' },
+                            { value: 'QUALIFIED', label: 'Qualificado' },
+                            { value: 'WON', label: 'Ganho' },
+                            { value: 'LOST', label: 'Perdido' }
+                        ]
+                    },
+                    { id: 'source', label: 'Origem', type: 'text', placeholder: 'Instagram, Google...' },
+                    { id: 'created_start', label: 'Criado (De)', type: 'date' },
+                    { id: 'created_end', label: 'Criado (Até)', type: 'date' },
+                    { id: 'min_value', label: 'Valor Mínimo', type: 'number' }
+                ],
+                defaultSort: 'created_at'
+            },
+            {
+                id: 'budgets',
+                label: 'Orçamentos',
+                table: 'budgets',
+                columns: [
+                    { key: 'patient_name', label: 'Paciente' },
+                    { key: 'status', label: 'Status', type: 'status' },
+                    { key: 'total_value', label: 'Valor Total', type: 'currency' },
+                    { key: 'final_value', label: 'Valor Final', type: 'currency' },
+                    { key: 'discount', label: 'Desconto', type: 'currency' },
+                    { key: 'created_at', label: 'Criado em', type: 'date' }
+                ],
+                filters: [
+                    {
+                        id: 'status', label: 'Status', type: 'select', options: [
+                            { value: 'DRAFT', label: 'Rascunho' },
+                            { value: 'SENT', label: 'Enviado' },
+                            { value: 'APPROVED', label: 'Aprovado' },
+                            { value: 'REJECTED', label: 'Rejeitado' }
+                        ]
+                    },
+                    { id: 'created_start', label: 'Criado (De)', type: 'date' },
+                    { id: 'created_end', label: 'Criado (Até)', type: 'date' },
+                    { id: 'min_value', label: 'Valor Mínimo', type: 'number' }
+                ],
+                defaultSort: 'created_at'
+            }
+        ]
+    },
+    {
+        id: 'PATIENTS',
+        label: 'Pacientes',
+        icon: Users,
+        color: 'green',
+        sources: [
+            {
+                id: 'patients',
+                label: 'Base de Pacientes',
+                table: 'patients',
+                columns: [
+                    { key: 'name', label: 'Nome' },
+                    { key: 'phone', label: 'Telefone' },
+                    { key: 'email', label: 'Email' },
+                    { key: 'birth_date', label: 'Nascimento', type: 'date' },
+                    { key: 'clinical_status', label: 'Status Clínico' },
+                    { key: 'created_at', label: 'Cadastro', type: 'date' }
+                ],
+                filters: [
+                    { id: 'name', label: 'Nome', type: 'text', placeholder: 'Nome do paciente...' },
+                    { id: 'phone', label: 'Telefone', type: 'text' },
+                    { id: 'clinical_status', label: 'Status Clínico', type: 'text' },
+                    {
+                        id: 'birth_month', label: 'Mês de Aniversário', type: 'select', options: [
+                            { value: '01', label: 'Janeiro' },
+                            { value: '02', label: 'Fevereiro' },
+                            { value: '03', label: 'Março' },
+                            { value: '04', label: 'Abril' },
+                            { value: '05', label: 'Maio' },
+                            { value: '06', label: 'Junho' },
+                            { value: '07', label: 'Julho' },
+                            { value: '08', label: 'Agosto' },
+                            { value: '09', label: 'Setembro' },
+                            { value: '10', label: 'Outubro' },
+                            { value: '11', label: 'Novembro' },
+                            { value: '12', label: 'Dezembro' }
+                        ]
+                    }
+                ],
+                defaultSort: 'name'
+            },
+            {
+                id: 'appointments',
+                label: 'Agendamentos',
+                table: 'appointments',
+                columns: [
+                    { key: 'date', label: 'Data/Hora', type: 'date' },
+                    { key: 'patient_name', label: 'Paciente' },
+                    { key: 'doctor_name', label: 'Profissional' },
+                    { key: 'type', label: 'Tipo' },
+                    { key: 'status', label: 'Status', type: 'status' }
+                ],
+                filters: [
+                    {
+                        id: 'status', label: 'Status', type: 'select', options: [
+                            { value: 'PENDING', label: 'Pendente' },
+                            { value: 'CONFIRMED', label: 'Confirmado' },
+                            { value: 'COMPLETED', label: 'Realizado' },
+                            { value: 'CANCELLED', label: 'Cancelado' },
+                            { value: 'NO_SHOW', label: 'Faltou' }
+                        ]
+                    },
+                    { id: 'date_start', label: 'Data (De)', type: 'date' },
+                    { id: 'date_end', label: 'Data (Até)', type: 'date' },
+                    { id: 'type', label: 'Tipo', type: 'text' }
+                ],
+                defaultSort: 'date'
+            }
+        ]
+    }
+];
+
+// ============================================
+// MAIN COMPONENT
+// ============================================
 const Reports: React.FC = () => {
     const { profile } = useAuth();
-    const [searchParams, setSearchParams] = useSearchParams();
-    const componentRef = useRef<HTMLDivElement>(null);
+    const printRef = useRef<HTMLDivElement>(null);
 
-    const [loading, setLoading] = useState(true);
-    const [data, setData] = useState<Intelligence360Data | null>(null);
-    const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'ALL');
-    const [highlightId, setHighlightId] = useState(searchParams.get('highlight') || '');
+    // State Management
+    const [selectedPillar, setSelectedPillar] = useState<Pillar | null>(null);
+    const [selectedSource, setSelectedSource] = useState<DataSource | null>(null);
+    const [filters, setFilters] = useState<Record<string, any>>({});
+    const [results, setResults] = useState<any[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [totalCount, setTotalCount] = useState(0);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize] = useState(50);
+    const [sortBy, setSortBy] = useState<string>('');
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
-    // Handle Print
-    const handlePrint = useReactToPrint({
-        // @ts-ignore - content IS supported but types might be mismatching in this version
-        content: () => componentRef.current,
-        documentTitle: `Relatorio_Auditoria_${new Date().toISOString().split('T')[0]}`,
-    });
+    // Sheet State
+    const [selectedRecord, setSelectedRecord] = useState<any>(null);
+    const [sheetOpen, setSheetOpen] = useState(false);
 
+    // Initialize with first pillar
     useEffect(() => {
-        loadData();
-    }, [profile?.clinic_id]);
+        if (REPORT_CONFIG.length > 0) {
+            setSelectedPillar(REPORT_CONFIG[0]);
+            setSelectedSource(REPORT_CONFIG[0].sources[0]);
+            setSortBy(REPORT_CONFIG[0].sources[0].defaultSort || '');
+        }
+    }, []);
 
-    useEffect(() => {
-        const tab = searchParams.get('tab');
-        if (tab) setActiveTab(tab.toUpperCase());
-        const highlight = searchParams.get('highlight');
-        if (highlight) setHighlightId(highlight);
-    }, [searchParams]);
+    // Query Builder
+    const buildQuery = () => {
+        if (!selectedSource || !profile?.clinic_id) return null;
 
-    const loadData = async () => {
+        let query = supabase
+            .from(selectedSource.table)
+            .select('*', { count: 'exact' })
+            .eq('clinic_id', profile.clinic_id);
+
+        // Apply Filters
+        Object.entries(filters).forEach(([key, value]) => {
+            if (!value) return;
+
+            if (key.endsWith('_start')) {
+                const field = key.replace('_start', '');
+                query = query.gte(field, value);
+            } else if (key.endsWith('_end')) {
+                const field = key.replace('_end', '');
+                query = query.lte(field, value);
+            } else if (key.startsWith('min_')) {
+                const field = key.replace('min_', '');
+                query = query.gte(field, parseFloat(value));
+            } else if (key === 'birth_month') {
+                // Special case for birthday month
+                query = query.ilike('birth_date', `%-${value}-%`);
+            } else {
+                // Text search or exact match
+                if (typeof value === 'string' && !['PENDING', 'PAID', 'APPROVED'].includes(value)) {
+                    query = query.ilike(key, `%${value}%`);
+                } else {
+                    query = query.eq(key, value);
+                }
+            }
+        });
+
+        // Sorting
+        if (sortBy) {
+            query = query.order(sortBy, { ascending: sortOrder === 'asc' });
+        }
+
+        // Pagination
+        const from = (currentPage - 1) * pageSize;
+        const to = from + pageSize - 1;
+        query = query.range(from, to);
+
+        return query;
+    };
+
+    // Execute Query
+    const runQuery = async () => {
+        const query = buildQuery();
+        if (!query) return;
+
+        setLoading(true);
         try {
-            setLoading(true);
-            // Fetch from the Single Source of Truth View
-            const { data: viewData, error } = await supabase
-                .from('view_intelligence_360')
-                .select('*')
-                .eq('clinic_id', profile?.clinic_id)
-                .single();
+            const { data, error, count } = await query;
 
-            if (error) {
-                // If view doesn't exist or empty, maybe fallback or just show error.
-                // Assuming view exists as per instructions.
-                console.error('Error fetching view_intelligence_360', error);
+            if (error) throw error;
 
-                // Fallback mock data if view is missing (for safety during dev)
-                // Remove in production
-                /*
-                setData({
-                    clinic_id: profile?.clinic_id || '',
-                    clinic_name: profile?.clinic_name || 'Clínica',
-                    total_leads: 145, taxa_qualificacao: 68,
-                    valor_pipeline: 250000, ticket_medio: 4500, taxa_conversao_orcamentos: 28, ltv_medio: 12000, taxa_fidelizacao: 45,
-                    procedimentos_concluidos: 32, valor_producao_total: 180000, margem_media_procedimento: 35,
-                    total_agendamentos: 85, taxa_no_show: 5, taxa_conclusao: 92,
-                    faturamento_realizado: 150000, despesas_totais: 90000, resultado_liquido: 60000, margem_ebitda: 40, inadimplencia_total: 5000
-                });
-                */
-                // toast.error('Erro ao carregar dados consolidados.');
-            }
+            // Enrich data with related info (patient names, etc)
+            const enrichedData = await enrichResults(data || []);
 
-            if (viewData) {
-                setData(viewData);
-            }
+            setResults(enrichedData);
+            setTotalCount(count || 0);
         } catch (error) {
-            console.error('Erro geral:', error);
+            console.error('Query error:', error);
+            toast.error('Erro ao executar consulta');
         } finally {
             setLoading(false);
         }
     };
 
-    const StatusBadge = ({ value, type }: { value: number, type: 'PERCENT' | 'CURRENCY' | 'NUMBER' }) => {
-        // Simple logic for color
-        const isGood = type === 'PERCENT' ? value > 20 : value > 0;
-        return (
-            <span className={`px-2 py-0.5 rounded text-xs font-bold ${isGood ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                {type === 'PERCENT' ? `${value}%` : type === 'CURRENCY' ? `R$ ${value}` : value}
-            </span>
-        );
-    }
+    // Enrich results with related data
+    const enrichResults = async (data: any[]) => {
+        if (!selectedSource) return data;
 
-    if (loading) {
+        // Add patient names for financial tables
+        if (['financial_installments', 'budgets', 'appointments'].includes(selectedSource.table)) {
+            const patientIds = data.map(r => r.patient_id).filter(Boolean);
+            if (patientIds.length > 0) {
+                const { data: patients } = await supabase
+                    .from('patients')
+                    .select('id, name')
+                    .in('id', patientIds);
+
+                const patientMap = new Map(patients?.map(p => [p.id, p.name]) || []);
+                data = data.map(r => ({ ...r, patient_name: patientMap.get(r.patient_id) || 'N/A' }));
+            }
+        }
+
+        // Add doctor names for appointments
+        if (selectedSource.table === 'appointments') {
+            const doctorIds = data.map(r => r.doctor_id).filter(Boolean);
+            if (doctorIds.length > 0) {
+                const { data: doctors } = await supabase
+                    .from('users')
+                    .select('id, name')
+                    .in('id', doctorIds);
+
+                const doctorMap = new Map(doctors?.map(d => [d.id, d.name]) || []);
+                data = data.map(r => ({ ...r, doctor_name: doctorMap.get(r.doctor_id) || 'N/A' }));
+            }
+        }
+
+        return data;
+    };
+
+    // Handlers
+    const handlePillarChange = (pillar: Pillar) => {
+        setSelectedPillar(pillar);
+        setSelectedSource(pillar.sources[0]);
+        setFilters({});
+        setResults([]);
+        setSortBy(pillar.sources[0].defaultSort || '');
+    };
+
+    const handleSourceChange = (source: DataSource) => {
+        setSelectedSource(source);
+        setFilters({});
+        setResults([]);
+        setSortBy(source.defaultSort || '');
+    };
+
+    const handleFilterChange = (filterId: string, value: any) => {
+        setFilters(prev => ({ ...prev, [filterId]: value }));
+    };
+
+    const handleSort = (column: string) => {
+        if (sortBy === column) {
+            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortBy(column);
+            setSortOrder('desc');
+        }
+    };
+
+    const handlePrint = () => {
+        window.print();
+    };
+
+    const handleExportCSV = () => {
+        if (results.length === 0) {
+            toast.error('Nenhum resultado para exportar');
+            return;
+        }
+
+        const headers = selectedSource?.columns.map(c => c.label).join(',') || '';
+        const rows = results.map(r =>
+            selectedSource?.columns.map(c => {
+                const value = r[c.key];
+                if (c.type === 'currency') return `R$ ${parseFloat(value || 0).toFixed(2)}`;
+                if (c.type === 'date') return new Date(value).toLocaleDateString('pt-BR');
+                return value || '';
+            }).join(',')
+        ).join('\n');
+
+        const csv = `${headers}\n${rows}`;
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `relatorio_${selectedSource?.id}_${new Date().toISOString().split('T')[0]}.csv`;
+        link.click();
+        toast.success('Relatório exportado com sucesso!');
+    };
+
+    // Render Helpers
+    const renderCellValue = (value: any, type?: string) => {
+        if (value === null || value === undefined) return '-';
+
+        switch (type) {
+            case 'currency':
+                return `R$ ${parseFloat(value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+            case 'date':
+                return new Date(value).toLocaleDateString('pt-BR');
+            case 'status':
+                return (
+                    <span className={`px-2 py-0.5 rounded text-xs font-bold ${['PAID', 'APPROVED', 'COMPLETED', 'CONFIRMED'].includes(value)
+                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                            : ['PENDING', 'DRAFT'].includes(value)
+                                ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300'
+                                : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+                        }`}>
+                        {value}
+                    </span>
+                );
+            default:
+                return value;
+        }
+    };
+
+    if (!selectedPillar || !selectedSource) {
         return (
-            <div className="flex flex-col items-center justify-center h-screen bg-slate-100">
-                <Loader2 className="w-12 h-12 text-slate-800 animate-spin mb-4" />
-                <p className="text-slate-600 font-medium">Gerando Relatório de Auditoria...</p>
+            <div className="flex items-center justify-center h-screen">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
             </div>
         );
-    }
-
-    if (!data) {
-        return (
-            <div className="flex flex-col items-center justify-center h-screen bg-slate-100">
-                <AlertTriangle className="w-12 h-12 text-amber-500 mb-4" />
-                <p className="text-slate-600 font-medium">Nenhum dado consolidado disponível para auditoria.</p>
-                <button onClick={loadData} className="mt-4 text-blue-600 hover:underline">Tentar novamente</button>
-            </div>
-        )
     }
 
     return (
-        <div className="min-h-screen bg-slate-200 p-8 print:p-0 print:bg-white overflow-auto flex flex-col items-center">
-
-            {/* Control Bar (Hidden on Print) */}
-            <div className="w-full max-w-[210mm] mb-6 flex justify-between items-center print:hidden">
-                <div className="flex gap-2">
-                    <button
-                        onClick={() => { setSearchParams({ tab: 'ALL' }); setActiveTab('ALL'); }}
-                        className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${activeTab === 'ALL' ? 'bg-slate-800 text-white' : 'bg-white text-slate-600 hover:bg-slate-100'}`}
-                    >
-                        Visão Geral
-                    </button>
-                    <button
-                        onClick={() => { setSearchParams({ tab: 'FINANCIAL' }); setActiveTab('FINANCIAL'); }}
-                        className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${activeTab === 'FINANCIAL' ? 'bg-blue-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-100'}`}
-                    >
-                        Financeiro
-                    </button>
-                    <button
-                        onClick={() => { setSearchParams({ tab: 'MARKETING' }); setActiveTab('MARKETING'); }}
-                        className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${activeTab === 'MARKETING' ? 'bg-violet-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-100'}`}
-                    >
-                        Marketing & Vendas
-                    </button>
-                    <button
-                        onClick={() => { setSearchParams({ tab: 'CEO' }); setActiveTab('CEO'); }}
-                        className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${activeTab === 'CEO' ? 'bg-slate-900 text-white' : 'bg-white text-slate-600 hover:bg-slate-100'}`}
-                    >
-                        Checklist CEO
-                    </button>
+        <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950">
+            {/* ============================================ */}
+            {/* HEADER - JIRA STYLE */}
+            {/* ============================================ */}
+            <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 print:hidden">
+                <div className="flex items-center justify-between mb-4">
+                    <div>
+                        <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                            <FileText className="text-blue-600" size={28} />
+                            Relatórios Operacionais
+                        </h1>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                            Sistema de BI Dinâmico • {totalCount} registros encontrados
+                        </p>
+                    </div>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={handleExportCSV}
+                            disabled={results.length === 0}
+                            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm"
+                        >
+                            <Download size={16} />
+                            CSV
+                        </button>
+                        <button
+                            onClick={handlePrint}
+                            disabled={results.length === 0}
+                            className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-900 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm"
+                        >
+                            <Printer size={16} />
+                            Imprimir A4
+                        </button>
+                    </div>
                 </div>
 
-                <button
-                    onClick={handlePrint}
-                    className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition-colors font-medium shadow-lg"
-                >
-                    <Printer size={18} />
-                    Imprimir Auditoria (A4)
-                </button>
+                {/* PILLAR SELECTOR */}
+                <div className="flex gap-2 mb-4">
+                    {REPORT_CONFIG.map(pillar => {
+                        const Icon = pillar.icon;
+                        return (
+                            <button
+                                key={pillar.id}
+                                onClick={() => handlePillarChange(pillar)}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-all ${selectedPillar.id === pillar.id
+                                        ? `bg-${pillar.color}-600 text-white shadow-md`
+                                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                                    }`}
+                            >
+                                <Icon size={16} />
+                                {pillar.label}
+                            </button>
+                        );
+                    })}
+                </div>
+
+                {/* SOURCE SELECTOR */}
+                <div className="flex gap-2">
+                    {selectedPillar.sources.map(source => (
+                        <button
+                            key={source.id}
+                            onClick={() => handleSourceChange(source)}
+                            className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${selectedSource.id === source.id
+                                    ? 'bg-slate-900 dark:bg-slate-200 text-white dark:text-slate-900'
+                                    : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-slate-300'
+                                }`}
+                        >
+                            {source.label}
+                        </button>
+                    ))}
+                </div>
             </div>
 
-            {/* A4 Paper Container */}
-            <div ref={componentRef} className="bg-white w-full md:w-[210mm] min-h-screen md:min-h-[297mm] shadow-sm md:shadow-2xl print:shadow-none p-6 md:p-[20mm] relative rounded-xl md:rounded-none">
-
-                {/* Header */}
-                <div className="border-b-2 border-slate-800 pb-6 mb-8 flex flex-col md:flex-row justify-between md:items-end gap-4">
-                    <div>
-                        <h1 className="text-2xl md:text-3xl font-black text-slate-900 uppercase tracking-tighter">Relatório de Auditoria</h1>
-                        <p className="text-slate-500 font-medium mt-1">Torre de Controle Operacional • {data?.clinic_name || profile?.clinics?.name || 'Clínica'}</p>
-                    </div>
-                    <div className="text-left md:text-right">
-                        <p className="text-xs text-slate-400 uppercase font-bold">Data de Emissão</p>
-                        <p className="text-lg font-bold text-slate-800">{new Date().toLocaleDateString('pt-BR')}</p>
-                    </div>
+            {/* ============================================ */}
+            {/* FILTER BAR - DYNAMIC CASCADE */}
+            {/* ============================================ */}
+            <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 print:hidden">
+                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                    {selectedSource.filters.map(filter => (
+                        <div key={filter.id}>
+                            <label className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-1 block uppercase">
+                                {filter.label}
+                            </label>
+                            {filter.type === 'select' ? (
+                                <select
+                                    value={filters[filter.id] || ''}
+                                    onChange={(e) => handleFilterChange(filter.id, e.target.value)}
+                                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                                >
+                                    <option value="">Todos</option>
+                                    {filter.options?.map(opt => (
+                                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                    ))}
+                                </select>
+                            ) : filter.type === 'date' ? (
+                                <input
+                                    type="date"
+                                    value={filters[filter.id] || ''}
+                                    onChange={(e) => handleFilterChange(filter.id, e.target.value)}
+                                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                                />
+                            ) : filter.type === 'number' ? (
+                                <input
+                                    type="number"
+                                    value={filters[filter.id] || ''}
+                                    onChange={(e) => handleFilterChange(filter.id, e.target.value)}
+                                    placeholder={filter.placeholder}
+                                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                                />
+                            ) : (
+                                <input
+                                    type="text"
+                                    value={filters[filter.id] || ''}
+                                    onChange={(e) => handleFilterChange(filter.id, e.target.value)}
+                                    placeholder={filter.placeholder}
+                                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                                />
+                            )}
+                        </div>
+                    ))}
                 </div>
+                <div className="flex gap-2 mt-4">
+                    <button
+                        onClick={runQuery}
+                        disabled={loading}
+                        className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-bold text-sm shadow-md"
+                    >
+                        {loading ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
+                        {loading ? 'Buscando...' : 'Buscar'}
+                    </button>
+                    <button
+                        onClick={() => { setFilters({}); setResults([]); }}
+                        className="flex items-center gap-2 px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 font-medium text-sm"
+                    >
+                        <X size={16} />
+                        Limpar
+                    </button>
+                </div>
+            </div>
 
-                {/* Executive Summary (Health Score) */}
-                {(activeTab === 'ALL') && (
-                    <div className="mb-12 bg-slate-50 p-6 rounded-xl border border-slate-100 print:border-slate-200">
-                        <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4">Resumo Executivo (IVC)</h2>
-                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 md:gap-4 text-center">
-                            <div>
-                                <p className="text-xs text-slate-500 mb-1">Marketing</p>
-                                <p className="text-xl md:text-2xl font-black text-slate-800">{data.total_leads}</p>
-                                <p className="text-[10px] text-green-600 font-bold">Leads Totais</p>
-                            </div>
-                            <div className="border-l border-slate-200 md:border-l">
-                                <p className="text-xs text-slate-500 mb-1">Vendas</p>
-                                <p className="text-xl md:text-2xl font-black text-slate-800">{data.taxa_conversao_orcamentos}%</p>
-                                <p className="text-[10px] text-blue-600 font-bold">Conversão</p>
-                            </div>
-                            <div className="col-span-2 md:col-span-1 border-t md:border-t-0 md:border-l border-slate-200 pt-4 md:pt-0">
-                                <p className="text-xs text-slate-500 mb-1">Financeiro</p>
-                                <p className="text-xl md:text-2xl font-black text-slate-800">{data.margem_ebitda}%</p>
-                                <p className="text-[10px] text-slate-600 font-bold">Margem EBITDA</p>
-                            </div>
-                            <div className="border-l border-slate-200">
-                                <p className="text-xs text-slate-500 mb-1">Operacional</p>
-                                <p className="text-xl md:text-2xl font-black text-slate-800">{data.taxa_no_show}%</p>
-                                <p className="text-[10px] text-red-600 font-bold">No-Show</p>
-                            </div>
-                            <div className="border-l border-slate-200">
-                                <p className="text-xs text-slate-500 mb-1">Produção</p>
-                                <p className="text-xl md:text-2xl font-black text-slate-800">
-                                    {new Intl.NumberFormat('pt-BR', { notation: 'compact', style: 'currency', currency: 'BRL' }).format(data.valor_producao_total)}
-                                </p>
-                                <p className="text-[10px] text-slate-600 font-bold">Realizada</p>
-                            </div>
-                        </div>
+            {/* ============================================ */}
+            {/* RESULTS TABLE - JIRA DENSE STYLE */}
+            {/* ============================================ */}
+            <div className="flex-1 overflow-auto p-4" ref={printRef}>
+                {results.length === 0 && !loading ? (
+                    <div className="flex flex-col items-center justify-center h-full text-slate-400">
+                        <AlertCircle size={48} className="mb-4 opacity-50" />
+                        <p className="text-lg font-medium">Nenhum resultado encontrado</p>
+                        <p className="text-sm">Ajuste os filtros e clique em "Buscar"</p>
                     </div>
-                )}
-
-                {/* Financial Section */}
-                {(activeTab === 'ALL' || activeTab === 'FINANCIAL') && (
-                    <div className="mb-8 break-inside-avoid">
-                        <div className="flex items-center gap-2 mb-4 border-b border-slate-200 pb-2">
-                            <DollarSign className="text-slate-800" size={24} />
-                            <h2 className="text-xl font-bold text-slate-800">Auditoria Financeira</h2>
-                        </div>
-
+                ) : (
+                    <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
                         <table className="w-full text-sm">
-                            <tbody className="divide-y divide-slate-100">
-                                <tr className="bg-slate-50">
-                                    <td className="py-3 px-4 font-bold text-slate-700">Faturamento Realizado</td>
-                                    <td className="py-3 px-4 text-right font-mono font-bold text-slate-800">
-                                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(data.faturamento_realizado)}
-                                    </td>
-                                </tr>
+                            <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
                                 <tr>
-                                    <td className="py-3 px-4 text-slate-600">(-) Despesas Totais</td>
-                                    <td className="py-3 px-4 text-right font-mono text-red-600">
-                                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(data.despesas_totais)}
-                                    </td>
+                                    {selectedSource.columns.map(col => (
+                                        <th
+                                            key={col.key}
+                                            onClick={() => handleSort(col.key)}
+                                            className="px-4 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                {col.label}
+                                                {sortBy === col.key && (
+                                                    <ArrowUpDown size={12} className={sortOrder === 'asc' ? 'rotate-180' : ''} />
+                                                )}
+                                            </div>
+                                        </th>
+                                    ))}
+                                    <th className="px-4 py-3 text-right text-xs font-bold text-slate-600 dark:text-slate-300 uppercase print:hidden">
+                                        Ações
+                                    </th>
                                 </tr>
-                                <tr className="bg-slate-100 print:bg-slate-50">
-                                    <td className="py-3 px-4 font-black text-slate-800 uppercase">Resultado Líquido</td>
-                                    <td className="py-3 px-4 text-right font-mono font-black text-blue-600 text-lg">
-                                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(data.resultado_liquido)}
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td className="py-3 px-4 text-slate-600">Margem EBITDA</td>
-                                    <td className="py-3 px-4 text-right">
-                                        <StatusBadge value={data.margem_ebitda} type="PERCENT" />
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td className="py-3 px-4 text-slate-600">Inadimplência Total</td>
-                                    <td className="py-3 px-4 text-right font-mono text-red-500">
-                                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(data.inadimplencia_total)}
-                                    </td>
-                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                {results.map((row, idx) => (
+                                    <tr
+                                        key={idx}
+                                        className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
+                                        onClick={() => { setSelectedRecord(row); setSheetOpen(true); }}
+                                    >
+                                        {selectedSource.columns.map(col => (
+                                            <td key={col.key} className="px-4 py-3 text-slate-700 dark:text-slate-300">
+                                                {renderCellValue(row[col.key], col.type)}
+                                            </td>
+                                        ))}
+                                        <td className="px-4 py-3 text-right print:hidden">
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setSelectedRecord(row);
+                                                    setSheetOpen(true);
+                                                }}
+                                                className="text-blue-600 dark:text-blue-400 hover:underline text-xs font-medium"
+                                            >
+                                                <Eye size={14} className="inline" />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
                             </tbody>
                         </table>
+
+                        {/* Pagination */}
+                        {totalCount > pageSize && (
+                            <div className="border-t border-slate-200 dark:border-slate-700 px-4 py-3 flex items-center justify-between print:hidden">
+                                <p className="text-sm text-slate-500 dark:text-slate-400">
+                                    Mostrando {((currentPage - 1) * pageSize) + 1} a {Math.min(currentPage * pageSize, totalCount)} de {totalCount}
+                                </p>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                        disabled={currentPage === 1}
+                                        className="px-3 py-1 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded disabled:opacity-50 text-sm"
+                                    >
+                                        Anterior
+                                    </button>
+                                    <button
+                                        onClick={() => setCurrentPage(p => p + 1)}
+                                        disabled={currentPage * pageSize >= totalCount}
+                                        className="px-3 py-1 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded disabled:opacity-50 text-sm"
+                                    >
+                                        Próxima
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
-
-                {/* Commercial Section */}
-                {(activeTab === 'ALL' || activeTab === 'MARKETING') && (
-                    <div className="mb-8 break-inside-avoid">
-                        <div className="flex items-center gap-2 mb-4 border-b border-slate-200 pb-2">
-                            <TrendingUp className="text-slate-800" size={24} />
-                            <h2 className="text-xl font-bold text-slate-800">Performance Comercial</h2>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <table className="w-full text-sm">
-                                <thead className="text-xs text-slate-400 uppercase font-bold text-left">
-                                    <tr><th className="pb-2">KPI Marketing</th><th className="pb-2 text-right">Valor</th></tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100">
-                                    <tr>
-                                        <td className="py-2 text-slate-600">Total Leads</td>
-                                        <td className="py-2 text-right font-bold">{data.total_leads}</td>
-                                    </tr>
-                                    <tr>
-                                        <td className="py-2 text-slate-600">Taxa Qualificação</td>
-                                        <td className="py-2 text-right">{data.taxa_qualificacao}%</td>
-                                    </tr>
-                                    <tr>
-                                        <td className="py-2 text-slate-600">Pipeline</td>
-                                        <td className="py-2 text-right font-mono">
-                                            {new Intl.NumberFormat('pt-BR', { notation: 'compact', style: 'currency', currency: 'BRL' }).format(data.valor_pipeline)}
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-
-                            <table className="w-full text-sm">
-                                <thead className="text-xs text-slate-400 uppercase font-bold text-left">
-                                    <tr><th className="pb-2">KPI Vendas</th><th className="pb-2 text-right">Valor</th></tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100">
-                                    <tr>
-                                        <td className="py-2 text-slate-600">Ticket Médio</td>
-                                        <td className="py-2 text-right">
-                                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(data.ticket_medio)}
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td className="py-2 text-slate-600">Conversão</td>
-                                        <td className="py-2 text-right font-bold text-green-600">{data.taxa_conversao_orcamentos}%</td>
-                                    </tr>
-                                    <tr>
-                                        <td className="py-2 text-slate-600">LTV Médio</td>
-                                        <td className="py-2 text-right">
-                                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(data.ltv_medio)}
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                )}
-
-                {/* CEO Checklist Section */}
-                {activeTab === 'CEO' && (
-                    <div className="mb-8 break-inside-avoid">
-                        <div className="flex items-center gap-2 mb-6 border-b-2 border-slate-900 pb-4">
-                            <Activity className="text-slate-900" size={32} />
-                            <div>
-                                <h2 className="text-2xl font-black text-slate-900 uppercase">Checklist de Auditoria Mensal</h2>
-                                <p className="text-sm text-slate-500 font-medium">Protocolo de Governança 2026 • Executar todo dia 01</p>
-                            </div>
-                        </div>
-
-                        <div className="space-y-8">
-                            {/* Bloco 1 */}
-                            <div className="bg-slate-50 p-6 rounded-xl border border-slate-200">
-                                <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-                                    <span className="bg-slate-800 text-white w-6 h-6 rounded flex items-center justify-center text-xs">1</span>
-                                    Saúde Financeira (O Combustível)
-                                </h3>
-                                <ul className="space-y-3 pl-8">
-                                    <li className="flex items-start gap-3">
-                                        <div className="w-4 h-4 rounded border-2 border-slate-400 mt-1"></div>
-                                        <div>
-                                            <span className="font-bold text-slate-700">Faturamento vs Meta (+30%)</span>
-                                            <p className="text-xs text-slate-500">Abaixo da meta? "War Room" imediata com vendas.</p>
-                                        </div>
-                                    </li>
-                                    <li className="flex items-start gap-3">
-                                        <div className="w-4 h-4 rounded border-2 border-slate-400 mt-1"></div>
-                                        <div>
-                                            <span className="font-bold text-slate-700">Margem EBITDA ({`> 25%`})</span>
-                                            <p className="text-xs text-slate-500">Atual: <span className="font-bold text-slate-900">{data.margem_ebitda}%</span>. Se &lt; 20%, auditar custos.</p>
-                                        </div>
-                                    </li>
-                                    <li className="flex items-start gap-3">
-                                        <div className="w-4 h-4 rounded border-2 border-slate-400 mt-1"></div>
-                                        <div>
-                                            <span className="font-bold text-slate-700">Ponto de Equilíbrio (Breakeven)</span>
-                                            <p className="text-xs text-slate-500">Passou do dia 20? Cortar gastos não-essenciais.</p>
-                                        </div>
-                                    </li>
-                                </ul>
-                            </div>
-
-                            {/* Bloco 2 */}
-                            <div className="bg-blue-50 p-6 rounded-xl border border-blue-100">
-                                <h3 className="text-lg font-bold text-blue-900 mb-4 flex items-center gap-2">
-                                    <span className="bg-blue-600 text-white w-6 h-6 rounded flex items-center justify-center text-xs">2</span>
-                                    Máquina de Vendas (O Motor)
-                                </h3>
-                                <ul className="space-y-3 pl-8">
-                                    <li className="flex items-start gap-3">
-                                        <div className="w-4 h-4 rounded border-2 border-blue-300 mt-1"></div>
-                                        <div>
-                                            <span className="font-bold text-blue-800">Conversão High-Ticket ({`> 30%`})</span>
-                                            <p className="text-xs text-blue-600">Atual: <span className="font-bold">{data.taxa_conversao_orcamentos}%</span>. Auditar leads perdidos &gt; 15k.</p>
-                                        </div>
-                                    </li>
-                                    <li className="flex items-start gap-3">
-                                        <div className="w-4 h-4 rounded border-2 border-blue-300 mt-1"></div>
-                                        <div>
-                                            <span className="font-bold text-blue-800">Qualidade de Leads (CPL)</span>
-                                            <p className="text-xs text-blue-600">Abaixo de 50% de qualificação? Ajustar público para 'Lookalike VIP'.</p>
-                                        </div>
-                                    </li>
-                                </ul>
-                            </div>
-
-                            {/* Bloco 3 */}
-                            <div className="bg-emerald-50 p-6 rounded-xl border border-emerald-100">
-                                <h3 className="text-lg font-bold text-emerald-900 mb-4 flex items-center gap-2">
-                                    <span className="bg-emerald-600 text-white w-6 h-6 rounded flex items-center justify-center text-xs">3</span>
-                                    Eficiência Operacional (A Engrenagem)
-                                </h3>
-                                <ul className="space-y-3 pl-8">
-                                    <li className="flex items-start gap-3">
-                                        <div className="w-4 h-4 rounded border-2 border-emerald-300 mt-1"></div>
-                                        <div>
-                                            <span className="font-bold text-emerald-800">Ocupação da Cadeira ({`> 85%`})</span>
-                                            <p className="text-xs text-emerald-600">Se &lt; 70%, ativar 'Encaixe Express'.</p>
-                                        </div>
-                                    </li>
-                                    <li className="flex items-start gap-3">
-                                        <div className="w-4 h-4 rounded border-2 border-emerald-300 mt-1"></div>
-                                        <div>
-                                            <span className="font-bold text-emerald-800">Performance Profissional</span>
-                                            <p className="text-xs text-emerald-600">Verificar alerta no BOS. Ticket &lt; Média = Treinamento.</p>
-                                        </div>
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
-
-                        <div className="mt-12 border-t-2 border-slate-300 pt-8 flex gap-8">
-                            <div className="flex-1">
-                                <p className="text-sm font-bold text-slate-400 uppercase mb-8">Assinatura CEO</p>
-                                <div className="border-b border-slate-900 w-full"></div>
-                            </div>
-                            <div className="flex-1">
-                                <p className="text-sm font-bold text-slate-400 uppercase mb-8">Data da Auditoria</p>
-                                <div className="border-b border-slate-900 w-full"></div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Footer */}
-                <div className="absolute bottom-10 left-[20mm] right-[20mm] text-center border-t border-slate-100 pt-4 print:block hidden">
-                    <p className="text-xs text-slate-400">Documento gerado eletronicamente pelo sistema BOS (Business Operating System). A autenticidade pode ser verificada no Intelligence Gateway.</p>
-                </div>
-
             </div>
+
+            {/* ============================================ */}
+            {/* DETAIL SHEET - SHADCN */}
+            {/* ============================================ */}
+            <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+                <SheetContent className="w-full sm:max-w-lg overflow-auto">
+                    <SheetHeader>
+                        <SheetTitle>Detalhes do Registro</SheetTitle>
+                    </SheetHeader>
+                    {selectedRecord && (
+                        <div className="mt-6 space-y-4">
+                            {Object.entries(selectedRecord).map(([key, value]) => (
+                                <div key={key} className="border-b border-slate-100 dark:border-slate-800 pb-3">
+                                    <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">
+                                        {key.replace(/_/g, ' ')}
+                                    </p>
+                                    <p className="text-sm text-slate-900 dark:text-white font-medium">
+                                        {value?.toString() || '-'}
+                                    </p>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </SheetContent>
+            </Sheet>
+
+            {/* Print Styles */}
+            <style>{`
+                @media print {
+                    body { background: white !important; }
+                    .print\\:hidden { display: none !important; }
+                    table { page-break-inside: auto; }
+                    tr { page-break-inside: avoid; page-break-after: auto; }
+                    thead { display: table-header-group; }
+                }
+            `}</style>
         </div>
     );
 };

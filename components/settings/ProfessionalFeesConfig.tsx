@@ -95,7 +95,7 @@ export const ProfessionalFeesConfig: React.FC<ProfessionalFeesConfigProps> = ({ 
                     fee_value: customFee?.fee_value ?? 0,
                     is_custom: !!customFee,
                     lab_cost: p.estimated_lab_cost ?? 0,
-                    minute_cost: ((p.estimated_time_minutes ?? 60) * (clinicConfig.tax_rate / 60)) ?? 0,
+                    minute_cost: (p.estimated_time_minutes ?? 60) * (clinicConfig.tax_rate / 60),
                 } as ProcedureFeeItem;
             });
 

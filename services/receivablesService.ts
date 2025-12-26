@@ -1,198 +1,381 @@
-
 import { supabase } from '../lib/supabase';
-import { addMonths, format } from 'date-fns';
 
-export interface ApprovalSimulatonParams {
-    totalValue: number;
-    installments: number;
-    cardProfileId: string;
-    downPayment: number;
-    clinicId: string;
-}
+// =====================================================
+// TYPES
+// =====================================================
 
-export interface ApprovalSimulationResult {
-    grossValue: number;
-    netValue: number;
-    totalFees: number;
-    taxAmount: number;
-    cardFeeAmount: number;
-    installmentValue: number;
-    netInstallmentValue: number;
-    rates: {
-        tax: number;
-        card: number;
-        anticipation: number;
+export interface Installment {
+    id: string;
+    patient_id: string;
+    clinic_id: string;
+    budget_id?: string;
+    installment_number: number;
+    total_installments: number;
+    amount: number;
+    due_date: string;
+    paid_date?: string;
+    status: 'PENDING' | 'PAID' | 'OVERDUE' | 'CANCELLED';
+    payment_method?: string;
+    notes?: string;
+    created_at: string;
+    updated_at: string;
+
+    // Relations
+    patient?: {
+        id: string;
+        name: string;
+        phone: string;
+        email?: string;
     };
 }
 
+export interface CollectionRule {
+    daysBeforeDue: number;
+    daysAfterDue: number;
+    action: 'REMINDER' | 'WARNING' | 'BLOCK_SCHEDULE';
+    message: string;
+}
+
+export interface ReceivablesStats {
+    totalPending: number;
+    totalOverdue: number;
+    totalPaid: number;
+    overdueCount: number;
+    dueThisWeek: number;
+    averageTicket: number;
+}
+
+// =====================================================
+// COLLECTION RULES (Régua de Cobrança)
+// =====================================================
+
+export const COLLECTION_RULES: CollectionRule[] = [
+    {
+        daysBeforeDue: 3,
+        daysAfterDue: 0,
+        action: 'REMINDER',
+        message: 'Olá {PATIENT_NAME}! Lembramos que sua parcela de R$ {AMOUNT} vence em {DAYS} dias. Qualquer dúvida, estamos à disposição! 😊'
+    },
+    {
+        daysBeforeDue: 0,
+        daysAfterDue: 1,
+        action: 'WARNING',
+        message: 'Olá {PATIENT_NAME}, identificamos que sua parcela de R$ {AMOUNT} venceu ontem. Por favor, regularize para evitar bloqueios. Link de pagamento: {PAYMENT_LINK}'
+    },
+    {
+        daysBeforeDue: 0,
+        daysAfterDue: 15,
+        action: 'BLOCK_SCHEDULE',
+        message: 'Olá {PATIENT_NAME}, sua parcela está em atraso há 15 dias. Seu agendamento foi bloqueado até a regularização. Entre em contato conosco.'
+    }
+];
+
+// =====================================================
+// SERVICE
+// =====================================================
+
 export const receivablesService = {
-    // Simula os valores (bruto vs líquido) antes de aprovar
-    async simulateApproval(params: ApprovalSimulatonParams): Promise<ApprovalSimulationResult> {
-        const { totalValue, installments, cardProfileId, downPayment, clinicId } = params;
-
-        // 1. Buscar Taxas da Clínica (Impostos)
-        const { data: clinic, error: clinicError } = await supabase
-            .from('clinics')
-            .select('federal_tax_rate, state_tax_rate, municipal_tax_rate, tax_rate_percent')
-            .eq('id', clinicId)
-            .single();
-
-        if (clinicError) throw new Error('Erro ao buscar taxas da clínica');
-
-        // Soma das taxas fiscais (prioriza colunas novas, fallback para antigo tax_rate_percent)
-        const federal = clinic.federal_tax_rate || 0;
-        const state = clinic.state_tax_rate || 0;
-        const municipal = clinic.municipal_tax_rate || 0;
-        let totalTaxRate = federal + state + municipal;
-
-        if (totalTaxRate === 0 && clinic.tax_rate_percent) {
-            totalTaxRate = clinic.tax_rate_percent;
+    /**
+     * Get all installments with filters
+     */
+    async getInstallments(
+        clinicId: string,
+        filters?: {
+            status?: 'PENDING' | 'PAID' | 'OVERDUE' | 'CANCELLED';
+            patientId?: string;
+            startDate?: string;
+            endDate?: string;
         }
-
-        // 2. Buscar Taxas da Maquininha
-        let cardRate = 0;
-        let anticipationRate = 0;
-
-        if (cardProfileId) {
-            const { data: profile, error: profileError } = await supabase
-                .from('card_machine_profiles')
-                .select(`
-                id, 
-                anticipation_rate,
-                debit_rate,
-                card_installment_rates (
-                    installments,
-                    rate
-                )
+    ): Promise<Installment[]> {
+        let query = supabase
+            .from('installments')
+            .select(`
+                *,
+                patient:patients(id, name, phone, email)
             `)
-                .eq('id', cardProfileId)
-                .single();
+            .eq('clinic_id', clinicId)
+            .order('due_date', { ascending: true });
 
-            if (profileError) throw new Error('Erro ao buscar perfil da maquininha');
-
-
-            if (installments === 1 && !params.downPayment) {
-                // Tratamento simplificado: se for 1x crédito (assumindo crédito à vista se não especificado como débito)
-                // Se fosse débito, teria que ter flag. Vamos buscar na tabela de parcelas '1' ou usar uma lógica padrão.
-                // Geralmente 1x é crédito à vista.
-                const rateObj = profile.card_installment_rates.find((r: any) => r.installments === 1);
-                cardRate = rateObj ? rateObj.rate : 0;
-            } else {
-                const rateObj = profile.card_installment_rates.find((r: any) => r.installments === installments);
-                cardRate = rateObj ? rateObj.rate : 0;
-            }
-
-            anticipationRate = profile.anticipation_rate || 0;
+        if (filters?.status) {
+            query = query.eq('status', filters.status);
         }
 
-        // 3. Cálculos
-        const valueToInstallment = totalValue - downPayment;
+        if (filters?.patientId) {
+            query = query.eq('patient_id', filters.patientId);
+        }
 
-        // Imposto incide sobre o Total Bruto (Nota Fiscal cheia)
-        const taxAmount = (totalValue * totalTaxRate) / 100;
+        if (filters?.startDate) {
+            query = query.gte('due_date', filters.startDate);
+        }
 
-        // Taxa de cartão incide sobre o valor passado no cartão (Total - Entrada em Dinheiro/Pix, assumindo entrada não é cartão)
-        // SE a entrada for no cartão, a lógica muda. 
-        // MVP: Assumir Entrada = Dinheiro/Pix (Taxa 0%) e Restante = Cartão.
-        // TODO: Adicionar opção "Entrada no Cartão?"
+        if (filters?.endDate) {
+            query = query.lte('due_date', filters.endDate);
+        }
 
-        const cardFeeAmount = (valueToInstallment * cardRate) / 100;
+        const { data, error } = await query;
 
-        const totalFees = taxAmount + cardFeeAmount;
-        const netValue = totalValue - totalFees;
+        if (error) throw error;
 
-        const installmentValue = installments > 0 ? valueToInstallment / installments : 0;
-        // Valor líquido por parcela (aproximado, pois o imposto pode ser pago separado)
-        const netInstallmentValue = installments > 0 ? (netValue - downPayment) / installments : 0;
-        // Nota: Essa divisão do "Líquido por parcela" é meramente ilustrativa pro fluxo de caixa, 
-        // tecnicamente o imposto é pago no DAS. O que entra no banco é (Parcela - Taxa Cartão).
+        // Update status based on due date
+        return (data || []).map(installment => ({
+            ...installment,
+            status: this.calculateStatus(installment)
+        }));
+    },
+
+    /**
+     * Calculate installment status based on due date
+     */
+    calculateStatus(installment: Installment): 'PENDING' | 'PAID' | 'OVERDUE' | 'CANCELLED' {
+        if (installment.paid_date) return 'PAID';
+        if (installment.status === 'CANCELLED') return 'CANCELLED';
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const dueDate = new Date(installment.due_date);
+        dueDate.setHours(0, 0, 0, 0);
+
+        if (dueDate < today) return 'OVERDUE';
+        return 'PENDING';
+    },
+
+    /**
+     * Get receivables statistics
+     */
+    async getStats(clinicId: string): Promise<ReceivablesStats> {
+        const installments = await this.getInstallments(clinicId);
+
+        const totalPending = installments
+            .filter(i => i.status === 'PENDING')
+            .reduce((sum, i) => sum + i.amount, 0);
+
+        const totalOverdue = installments
+            .filter(i => i.status === 'OVERDUE')
+            .reduce((sum, i) => sum + i.amount, 0);
+
+        const totalPaid = installments
+            .filter(i => i.status === 'PAID')
+            .reduce((sum, i) => sum + i.amount, 0);
+
+        const overdueCount = installments.filter(i => i.status === 'OVERDUE').length;
+
+        // Due this week
+        const today = new Date();
+        const nextWeek = new Date(today);
+        nextWeek.setDate(nextWeek.getDate() + 7);
+
+        const dueThisWeek = installments
+            .filter(i => {
+                const dueDate = new Date(i.due_date);
+                return i.status === 'PENDING' && dueDate >= today && dueDate <= nextWeek;
+            })
+            .reduce((sum, i) => sum + i.amount, 0);
+
+        const averageTicket = installments.length > 0
+            ? installments.reduce((sum, i) => sum + i.amount, 0) / installments.length
+            : 0;
 
         return {
-            grossValue: totalValue,
-            netValue,
-            totalFees,
-            taxAmount,
-            cardFeeAmount,
-            installmentValue,
-            netInstallmentValue,
-            rates: {
-                tax: totalTaxRate,
-                card: cardRate,
-                anticipation: anticipationRate
-            }
+            totalPending,
+            totalOverdue,
+            totalPaid,
+            overdueCount,
+            dueThisWeek,
+            averageTicket
         };
     },
 
-    // Aprova e Gera Financeiro
-    async approveBudgetAndGenerateInstallments(
-        budgetId: string,
-        params: ApprovalSimulatonParams & { firstDueDate: Date, patientId: string }
+    /**
+     * Mark installment as paid
+     */
+    async markAsPaid(
+        installmentId: string,
+        paymentMethod: string,
+        paidDate?: string,
+        notes?: string
     ): Promise<void> {
-        const simulation = await this.simulateApproval(params);
-
-        // 1. Atualizar Orçamento
-        const { error: updateError } = await supabase
-            .from('budgets')
+        const { error } = await supabase
+            .from('installments')
             .update({
-                status: 'APPROVED',
-                card_machine_profile_id: params.cardProfileId,
-                potential_margin: simulation.netValue, // Armazena o valor líquido real como "margem bruta financeira"
+                status: 'PAID',
+                paid_date: paidDate || new Date().toISOString(),
+                payment_method: paymentMethod,
+                notes,
                 updated_at: new Date().toISOString()
             })
-            .eq('id', budgetId);
+            .eq('id', installmentId);
 
-        if (updateError) throw updateError;
+        if (error) throw error;
 
-        // 2. Gerar Parcelas (Entry + Installments)
-        const installmentsData = [];
+        // TODO: Trigger professional commission calculation
+        // await this.triggerCommissionCalculation(installmentId);
+    },
 
-        // 2.1 Entrada (se houver)
-        if (params.downPayment > 0) {
-            installmentsData.push({
-                patient_id: params.patientId,
-                clinic_id: params.clinicId,
-                budget_id: budgetId,
-                installment_number: 0, // 0 representa entrada
-                total_installments: params.installments,
-                amount: params.downPayment,
-                due_date: new Date().toISOString(), // Entrada é hoje
-                status: 'PENDING', // Ou PAID se já recebeu
-                payment_method: 'CASH', // Default para entrada
-                notes: 'Entrada referente ao orçamento'
-            });
+    /**
+     * Get installments that need collection action
+     */
+    async getInstallmentsForCollection(clinicId: string): Promise<{
+        installment: Installment;
+        rule: CollectionRule;
+        daysUntilDue: number;
+    }[]> {
+        const installments = await this.getInstallments(clinicId, {
+            status: 'PENDING'
+        });
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const results: {
+            installment: Installment;
+            rule: CollectionRule;
+            daysUntilDue: number;
+        }[] = [];
+
+        for (const installment of installments) {
+            const dueDate = new Date(installment.due_date);
+            dueDate.setHours(0, 0, 0, 0);
+
+            const diffTime = dueDate.getTime() - today.getTime();
+            const daysUntilDue = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            // Check each collection rule
+            for (const rule of COLLECTION_RULES) {
+                const shouldTrigger = daysUntilDue >= 0
+                    ? daysUntilDue === rule.daysBeforeDue
+                    : Math.abs(daysUntilDue) === rule.daysAfterDue;
+
+                if (shouldTrigger) {
+                    results.push({
+                        installment,
+                        rule,
+                        daysUntilDue
+                    });
+                }
+            }
         }
 
-        // 2.2 Parcelas do Cartão
-        const installmentValue = params.installments > 0
-            ? (params.totalValue - params.downPayment) / params.installments
-            : 0;
+        return results;
+    },
 
-        for (let i = 1; i <= params.installments; i++) {
-            // Calcular vencimento: 1ª parcela na data escolhida, próximas +30 dias
-            // Se firstDueDate for hoje, 1ª é hoje.
-            // Usar addMonths do date-fns
-            const dueDate = addMonths(params.firstDueDate, i - 1);
+    /**
+     * Format collection message
+     */
+    formatCollectionMessage(
+        message: string,
+        installment: Installment,
+        daysUntilDue: number
+    ): string {
+        return message
+            .replace('{PATIENT_NAME}', installment.patient?.name || 'Cliente')
+            .replace('{AMOUNT}', installment.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 }))
+            .replace('{DAYS}', Math.abs(daysUntilDue).toString())
+            .replace('{PAYMENT_LINK}', `https://pay.clinicpro.com/${installment.id}`); // TODO: Real payment link
+    },
 
-            installmentsData.push({
-                patient_id: params.patientId,
-                clinic_id: params.clinicId,
-                budget_id: budgetId,
-                installment_number: i,
-                total_installments: params.installments,
-                amount: installmentValue,
-                due_date: dueDate.toISOString(),
-                status: 'PENDING',
-                payment_method: 'CREDIT_CARD',
-                notes: `Parcela ${i}/${params.installments} via Maquininha`
-            });
+    /**
+     * Execute collection action
+     */
+    async executeCollectionAction(
+        installment: Installment,
+        rule: CollectionRule,
+        daysUntilDue: number
+    ): Promise<void> {
+        const message = this.formatCollectionMessage(rule.message, installment, daysUntilDue);
+
+        switch (rule.action) {
+            case 'REMINDER':
+            case 'WARNING':
+                // TODO: Integrate with WhatsApp/SMS service
+                console.log(`[COLLECTION] Sending ${rule.action} to ${installment.patient?.phone}:`, message);
+                // await whatsappService.sendMessage(installment.patient?.phone, message);
+                break;
+
+            case 'BLOCK_SCHEDULE':
+                // Block patient scheduling
+                await this.blockPatientScheduling(installment.patient_id, installment.id);
+                console.log(`[COLLECTION] Blocked scheduling for patient ${installment.patient_id}`);
+                break;
         }
 
-        if (installmentsData.length > 0) {
-            const { error: insertError } = await supabase
-                .from('installments')
-                .insert(installmentsData);
+        // Log collection attempt
+        await this.logCollectionAttempt(installment.id, rule.action, message);
+    },
 
-            if (insertError) throw insertError;
+    /**
+     * Block patient scheduling due to overdue payment
+     */
+    async blockPatientScheduling(patientId: string, installmentId: string): Promise<void> {
+        // TODO: Implement scheduling block logic
+        // This could be a flag in the patients table or a separate blocking_reasons table
+        console.log(`Blocking scheduling for patient ${patientId} due to installment ${installmentId}`);
+    },
+
+    /**
+     * Log collection attempt
+     */
+    async logCollectionAttempt(
+        installmentId: string,
+        action: string,
+        message: string
+    ): Promise<void> {
+        // TODO: Create collection_logs table
+        console.log(`[LOG] Collection attempt for installment ${installmentId}:`, { action, message });
+    },
+
+    /**
+     * Check if lab order can be sent (Trava de Laboratório)
+     */
+    async canSendLabOrder(
+        patientId: string,
+        budgetId: string,
+        estimatedLabCost: number
+    ): Promise<{ allowed: boolean; reason?: string; amountPaid: number; amountNeeded: number }> {
+        // Get all installments for this budget
+        const { data: installments, error } = await supabase
+            .from('installments')
+            .select('*')
+            .eq('patient_id', patientId)
+            .eq('budget_id', budgetId);
+
+        if (error) throw error;
+
+        // Calculate total paid
+        const amountPaid = (installments || [])
+            .filter(i => i.status === 'PAID' || i.paid_date)
+            .reduce((sum, i) => sum + i.amount, 0);
+
+        const allowed = amountPaid >= estimatedLabCost;
+
+        return {
+            allowed,
+            reason: allowed
+                ? undefined
+                : `Cliente precisa pagar mais R$ ${(estimatedLabCost - amountPaid).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} antes de enviar para o laboratório.`,
+            amountPaid,
+            amountNeeded: estimatedLabCost
+        };
+    },
+
+    /**
+     * Run daily collection routine
+     * This should be called by a cron job or scheduled task
+     */
+    async runDailyCollectionRoutine(clinicId: string): Promise<void> {
+        console.log(`[COLLECTION ROUTINE] Starting for clinic ${clinicId}`);
+
+        const actionsNeeded = await this.getInstallmentsForCollection(clinicId);
+
+        console.log(`[COLLECTION ROUTINE] Found ${actionsNeeded.length} actions to execute`);
+
+        for (const { installment, rule, daysUntilDue } of actionsNeeded) {
+            try {
+                await this.executeCollectionAction(installment, rule, daysUntilDue);
+            } catch (error) {
+                console.error(`[COLLECTION ROUTINE] Error executing action for installment ${installment.id}:`, error);
+            }
         }
+
+        console.log(`[COLLECTION ROUTINE] Completed`);
     }
 };

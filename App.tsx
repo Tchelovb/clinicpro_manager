@@ -27,6 +27,7 @@ import Login from "./components/Login";
 import IntelligenceGateway from "./pages/IntelligenceGateway";
 import Dashboard from "./pages/Dashboard";
 import Agenda from "./pages/Agenda";
+import AttendanceQueue from "./pages/AttendanceQueue";
 import PatientsList from "./pages/PatientsList";
 import PatientDetail from "./pages/PatientDetail";
 import PipelinePage from "./pages/Pipeline";
@@ -60,6 +61,13 @@ import ProfessionalClosing from "./pages/financial/ProfessionalClosing";
 import Goals from "./pages/intelligence/Goals";
 import BOSIntelligence from "./pages/intelligence/BOSIntelligence";
 import ClinicHealthDetails from "./components/ClinicHealthDetails";
+
+// ============================================
+// FINTECH MODULES (A, B, C, D, E)
+// ============================================
+import Receivables from "./pages/Receivables";
+import ProfessionalFinancial from "./pages/ProfessionalFinancial";
+import CFO from "./pages/CFO";
 
 // Wrapper to adapt AppLayout for Router Outlet
 const LayoutWrapper = () => (
@@ -101,6 +109,7 @@ const App: React.FC = () => {
                     <Route path="/agenda" element={<Agenda />} />
                     <Route path="/agenda/new" element={<AgendaForm />} />
                     <Route path="/agenda/:id" element={<AgendaForm />} />
+                    <Route path="/attendance-queue" element={<AttendanceQueue />} />
 
                     {/* --- PATIENTS MODULE --- */}
                     <Route path="/patients" element={<PatientsList />} />
@@ -127,6 +136,11 @@ const App: React.FC = () => {
                     <Route path="/financial/pay/:id" element={<PayExpense />} />
                     <Route path="/financial/receive/:id" element={<ReceivePayment />} />
                     <Route path="/financial/closing" element={<ProfessionalClosing />} />
+
+                    {/* --- FINTECH MODULES --- */}
+                    <Route path="/receivables" element={<Receivables />} />
+                    <Route path="/professional-financial" element={<ProfessionalFinancial />} />
+                    <Route path="/cfo" element={<CFO />} />
 
                     {/* --- INTELLIGENCE MODULE --- */}
                     <Route path="/intelligence/goals" element={<Goals />} />
