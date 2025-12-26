@@ -496,7 +496,7 @@ const BudgetForm: React.FC<BudgetFormProps> = ({
     };
 
     return (
-        <div className={`flex flex-col ${isInline ? 'bg-transparent pb-0' : 'min-h-screen bg-slate-950 pb-20'}`}>
+        <div className={`flex flex-col ${isInline ? 'bg-transparent pb-32' : 'min-h-screen bg-slate-950 pb-32'}`}>
             {/* INLINE HEADER - STICKY */}
             {isInline && (
                 <div className="sticky top-0 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-b border-slate-200 dark:border-slate-800 px-4 py-3 flex items-center gap-2 mb-4">
@@ -974,7 +974,7 @@ const BudgetForm: React.FC<BudgetFormProps> = ({
             />
             {/* INLINE FOOTER ACTION BAR */}
             {isInline && (
-                <div className="sticky bottom-0 w-full bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 p-4 flex gap-3 justify-end shadow-[0_-5px_20px_rgba(0,0,0,0.1)] z-[60]">
+                <div className="sticky bottom-0 w-full bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 p-4 flex gap-3 justify-end shadow-[0_-5px_20px_rgba(0,0,0,0.1)] z-20">
                     <button
                         onClick={onCancel}
                         className="px-5 py-2.5 rounded-xl font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
