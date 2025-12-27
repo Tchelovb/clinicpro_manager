@@ -78,249 +78,255 @@ const Inventory: React.FC = () => {
     }
 
     return (
-        <div className="p-6 space-y-6 max-w-[1600px] mx-auto min-h-screen">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold text-slate-800 dark:text-white tracking-tight flex items-center gap-3">
-                        <Package className="text-amber-600" size={32} />
-                        Controle de Estoque
-                    </h1>
-                    <p className="text-slate-500 dark:text-slate-400 mt-2">Gestão de materiais e insumos de alto custo</p>
-                </div>
-                <button
-                    onClick={() => navigate('/inventory/new')}
-                    className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-3 md:px-4 md:py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors font-medium shadow-sm active:scale-[0.98]"
-                >
-                    <Plus size={18} />
-                    Novo Item
-                </button>
-            </div>
-
-            {/* KPIs */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-6 transition-colors">
-                    <div className="flex items-center gap-3 mb-2">
-                        <div className="p-2 bg-violet-50 dark:bg-violet-900/20 rounded-lg">
-                            <Package className="text-violet-600 dark:text-violet-400" size={20} />
-                        </div>
-                        <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Total Itens</p>
-                    </div>
-                    <p className="text-2xl font-bold text-violet-600 dark:text-violet-400">{items.length}</p>
-                </div>
-
-                <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-6 transition-colors">
-                    <div className="flex items-center gap-3 mb-2">
-                        <div className="p-2 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
-                            <AlertTriangle className="text-amber-600 dark:text-amber-400" size={20} />
-                        </div>
-                        <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Estoque Baixo</p>
-                    </div>
-                    <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{lowStockItems.length}</p>
-                </div>
-
-                <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-6 transition-colors">
-                    <div className="flex items-center gap-3 mb-2">
-                        <div className="p-2 bg-rose-50 dark:bg-rose-900/20 rounded-lg">
-                            <TrendingDown className="text-rose-600 dark:text-rose-400" size={20} />
-                        </div>
-                        <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Críticos</p>
-                    </div>
-                    <p className="text-2xl font-bold text-rose-600 dark:text-rose-400">{criticalItems.length}</p>
-                </div>
-
-                <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-6 transition-colors">
-                    <div className="flex items-center gap-3 mb-2">
-                        <div className="p-2 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                            <TrendingUp className="text-green-600 dark:text-green-400" size={20} />
-                        </div>
-                        <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Valor Total</p>
-                    </div>
-                    <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalValue)}
-                    </p>
-                </div>
-            </div>
-
-            {/* Filters */}
-            <div className="flex flex-col md:flex-row gap-4">
-                <div className="flex-1 relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
-                    <input
-                        type="text"
-                        placeholder="Buscar por nome ou fornecedor..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-10 pr-4 py-3 md:py-2 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white dark:bg-slate-800 text-slate-800 dark:text-white dark:placeholder-slate-500 transition-colors"
-                    />
-                </div>
-
-                <div className="flex items-center gap-2 bg-white dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm overflow-x-auto pb-2 md:pb-1 transition-colors">
-                    {categories.map(cat => (
-                        <button
-                            key={cat.value}
-                            onClick={() => setFilterCategory(cat.value as any)}
-                            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0 ${filterCategory === cat.value
-                                ? 'bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300'
-                                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-                                }`}
-                        >
-                            {cat.label}
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            {/* Alerts */}
-            {lowStockItems.length > 0 && (
-                <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/50 rounded-xl p-4 flex items-start gap-3 transition-colors">
-                    <AlertTriangle className="text-amber-600 dark:text-amber-500 flex-shrink-0 mt-0.5" size={20} />
+        <div className="h-full flex flex-col bg-slate-50 dark:bg-slate-950 overflow-hidden">
+            {/* HEADER FIXO */}
+            <div className="flex-none bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-3 md:p-4">
+                {/* Title + Action */}
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 mb-3">
                     <div>
-                        <p className="text-sm font-bold text-amber-800 dark:text-amber-400">Atenção: {lowStockItems.length} itens com estoque baixo</p>
-                        <p className="text-xs text-amber-600 dark:text-amber-500/80 mt-1">Verifique os itens destacados e programe reposição.</p>
+                        <h1 className="text-xl md:text-2xl font-bold text-slate-800 dark:text-white tracking-tight flex items-center gap-2">
+                            <Package className="text-amber-600" size={24} />
+                            Controle de Estoque
+                        </h1>
+                        <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-1">Gestão de materiais e insumos de alto custo</p>
+                    </div>
+                    <button
+                        onClick={() => navigate('/inventory/new')}
+                        className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors font-medium shadow-sm"
+                    >
+                        <Plus size={18} />
+                        Novo Item
+                    </button>
+                </div>
+
+                {/* KPIs */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 mb-3">
+                    <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm p-3 transition-colors">
+                        <div className="flex items-center gap-2 mb-1">
+                            <div className="p-1.5 bg-violet-50 dark:bg-violet-900/20 rounded">
+                                <Package className="text-violet-600 dark:text-violet-400" size={14} />
+                            </div>
+                            <p className="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase">Total Itens</p>
+                        </div>
+                        <p className="text-base md:text-xl font-bold text-violet-600 dark:text-violet-400">{items.length}</p>
+                    </div>
+
+                    <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm p-3 transition-colors">
+                        <div className="flex items-center gap-2 mb-1">
+                            <div className="p-1.5 bg-amber-50 dark:bg-amber-900/20 rounded">
+                                <AlertTriangle className="text-amber-600 dark:text-amber-400" size={14} />
+                            </div>
+                            <p className="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase">Estoque Baixo</p>
+                        </div>
+                        <p className="text-base md:text-xl font-bold text-amber-600 dark:text-amber-400">{lowStockItems.length}</p>
+                    </div>
+
+                    <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm p-3 transition-colors">
+                        <div className="flex items-center gap-2 mb-1">
+                            <div className="p-1.5 bg-rose-50 dark:bg-rose-900/20 rounded">
+                                <TrendingDown className="text-rose-600 dark:text-rose-400" size={14} />
+                            </div>
+                            <p className="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase">Críticos</p>
+                        </div>
+                        <p className="text-base md:text-xl font-bold text-rose-600 dark:text-rose-400">{criticalItems.length}</p>
+                    </div>
+
+                    <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm p-3 transition-colors">
+                        <div className="flex items-center gap-2 mb-1">
+                            <div className="p-1.5 bg-green-50 dark:bg-green-900/20 rounded">
+                                <TrendingUp className="text-green-600 dark:text-green-400" size={14} />
+                            </div>
+                            <p className="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase">Valor Total</p>
+                        </div>
+                        <p className="text-sm md:text-lg font-bold text-green-600 dark:text-green-400">
+                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', notation: 'compact' }).format(totalValue)}
+                        </p>
                     </div>
                 </div>
-            )}
 
-            {/* Inventory List (Hybrid) */}
-            {filteredItems.length === 0 ? (
-                <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-12 text-center transition-colors">
-                    <Package size={48} className="mx-auto mb-4 text-slate-300 dark:text-slate-600" />
-                    <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2">Nenhum item encontrado</h3>
-                    <p className="text-slate-500 dark:text-slate-400 mb-6">
-                        {searchTerm || filterCategory !== 'ALL'
-                            ? 'Tente ajustar os filtros de busca'
-                            : 'Adicione itens ao estoque para começar o controle'
-                        }
-                    </p>
-                    {!searchTerm && filterCategory === 'ALL' && (
-                        <button
-                            onClick={() => navigate('/inventory/new')}
-                            className="w-full md:w-auto px-6 py-3 md:py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors font-medium"
-                        >
-                            Adicionar Primeiro Item
-                        </button>
-                    )}
+                {/* Filters */}
+                <div className="flex flex-col md:flex-row gap-2 md:gap-3">
+                    <div className="flex-1 relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={18} />
+                        <input
+                            type="text"
+                            placeholder="Buscar por nome ou fornecedor..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white dark:bg-slate-800 text-slate-800 dark:text-white dark:placeholder-slate-500 transition-colors text-sm"
+                        />
+                    </div>
+
+                    <div className="flex items-center gap-1 bg-white dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700 overflow-x-auto transition-colors">
+                        {categories.map(cat => (
+                            <button
+                                key={cat.value}
+                                onClick={() => setFilterCategory(cat.value as any)}
+                                className={`px-3 py-1.5 rounded text-xs font-medium transition-colors whitespace-nowrap ${filterCategory === cat.value
+                                    ? 'bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300'
+                                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                                    }`}
+                            >
+                                {cat.label}
+                            </button>
+                        ))}
+                    </div>
                 </div>
-            ) : (
-                <>
-                    {/* Mobile Card View */}
-                    <div className="md:hidden grid grid-cols-1 gap-4">
-                        {filteredItems.map(item => {
-                            const isLowStock = item.quantity <= item.min_quantity;
-                            const isCritical = item.quantity === 0;
-                            const totalValue = item.quantity * item.cost_per_unit;
+            </div>
 
-                            return (
-                                <div
-                                    key={item.id}
-                                    className={`bg-white dark:bg-slate-800 rounded-xl border shadow-sm p-4 relative transition-colors ${isCritical ? 'border-rose-200 dark:border-rose-900 border-l-4 border-l-rose-500' :
-                                        isLowStock ? 'border-amber-200 dark:border-amber-900 border-l-4 border-l-amber-500' :
-                                            'border-slate-200 dark:border-slate-700'
-                                        }`}
-                                >
-                                    <div className="flex justify-between items-start mb-2">
-                                        <div>
-                                            <h3 className="font-bold text-slate-800 dark:text-white text-lg">{item.name}</h3>
-                                            <p className="text-xs text-slate-500 dark:text-slate-400 uppercase font-bold mt-1">{item.category}</p>
-                                        </div>
-                                        <button className="p-2 -mr-2 -mt-2 text-slate-400 hover:text-violet-600 dark:hover:text-violet-400">
-                                            <Edit2 size={18} />
-                                        </button>
-                                    </div>
-
-                                    <div className="flex items-center gap-2 mb-3">
-                                        <span className={`px-2 py-1 rounded text-xs font-bold flex items-center gap-1 transition-colors
-                                            ${isCritical ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300' :
-                                                isLowStock ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' :
-                                                    'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300'}`}>
-                                            {isCritical ? <AlertTriangle size={12} /> : <Package size={12} />}
-                                            {item.quantity} {item.unit}
-                                        </span>
-                                        <span className="text-xs text-slate-500 dark:text-slate-400">
-                                            Mín: {item.min_quantity}
-                                        </span>
-                                    </div>
-
-                                    <div className="pt-3 border-t border-slate-100 dark:border-slate-700 flex justify-between items-center text-sm">
-                                        <div>
-                                            <p className="text-xs text-slate-400">Fornecedor</p>
-                                            <p className="text-slate-600 dark:text-slate-300 truncate max-w-[120px]">{item.supplier}</p>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="text-xs text-slate-400">Total em Estoque</p>
-                                            <p className="font-bold text-green-600 dark:text-green-400">
-                                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalValue)}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            );
-                        })}
+            {/* CONTEÚDO SCROLLÁVEL */}
+            <div className="flex-1 overflow-y-auto scroll-smooth p-3 md:p-4 space-y-4">
+                {/* Alerts */}
+                {lowStockItems.length > 0 && (
+                    <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/50 rounded-lg p-3 flex items-start gap-2 transition-colors">
+                        <AlertTriangle className="text-amber-600 dark:text-amber-500 flex-shrink-0 mt-0.5" size={18} />
+                        <div>
+                            <p className="text-sm font-bold text-amber-800 dark:text-amber-400">Atenção: {lowStockItems.length} itens com estoque baixo</p>
+                            <p className="text-xs text-amber-600 dark:text-amber-500/80 mt-1">Verifique os itens destacados e programe reposição.</p>
+                        </div>
                     </div>
+                )}
 
-                    {/* Desktop Table View */}
-                    <div className="hidden md:block bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden transition-colors">
-                        <table className="w-full">
-                            <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 transition-colors">
-                                <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">Item</th>
-                                    <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">Categoria</th>
-                                    <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">Quantidade</th>
-                                    <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">Estoque Mín.</th>
-                                    <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">Custo Unit.</th>
-                                    <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">Valor Total</th>
-                                    <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">Fornecedor</th>
-                                    <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
-                                {filteredItems.map(item => {
-                                    const isLowStock = item.quantity <= item.min_quantity;
-                                    const isCritical = item.quantity === 0;
-                                    const totalValue = item.quantity * item.cost_per_unit;
-
-                                    return (
-                                        <tr
-                                            key={item.id}
-                                            className={`hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors ${isCritical ? 'bg-rose-50 dark:bg-rose-900/10' : isLowStock ? 'bg-amber-50 dark:bg-amber-900/10' : ''
-                                                }`}
-                                        >
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center gap-2">
-                                                    {isCritical && <AlertTriangle size={16} className="text-rose-600 dark:text-rose-400" />}
-                                                    {!isCritical && isLowStock && <AlertTriangle size={16} className="text-amber-600 dark:text-amber-400" />}
-                                                    <span className="font-medium text-slate-800 dark:text-slate-200">{item.name}</span>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{item.category}</td>
-                                            <td className="px-6 py-4">
-                                                <span className={`font-bold ${isCritical ? 'text-rose-600 dark:text-rose-400' : isLowStock ? 'text-amber-600 dark:text-amber-400' : 'text-slate-800 dark:text-slate-300'
-                                                    }`}>
-                                                    {item.quantity} {item.unit}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{item.min_quantity} {item.unit}</td>
-                                            <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
-                                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.cost_per_unit)}
-                                            </td>
-                                            <td className="px-6 py-4 text-sm font-bold text-green-600 dark:text-green-400">
-                                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalValue)}
-                                            </td>
-                                            <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{item.supplier}</td>
-                                            <td className="px-6 py-4">
-                                                <button className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
-                                                    <Edit2 size={16} className="text-slate-400" />
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
+                {/* Inventory List (Hybrid) */}
+                {filteredItems.length === 0 ? (
+                    <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-12 text-center transition-colors">
+                        <Package size={48} className="mx-auto mb-4 text-slate-300 dark:text-slate-600" />
+                        <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2">Nenhum item encontrado</h3>
+                        <p className="text-slate-500 dark:text-slate-400 mb-6">
+                            {searchTerm || filterCategory !== 'ALL'
+                                ? 'Tente ajustar os filtros de busca'
+                                : 'Adicione itens ao estoque para começar o controle'
+                            }
+                        </p>
+                        {!searchTerm && filterCategory === 'ALL' && (
+                            <button
+                                onClick={() => navigate('/inventory/new')}
+                                className="px-6 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors font-medium"
+                            >
+                                Adicionar Primeiro Item
+                            </button>
+                        )}
                     </div>
-                </>
-            )}
+                ) : (
+                    <>
+                        {/* Mobile Card View */}
+                        <div className="md:hidden grid grid-cols-1 gap-3">
+                            {filteredItems.map(item => {
+                                const isLowStock = item.quantity <= item.min_quantity;
+                                const isCritical = item.quantity === 0;
+                                const totalValue = item.quantity * item.cost_per_unit;
+
+                                return (
+                                    <div
+                                        key={item.id}
+                                        className={`bg-white dark:bg-slate-800 rounded-lg border shadow-sm p-4 relative transition-colors ${isCritical ? 'border-rose-200 dark:border-rose-900 border-l-4 border-l-rose-500' :
+                                            isLowStock ? 'border-amber-200 dark:border-amber-900 border-l-4 border-l-amber-500' :
+                                                'border-slate-200 dark:border-slate-700'
+                                            }`}
+                                    >
+                                        <div className="flex justify-between items-start mb-2">
+                                            <div>
+                                                <h3 className="font-bold text-slate-800 dark:text-white">{item.name}</h3>
+                                                <p className="text-xs text-slate-500 dark:text-slate-400 uppercase font-bold mt-1">{item.category}</p>
+                                            </div>
+                                            <button className="p-2 -mr-2 -mt-2 text-slate-400 hover:text-violet-600 dark:hover:text-violet-400">
+                                                <Edit2 size={16} />
+                                            </button>
+                                        </div>
+
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <span className={`px-2 py-1 rounded text-xs font-bold flex items-center gap-1 transition-colors
+                                                ${isCritical ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300' :
+                                                    isLowStock ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' :
+                                                        'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300'}`}>
+                                                {isCritical ? <AlertTriangle size={12} /> : <Package size={12} />}
+                                                {item.quantity} {item.unit}
+                                            </span>
+                                            <span className="text-xs text-slate-500 dark:text-slate-400">
+                                                Mín: {item.min_quantity}
+                                            </span>
+                                        </div>
+
+                                        <div className="pt-3 border-t border-slate-100 dark:border-slate-700 flex justify-between items-center text-sm">
+                                            <div>
+                                                <p className="text-xs text-slate-400">Fornecedor</p>
+                                                <p className="text-slate-600 dark:text-slate-300 truncate max-w-[120px]">{item.supplier}</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-xs text-slate-400">Total em Estoque</p>
+                                                <p className="font-bold text-green-600 dark:text-green-400 text-sm">
+                                                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalValue)}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        {/* Desktop Table View */}
+                        <div className="hidden md:block bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden transition-colors">
+                            <table className="w-full">
+                                <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 transition-colors">
+                                    <tr>
+                                        <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">Item</th>
+                                        <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">Categoria</th>
+                                        <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">Quantidade</th>
+                                        <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">Estoque Mín.</th>
+                                        <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">Custo Unit.</th>
+                                        <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">Valor Total</th>
+                                        <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">Fornecedor</th>
+                                        <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
+                                    {filteredItems.map(item => {
+                                        const isLowStock = item.quantity <= item.min_quantity;
+                                        const isCritical = item.quantity === 0;
+                                        const totalValue = item.quantity * item.cost_per_unit;
+
+                                        return (
+                                            <tr
+                                                key={item.id}
+                                                className={`hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors ${isCritical ? 'bg-rose-50 dark:bg-rose-900/10' : isLowStock ? 'bg-amber-50 dark:bg-amber-900/10' : ''
+                                                    }`}
+                                            >
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-center gap-2">
+                                                        {isCritical && <AlertTriangle size={16} className="text-rose-600 dark:text-rose-400" />}
+                                                        {!isCritical && isLowStock && <AlertTriangle size={16} className="text-amber-600 dark:text-amber-400" />}
+                                                        <span className="font-medium text-slate-800 dark:text-slate-200">{item.name}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{item.category}</td>
+                                                <td className="px-6 py-4">
+                                                    <span className={`font-bold ${isCritical ? 'text-rose-600 dark:text-rose-400' : isLowStock ? 'text-amber-600 dark:text-amber-400' : 'text-slate-800 dark:text-slate-300'
+                                                        }`}>
+                                                        {item.quantity} {item.unit}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{item.min_quantity} {item.unit}</td>
+                                                <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
+                                                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.cost_per_unit)}
+                                                </td>
+                                                <td className="px-6 py-4 text-sm font-bold text-green-600 dark:text-green-400">
+                                                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalValue)}
+                                                </td>
+                                                <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{item.supplier}</td>
+                                                <td className="px-6 py-4">
+                                                    <button className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
+                                                        <Edit2 size={16} className="text-slate-400" />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    </>
+                )}
+            </div>
         </div>
     );
 };
