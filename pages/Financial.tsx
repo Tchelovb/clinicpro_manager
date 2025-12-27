@@ -11,6 +11,7 @@ import CashClosingWizard from '../components/CashClosingWizard';
 import SangriaSuprimentoModal from '../components/SangriaSuprimentoModal';
 import { SummaryCard } from '../components/ui/SummaryCard';
 import { StatusBadge } from '../components/ui/StatusBadge';
+import FinancialDRE from '../components/finance/FinancialDRE';
 
 const Financial: React.FC = () => {
     const {
@@ -96,8 +97,8 @@ const Financial: React.FC = () => {
                                 R$ {currentRegister?.calculatedBalance.toLocaleString('pt-BR') || '0,00'}
                             </span>
                             <span className={`px-2 py-1 rounded-full text-xs font-bold ${currentRegister
-                                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
-                                    : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400'
+                                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+                                : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400'
                                 }`}>
                                 {currentRegister ? '🟢 Aberto' : '🔴 Fechado'}
                             </span>
@@ -296,17 +297,9 @@ const Financial: React.FC = () => {
                         </div>
                     </TabsContent>
 
-                    {/* DRE GERENCIAL - Placeholder */}
+                    {/* DRE GERENCIAL */}
                     <TabsContent value="dre" className="p-3 md:p-6 m-0">
-                        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-12 text-center">
-                            <FileText size={48} className="text-slate-400 mx-auto mb-4" />
-                            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">
-                                DRE Gerencial
-                            </h3>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">
-                                Demonstrativo de Resultado do Exercício em desenvolvimento
-                            </p>
-                        </div>
+                        <FinancialDRE />
                     </TabsContent>
                 </div>
             </Tabs>
