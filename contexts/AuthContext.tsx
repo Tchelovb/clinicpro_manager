@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { User } from "@supabase/supabase-js";
+import toast from "react-hot-toast";
 
 interface Profile {
   id: string;
@@ -47,36 +48,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [loading, setLoading] = useState(true);
   const [activeClinicId, setActiveClinicId] = useState<string | null>(null);
 
+  // 1. WATCHDOG TIMER (Cão de Guarda)
   useEffect(() => {
-    setLoading(true);
+    const timer = setTimeout(() => {
+      if (loading) {
+        console.error("Auth timeout: Watchdog forcing stop loading.");
+        setLoading(false);
+        if (!user) toast.error("Tempo limite de conexão excedido. Tente recarregar.");
+      }
+    }, 5000); // 5 segundos máximo
+
+    return () => clearTimeout(timer);
+  }, [loading, user]);
+
+  // 2. AUTH LISTENER & INITIALIZATION
+  useEffect(() => {
+    // Check inicial rápido
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
+        setLoading(false);
+      }
+    });
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log("Auth event:", event);
-
       setUser(session?.user ?? null);
 
-      if (session?.user) {
-        if (session.user.id) {
-          // AWAIT CRÍTICO: Bloqueia o app até carregar o clinic_id
-          // Isso garante "Sessão Blindada" - nada roda sem profile
-          try {
-            await fetchProfile(session.user.id);
-          } catch (err) {
-            console.error(
-              "Falha crítica ao carregar profile:",
-              err
-            );
-            setProfile(null);
-          }
-        }
+      if (session?.user?.id) {
+        // Tenta carregar profile - O finally garante o fim do loading
+        await fetchProfile(session.user.id);
       } else {
         setProfile(null);
+        setLoading(false);
       }
-
-      // Só libera o app depois de garantir que temos (ou tentamos ter) o profile
-      setLoading(false);
     });
 
     return () => {
@@ -86,6 +92,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const fetchProfile = async (userId: string) => {
     try {
+      // setLoading(true); // Opcional, já deve estar true no login, mas mal não faz
+
       const { data: userData, error: userError } = await supabase
         .from("users")
         .select(
@@ -95,16 +103,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         .single();
 
       const { data: authUser } = await supabase.auth.getUser();
-      const isBosEnabled = authUser?.user?.user_metadata?.is_bos_fab_enabled !== false; // Default true
+      const isBosEnabled = authUser?.user?.user_metadata?.is_bos_fab_enabled !== false;
 
       if (userError || !userData) {
         console.error("Erro Supabase:", userError);
-        throw new Error("Usuário não encontrado");
+        throw new Error("Usuário não encontrado na base de dados.");
       }
 
       const clinicData = (userData as any).clinics;
 
-      // Verificar se clínica está suspensa (exceto para MASTER)
+      // Verificar suspensão
       if (
         userData.role !== 'MASTER' &&
         clinicData &&
@@ -114,28 +122,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         throw new Error('Acesso suspenso. Entre em contato com o suporte financeiro.');
       }
 
-      // Validação do código da clínica (se houver pending)
+      // Validação de Código da Clínica
       const pendingClinicCode = sessionStorage.getItem("pending_clinic_code");
-
-      // MASTER pode usar código 'MASTER' para fazer login
       if (userData.role === 'MASTER') {
-        // MASTER não precisa validar código de clínica específica
         if (pendingClinicCode && pendingClinicCode !== 'MASTER') {
-          console.warn('MASTER tentou logar com código diferente de MASTER');
+          console.warn('MASTER logou com código diferente de MASTER');
         }
       } else {
-        // Usuários normais precisam validar código da clínica
         if (
           pendingClinicCode &&
           clinicData &&
           clinicData.code?.toUpperCase() !== pendingClinicCode?.toUpperCase()
         ) {
-          console.error("AuthContext: Código da clínica inválido", {
-            esperado: clinicData.code,
-            recebido: pendingClinicCode,
-          });
+          console.error("Auth: Código inválido", { esperado: clinicData.code, recebido: pendingClinicCode });
           await supabase.auth.signOut();
-          throw new Error("Código da clínica inválido");
+          throw new Error("Código da clínica inválido.");
         }
       }
 
@@ -153,11 +154,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       };
 
       setProfile(profileData);
+
     } catch (err: any) {
       console.error("Auth error:", err);
+      toast.error("Erro ao carregar perfil: " + (err.message || "Erro desconhecido"));
       setProfile(null);
-      // Opcional: deslogar em caso de erro grave
+      // Opcional: signOut se falhar criticamente para evitar "limbo"
       // await supabase.auth.signOut();
+    } finally {
+      // 🔓 CHAVE MESTRA: Libera a tela SEMPRE
+      setLoading(false);
     }
   };
 

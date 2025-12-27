@@ -9,6 +9,7 @@ interface SecurityPinModalProps {
     onSuccess: () => void;
     title?: string;
     description?: string;
+    message?: string; // Mensagem de orientação secundária
     actionType?: 'REFUND' | 'DISCOUNT' | 'DELETE' | 'BUDGET_OVERRIDE' | 'CUSTOM';
     entityType?: string;
     entityId?: string;
@@ -21,11 +22,14 @@ const SecurityPinModal: React.FC<SecurityPinModalProps> = ({
     onSuccess,
     title = '🔐 Autenticação de Segurança',
     description = 'Esta ação requer confirmação do PIN de segurança',
+    message,
     actionType = 'CUSTOM',
     entityType,
     entityId,
     entityName
 }) => {
+    // Cleaned up duplicates
+
     const { profile } = useAuth();
     const [pin, setPin] = useState('');
     const [isValidating, setIsValidating] = useState(false);
@@ -158,10 +162,10 @@ const SecurityPinModal: React.FC<SecurityPinModalProps> = ({
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                             <div className={`p-3 rounded-xl ${showSuccess
-                                    ? 'bg-green-100 dark:bg-green-900/40'
-                                    : isLocked
-                                        ? 'bg-red-100 dark:bg-red-900/40'
-                                        : 'bg-violet-100 dark:bg-violet-900/40'
+                                ? 'bg-green-100 dark:bg-green-900/40'
+                                : isLocked
+                                    ? 'bg-red-100 dark:bg-red-900/40'
+                                    : 'bg-violet-100 dark:bg-violet-900/40'
                                 }`}>
                                 {showSuccess ? (
                                     <CheckCircle className="text-green-600 dark:text-green-400" size={28} />
@@ -178,6 +182,12 @@ const SecurityPinModal: React.FC<SecurityPinModalProps> = ({
                                 <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
                                     {showSuccess ? 'PIN validado com sucesso' : description}
                                 </p>
+                                {message && !showSuccess && (
+                                    <p className="text-sm font-medium text-slate-600 dark:text-slate-300 mt-2 bg-slate-50 dark:bg-slate-800 p-2.5 rounded-lg border border-slate-100 dark:border-slate-700 flex items-start gap-2">
+                                        <AlertCircle size={16} className="text-blue-500 mt-0.5 flex-shrink-0" />
+                                        {message}
+                                    </p>
+                                )}
                             </div>
                         </div>
                         <button
@@ -220,8 +230,8 @@ const SecurityPinModal: React.FC<SecurityPinModalProps> = ({
                                 <div
                                     key={index}
                                     className={`w-12 h-14 rounded-lg border-2 flex items-center justify-center text-2xl font-bold transition-all ${pin.length > index
-                                            ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400'
-                                            : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-300 dark:text-slate-600'
+                                        ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400'
+                                        : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-300 dark:text-slate-600'
                                         }`}
                                 >
                                     {pin.length > index ? '●' : ''}

@@ -201,6 +201,11 @@ export interface Patient {
   wedding_anniversary?: string; // Data de aniversário de casamento
   vip_notes?: string; // Notas VIP de preferências
 
+  // Status e Responsáveis
+  clinical_status?: string; // Em tratamento, Manutenção, etc.
+  responsible_doctor?: string; // ID do dentista responsável (DB)
+  responsibleDoctor?: string; // Alias para frontend camelCaseências
+
   // Classificação ABC
   patient_score?: 'DIAMOND' | 'GOLD' | 'STANDARD' | 'RISK' | 'BLACKLIST';
   bad_debtor?: boolean;
