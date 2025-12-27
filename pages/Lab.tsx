@@ -27,10 +27,14 @@ const Lab: React.FC = () => {
     const [filterStatus, setFilterStatus] = useState<'ALL' | 'SENT' | 'TESTING' | 'READY' | 'DELIVERED'>('ALL');
 
     useEffect(() => {
-        loadOrders();
-    }, []);
+        if (profile?.clinic_id) {
+            loadOrders();
+        }
+    }, [profile?.clinic_id]);
 
     const loadOrders = async () => {
+        if (!profile?.clinic_id) return;
+
         try {
             setLoading(true);
             const { data: ordersData, error } = await supabase
@@ -39,7 +43,7 @@ const Lab: React.FC = () => {
                     *,
                     patients!inner(name)
                 `)
-                .eq('clinic_id', profile?.clinic_id)
+                .eq('clinic_id', profile.clinic_id)
                 .order('sent_date', { ascending: false });
 
             if (error) throw error;
@@ -102,246 +106,234 @@ const Lab: React.FC = () => {
     }
 
     return (
-        <div className="p-6 space-y-6 max-w-[1600px] mx-auto bg-slate-50 min-h-screen">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold text-slate-800 tracking-tight flex items-center gap-3">
-                        <Microscope className="text-teal-600" size={32} />
-                        Laboratório
-                    </h1>
-                    <p className="text-slate-500 mt-2">Rastreamento de próteses e trabalhos laboratoriais</p>
-                </div>
-                <button
-                    onClick={() => navigate('/lab/new')}
-                    className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-3 md:px-4 md:py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors font-medium shadow-sm active:scale-[0.98]"
-                >
-                    <Plus size={18} />
-                    Nova Ordem
-                </button>
-            </div>
-
-            {/* KPIs */}
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-                    <p className="text-xs font-bold text-slate-500 uppercase mb-1">Total</p>
-                    <p className="text-2xl font-bold text-slate-800">{kpis.total}</p>
-                </div>
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-                    <p className="text-xs font-bold text-slate-500 uppercase mb-1">Enviados</p>
-                    <p className="text-2xl font-bold text-blue-600">{kpis.sent}</p>
-                </div>
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-                    <p className="text-xs font-bold text-slate-500 uppercase mb-1">Em Prova</p>
-                    <p className="text-2xl font-bold text-amber-600">{kpis.testing}</p>
-                </div>
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-                    <p className="text-xs font-bold text-slate-500 uppercase mb-1">Prontos</p>
-                    <p className="text-2xl font-bold text-green-600">{kpis.ready}</p>
-                </div>
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-                    <p className="text-xs font-bold text-slate-500 uppercase mb-1">Atrasados</p>
-                    <p className="text-2xl font-bold text-rose-600">{kpis.overdue}</p>
-                </div>
-            </div>
-
-            {/* Filters & View Toggle */}
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                <div className="w-full md:w-auto flex items-center gap-2 bg-white p-1 rounded-lg border border-slate-200 shadow-sm overflow-x-auto pb-2 md:pb-1">
-                    <button
-                        onClick={() => setFilterStatus('ALL')}
-                        className={`px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0 ${filterStatus === 'ALL' ? 'bg-violet-50 text-violet-700' : 'text-slate-500 hover:text-slate-700'
-                            }`}
-                    >
-                        Todos
-                    </button>
-                    <button
-                        onClick={() => setFilterStatus('SENT')}
-                        className={`px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0 ${filterStatus === 'SENT' ? 'bg-blue-50 text-blue-700' : 'text-slate-500 hover:text-blue-600'
-                            }`}
-                    >
-                        Enviados
-                    </button>
-                    <button
-                        onClick={() => setFilterStatus('TESTING')}
-                        className={`px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0 ${filterStatus === 'TESTING' ? 'bg-amber-50 text-amber-700' : 'text-slate-500 hover:text-amber-600'
-                            }`}
-                    >
-                        Em Prova
-                    </button>
-                    <button
-                        onClick={() => setFilterStatus('READY')}
-                        className={`px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0 ${filterStatus === 'READY' ? 'bg-green-50 text-green-700' : 'text-slate-500 hover:text-green-600'
-                            }`}
-                    >
-                        Prontos
-                    </button>
-                </div>
-
-                <div className="hidden md:flex items-center gap-2">
-                    <button
-                        onClick={() => setViewMode('list')}
-                        className={`p-2 rounded-lg transition-colors ${viewMode === 'list' ? 'bg-violet-50 text-violet-700' : 'text-slate-400 hover:bg-slate-100'
-                            }`}
-                    >
-                        <List size={20} />
-                    </button>
-                    <button
-                        onClick={() => setViewMode('kanban')}
-                        className={`p-2 rounded-lg transition-colors ${viewMode === 'kanban' ? 'bg-violet-50 text-violet-700' : 'text-slate-400 hover:bg-slate-100'
-                            }`}
-                    >
-                        <LayoutGrid size={20} />
-                    </button>
-                </div>
-            </div>
-
-            {/* Content */}
-            {filteredOrders.length === 0 ? (
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-12 text-center">
-                    <Microscope size={48} className="mx-auto mb-4 text-slate-300" />
-                    <h3 className="text-lg font-bold text-slate-800 mb-2">Nenhuma ordem laboratorial</h3>
-                    <p className="text-slate-500 mb-6">Crie uma nova ordem para rastrear próteses e trabalhos laboratoriais</p>
+        <div className="h-full flex flex-col bg-slate-50 dark:bg-slate-950 overflow-hidden">
+            {/* HEADER FIXO */}
+            <div className="flex-none bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-3 md:p-4">
+                {/* Header Top */}
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-4">
+                    <div>
+                        <h1 className="text-2xl font-bold text-slate-800 dark:text-white tracking-tight flex items-center gap-3">
+                            <Microscope className="text-teal-600 dark:text-teal-400" size={24} />
+                            Laboratório
+                        </h1>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Gestão de próteses e trabalhos externos</p>
+                    </div>
                     <button
                         onClick={() => navigate('/lab/new')}
-                        className="px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors font-medium"
+                        className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors font-medium shadow-sm active:scale-[0.98]"
                     >
-                        Criar Primeira Ordem
+                        <Plus size={18} />
+                        Nova Ordem
                     </button>
                 </div>
-            ) : viewMode === 'list' ? (
-                <>
-                    {/* Mobile Card List View */}
-                    <div className="md:hidden grid grid-cols-1 gap-4">
-                        {filteredOrders.map(order => {
-                            const statusConfig = getStatusConfig(order.status);
-                            const isOverdue = new Date(order.expected_date) < new Date() && order.status !== 'DELIVERED';
-                            return (
-                                <div key={order.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm relative">
-                                    <div className="flex justify-between items-start mb-2">
-                                        <div className="flex items-center gap-2">
-                                            <User size={16} className="text-slate-400" />
-                                            <span className="font-bold text-slate-800">{order.patient_name}</span>
-                                        </div>
-                                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold border ${statusConfig.bg} ${statusConfig.text} ${statusConfig.border}`}>
-                                            {React.createElement(statusConfig.icon, { size: 10 })}
-                                            {statusConfig.label}
-                                        </span>
-                                    </div>
 
-                                    <h4 className="font-bold text-slate-700 text-sm mb-1">{order.prosthesis_type}</h4>
-                                    <p className="text-xs text-slate-500 mb-3">{order.lab_partner}</p>
-
-                                    <div className="pt-3 border-t border-slate-100 flex justify-between items-center text-xs">
-                                        <div>
-                                            <p className="text-slate-400">Enviado</p>
-                                            <p className="font-medium text-slate-600">{new Date(order.sent_date).toLocaleDateString('pt-BR')}</p>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="text-slate-400">Previsão</p>
-                                            <p className={`font-bold ${isOverdue ? 'text-rose-600' : 'text-slate-600'}`}>
-                                                {new Date(order.expected_date).toLocaleDateString('pt-BR')}
-                                                {isOverdue && ' ⚠️'}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            );
-                        })}
+                {/* Filters & KPIs */}
+                <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-4">
+                    {/* Filter Tabs */}
+                    <div className="w-full md:w-auto flex items-center gap-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg overflow-x-auto pb-2 md:pb-1">
+                        <button
+                            onClick={() => setFilterStatus('ALL')}
+                            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0 ${filterStatus === 'ALL' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
+                        >
+                            Todos
+                        </button>
+                        <button
+                            onClick={() => setFilterStatus('SENT')}
+                            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0 ${filterStatus === 'SENT' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
+                        >
+                            Enviados ({kpis.sent})
+                        </button>
+                        <button
+                            onClick={() => setFilterStatus('TESTING')}
+                            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0 ${filterStatus === 'TESTING' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
+                        >
+                            Em Prova ({kpis.testing})
+                        </button>
+                        <button
+                            onClick={() => setFilterStatus('READY')}
+                            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0 ${filterStatus === 'READY' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
+                        >
+                            Prontos ({kpis.ready})
+                        </button>
                     </div>
 
-                    {/* Desktop Table View */}
-                    <div className="hidden md:block bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                        <table className="w-full">
-                            <thead className="bg-slate-50 border-b border-slate-200">
-                                <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 uppercase">Paciente</th>
-                                    <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 uppercase">Tipo</th>
-                                    <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 uppercase">Laboratório</th>
-                                    <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 uppercase">Enviado</th>
-                                    <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 uppercase">Previsão</th>
-                                    <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 uppercase">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
+                    {/* View Toggle */}
+                    <div className="hidden md:flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
+                        <button
+                            onClick={() => setViewMode('list')}
+                            className={`p-1.5 rounded-md transition-colors ${viewMode === 'list' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}
+                        >
+                            <List size={18} />
+                        </button>
+                        <button
+                            onClick={() => setViewMode('kanban')}
+                            className={`p-1.5 rounded-md transition-colors ${viewMode === 'kanban' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}
+                        >
+                            <LayoutGrid size={18} />
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {/* CONTENT AREA */}
+            <div className={`flex-1 overflow-hidden ${viewMode === 'kanban' ? 'overflow-x-auto' : 'overflow-y-auto scroll-smooth'} bg-slate-50 dark:bg-slate-950 p-3 md:p-4`}>
+
+                {filteredOrders.length === 0 ? (
+                    <div className="h-full flex flex-col items-center justify-center p-8 text-center">
+                        <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4">
+                            <Microscope size={32} className="text-slate-400" />
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2">Nenhuma ordem encontrada</h3>
+                        <p className="text-slate-500 dark:text-slate-400 mb-6 max-w-sm">
+                            Não existem ordens com o filtro selecionado ou nenhuma ordem foi criada ainda.
+                        </p>
+                        {filterStatus === 'ALL' && (
+                            <button
+                                onClick={() => navigate('/lab/new')}
+                                className="px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors font-medium"
+                            >
+                                Criar Primeira Ordem
+                            </button>
+                        )}
+                    </div>
+                ) : (
+                    <>
+                        {/* LIST VIEW (Mobile Default) */}
+                        <div className={`${viewMode === 'kanban' ? 'hidden' : 'block'}`}>
+                            {/* Mobile Cards */}
+                            <div className="md:hidden space-y-3">
                                 {filteredOrders.map(order => {
                                     const statusConfig = getStatusConfig(order.status);
                                     const isOverdue = new Date(order.expected_date) < new Date() && order.status !== 'DELIVERED';
 
                                     return (
-                                        <tr key={order.id} className="hover:bg-slate-50 transition-colors cursor-pointer">
-                                            <td className="px-6 py-4">
+                                        <div key={order.id} className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm transition-colors">
+                                            <div className="flex justify-between items-start mb-2">
                                                 <div className="flex items-center gap-2">
-                                                    <User size={16} className="text-slate-400" />
-                                                    <span className="font-medium text-slate-800">{order.patient_name}</span>
+                                                    <span className="font-bold text-slate-800 dark:text-white">{order.patient_name}</span>
                                                 </div>
-                                            </td>
-                                            <td className="px-6 py-4 text-sm text-slate-600">{order.prosthesis_type}</td>
-                                            <td className="px-6 py-4 text-sm text-slate-600">{order.lab_partner}</td>
-                                            <td className="px-6 py-4 text-sm text-slate-600">
-                                                {new Date(order.sent_date).toLocaleDateString('pt-BR')}
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <span className={`text-sm ${isOverdue ? 'text-rose-600 font-bold' : 'text-slate-600'}`}>
-                                                    {new Date(order.expected_date).toLocaleDateString('pt-BR')}
-                                                    {isOverdue && ' ⚠️'}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold border ${statusConfig.bg} ${statusConfig.text} ${statusConfig.border}`}>
-                                                    {React.createElement(statusConfig.icon, { size: 12 })}
+                                                <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold border ${statusConfig.bg} ${statusConfig.text} ${statusConfig.border}`}>
                                                     {statusConfig.label}
                                                 </span>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
-                </>
-            ) : (
-                <div className="flex gap-4 overflow-x-auto pb-4">
-                    {kanbanColumns.map(col => {
-                        const columnOrders = filteredOrders.filter(o => o.status === col.id);
+                                            </div>
 
-                        return (
-                            <div key={col.id} className={`flex flex-col min-w-[300px] bg-white rounded-xl border-t-4 ${col.color} shadow-sm`}>
-                                <div className="p-4 border-b border-slate-100">
-                                    <div className="flex items-center justify-between">
-                                        <span className="font-bold text-slate-700">{col.label}</span>
-                                        <span className="text-xs font-bold bg-slate-100 text-slate-600 px-2 py-1 rounded-full">
-                                            {columnOrders.length}
-                                        </span>
-                                    </div>
-                                </div>
-                                <div className="p-3 space-y-3 flex-1 bg-slate-50/50">
-                                    {columnOrders.map(order => {
-                                        const isOverdue = new Date(order.expected_date) < new Date() && order.status !== 'DELIVERED';
+                                            <h4 className="font-medium text-slate-700 dark:text-slate-300 text-sm mb-1">{order.prosthesis_type}</h4>
+                                            <p className="text-xs text-slate-500 dark:text-slate-500 mb-3">{order.lab_partner}</p>
 
-                                        return (
-                                            <div key={order.id} className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-                                                <div className="flex items-center gap-2 mb-2">
-                                                    <User size={14} className="text-slate-400" />
-                                                    <span className="font-bold text-slate-800 text-sm">{order.patient_name}</span>
+                                            <div className="pt-3 border-t border-slate-100 dark:border-slate-700 flex justify-between items-center text-xs">
+                                                <div>
+                                                    <p className="text-slate-400">Enviado</p>
+                                                    <p className="font-medium text-slate-600 dark:text-slate-300">{new Date(order.sent_date).toLocaleDateString('pt-BR')}</p>
                                                 </div>
-                                                <p className="text-xs text-slate-600 mb-2">{order.prosthesis_type}</p>
-                                                <p className="text-xs text-slate-500 mb-3">{order.lab_partner}</p>
-                                                <div className="pt-2 border-t border-slate-100 text-xs text-slate-500">
-                                                    <p>Previsão: <span className={isOverdue ? 'text-rose-600 font-bold' : ''}>
+                                                <div className="text-right">
+                                                    <p className="text-slate-400">Previsão</p>
+                                                    <p className={`font-bold ${isOverdue ? 'text-rose-600 dark:text-rose-400' : 'text-slate-600 dark:text-slate-300'}`}>
                                                         {new Date(order.expected_date).toLocaleDateString('pt-BR')}
                                                         {isOverdue && ' ⚠️'}
-                                                    </span></p>
+                                                    </p>
                                                 </div>
                                             </div>
-                                        );
-                                    })}
-                                </div>
+                                        </div>
+                                    );
+                                })}
                             </div>
-                        );
-                    })}
-                </div>
-            )}
+
+                            {/* Desktop Table */}
+                            <div className="hidden md:block bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden transition-colors">
+                                <table className="w-full">
+                                    <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
+                                        <tr>
+                                            <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">Paciente</th>
+                                            <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">Tipo</th>
+                                            <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">Laboratório</th>
+                                            <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">Enviado</th>
+                                            <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">Previsão</th>
+                                            <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
+                                        {filteredOrders.map(order => {
+                                            const statusConfig = getStatusConfig(order.status);
+                                            const isOverdue = new Date(order.expected_date) < new Date() && order.status !== 'DELIVERED';
+
+                                            return (
+                                                <tr key={order.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer">
+                                                    <td className="px-6 py-4">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="p-1.5 bg-slate-100 dark:bg-slate-700 rounded-full">
+                                                                <User size={14} className="text-slate-500 dark:text-slate-400" />
+                                                            </div>
+                                                            <span className="font-medium text-slate-800 dark:text-white">{order.patient_name}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{order.prosthesis_type}</td>
+                                                    <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{order.lab_partner}</td>
+                                                    <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
+                                                        {new Date(order.sent_date).toLocaleDateString('pt-BR')}
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <span className={`text-sm ${isOverdue ? 'text-rose-600 dark:text-rose-400 font-bold' : 'text-slate-600 dark:text-slate-400'}`}>
+                                                            {new Date(order.expected_date).toLocaleDateString('pt-BR')}
+                                                            {isOverdue && ' ⚠️'}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold border ${statusConfig.bg} ${statusConfig.text} ${statusConfig.border}`}>
+                                                            {statusConfig.label}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        {/* KANBAN VIEW (Desktop Only) */}
+                        <div className={`hidden ${viewMode === 'kanban' ? 'md:flex' : ''} h-full gap-4 min-w-max pb-4`}>
+                            {kanbanColumns.map(col => {
+                                const columnOrders = filteredOrders.filter(o => o.status === col.id);
+
+                                return (
+                                    <div key={col.id} className={`flex flex-col w-[300px] bg-slate-100 dark:bg-slate-900 rounded-xl border-t-4 ${col.color} shadow-sm overflow-hidden`}>
+                                        <div className="p-3 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800">
+                                            <div className="flex items-center justify-between">
+                                                <span className="font-bold text-slate-700 dark:text-slate-300">{col.label}</span>
+                                                <span className="text-xs font-bold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 px-2 py-0.5 rounded-full">
+                                                    {columnOrders.length}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className="p-3 space-y-3 flex-1 overflow-y-auto bg-slate-100/50 dark:bg-black/20">
+                                            {columnOrders.map(order => {
+                                                const isOverdue = new Date(order.expected_date) < new Date() && order.status !== 'DELIVERED';
+
+                                                return (
+                                                    <div key={order.id} className="bg-white dark:bg-slate-800 p-3 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all cursor-pointer group">
+                                                        <div className="flex items-center gap-2 mb-2">
+                                                            <span className="font-bold text-slate-800 dark:text-white text-sm line-clamp-1">{order.patient_name}</span>
+                                                        </div>
+                                                        <p className="text-xs text-slate-600 dark:text-slate-400 mb-1 font-medium">{order.prosthesis_type}</p>
+                                                        <p className="text-xs text-slate-500 dark:text-slate-500 mb-3">{order.lab_partner}</p>
+                                                        <div className="pt-2 border-t border-slate-100 dark:border-slate-700 text-xs text-slate-500 dark:text-slate-500 flex justify-between">
+                                                            <span>Prev:</span>
+                                                            <span className={isOverdue ? 'text-rose-600 dark:text-rose-400 font-bold' : ''}>
+                                                                {new Date(order.expected_date).toLocaleDateString('pt-BR')}
+                                                                {isOverdue && '!'}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </>
+                )}
+            </div>
         </div>
     );
 };
