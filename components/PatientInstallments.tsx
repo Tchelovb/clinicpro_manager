@@ -1,17 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Check, X, Calendar, DollarSign, CreditCard } from 'lucide-react';
+import { ReceivePaymentSheet } from './finance/ReceivePaymentSheet';
+import toast from 'react-hot-toast';
 
 interface Installment {
     id: string;
     installment_number: number;
     total_installments: number;
     amount: number;
+    amount_paid?: number;
     due_date: string;
     paid_date?: string;
-    status: 'PENDING' | 'PAID' | 'OVERDUE' | 'CANCELLED';
+    status: 'PENDING' | 'PAID' | 'OVERDUE' | 'CANCELLED' | 'PARTIAL';
     payment_method?: string;
     source?: 'NEW' | 'OLD';
+    description?: string;
+    patient_id?: string;
+    clinic_id?: string;
 }
 
 interface PatientInstallmentsProps {
@@ -21,6 +27,8 @@ interface PatientInstallmentsProps {
 export const PatientInstallments: React.FC<PatientInstallmentsProps> = ({ patientId }) => {
     const [installments, setInstallments] = useState<Installment[]>([]);
     const [loading, setLoading] = useState(true);
+    const [showReceiveSheet, setShowReceiveSheet] = useState(false);
+    const [selectedInstallment, setSelectedInstallment] = useState<any>(null);
 
     useEffect(() => {
         loadInstallments();
@@ -61,14 +69,18 @@ export const PatientInstallments: React.FC<PatientInstallmentsProps> = ({ patien
                 })),
                 ...(oldInstallments || []).map(i => ({
                     id: i.id,
-                    installment_number: 1, // Parcelas antigas não têm número
+                    installment_number: 1,
                     total_installments: 1,
                     amount: i.amount,
+                    amount_paid: i.amount_paid || 0,
                     due_date: i.due_date,
                     paid_date: null,
                     status: i.status,
                     payment_method: i.payment_method,
-                    source: 'OLD' // Marcador
+                    description: i.description || 'Parcela',
+                    patient_id: i.patient_id,
+                    clinic_id: i.clinic_id,
+                    source: 'OLD'
                 }))
             ];
 
@@ -121,6 +133,9 @@ export const PatientInstallments: React.FC<PatientInstallmentsProps> = ({ patien
 
         if (status === 'PAID') {
             return <span className="px-3 py-1 bg-emerald-900/30 text-emerald-300 rounded-full text-xs font-bold">✓ PAGO</span>;
+        }
+        if (status === 'PARTIAL') {
+            return <span className="px-3 py-1 bg-blue-900/30 text-blue-300 rounded-full text-xs font-bold">💳 PARCIAL</span>;
         }
         if (isOverdue) {
             return <span className="px-3 py-1 bg-rose-900/30 text-rose-300 rounded-full text-xs font-bold">⚠️ VENCIDO</span>;
@@ -206,20 +221,37 @@ export const PatientInstallments: React.FC<PatientInstallmentsProps> = ({ patien
                                     </div>
                                 </div>
 
-                                <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
-                                    {getStatusBadge(installment.status, installment.due_date)}
+                                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
+                                    <div className="flex items-center gap-2">
+                                        {getStatusBadge(installment.status, installment.due_date)}
+                                        {installment.status === 'PARTIAL' && installment.amount_paid && (
+                                            <span className="text-xs text-blue-400">
+                                                R$ {installment.amount_paid.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} de R$ {installment.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                            </span>
+                                        )}
+                                    </div>
 
-                                    {installment.status === 'PENDING' && (
+                                    {(installment.status === 'PENDING' || installment.status === 'PARTIAL') && (
                                         <button
                                             onClick={() => {
-                                                if (confirm(`Confirmar pagamento de R$ ${installment.amount.toLocaleString('pt-BR')}?`)) {
-                                                    handlePayInstallment(installment.id, installment.source || 'NEW', installment.amount);
-                                                }
+                                                // Preparar dados para a sheet
+                                                const installmentData = {
+                                                    id: installment.id,
+                                                    amount: installment.amount,
+                                                    amount_paid: installment.amount_paid || 0,
+                                                    due_date: installment.due_date,
+                                                    status: installment.status,
+                                                    patient_id: installment.patient_id || patientId,
+                                                    clinic_id: installment.clinic_id || '',
+                                                    description: installment.description || `Parcela ${installment.installment_number}/${installment.total_installments}`
+                                                };
+                                                setSelectedInstallment(installmentData);
+                                                setShowReceiveSheet(true);
                                             }}
-                                            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-3 sm:py-2 rounded-lg transition-colors font-medium text-sm flex-1 sm:flex-none justify-center"
+                                            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-3 sm:py-2 rounded-lg transition-colors font-medium text-sm flex-1 sm:flex-none justify-center shadow-lg shadow-emerald-600/30"
                                         >
-                                            <Check size={16} />
-                                            Baixar
+                                            <DollarSign size={16} />
+                                            Receber
                                         </button>
                                     )}
                                 </div>
@@ -228,6 +260,24 @@ export const PatientInstallments: React.FC<PatientInstallmentsProps> = ({ patien
                     );
                 })}
             </div>
+
+            {/* ReceivePaymentSheet */}
+            {selectedInstallment && (
+                <ReceivePaymentSheet
+                    isOpen={showReceiveSheet}
+                    onClose={() => {
+                        setShowReceiveSheet(false);
+                        setSelectedInstallment(null);
+                    }}
+                    installment={selectedInstallment}
+                    onSuccess={() => {
+                        setShowReceiveSheet(false);
+                        setSelectedInstallment(null);
+                        loadInstallments();
+                        toast.success('💰 Pagamento registrado com sucesso!');
+                    }}
+                />
+            )}
         </div>
     );
 };

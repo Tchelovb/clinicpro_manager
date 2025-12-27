@@ -11,11 +11,12 @@ import {
   Phone,
   Mail,
   FileText,
-  Upload,
   Shield,
-  File,
   AlertCircle,
   AlertTriangle,
+  Loader2,
+  Edit2,
+  X,
 } from "lucide-react";
 import SecurityPinModal from "./SecurityPinModal";
 import toast from "react-hot-toast";
@@ -24,24 +25,33 @@ interface PatientFormProps {
   onSuccess?: (newId: string) => void;
   onCancel?: () => void;
   initialData?: any;
+  patientId?: string;
+  readonly?: boolean; // Nova prop para modo visualização
 }
 
-const PatientForm: React.FC<PatientFormProps> = ({ onSuccess, onCancel, initialData }) => {
-  console.log("📋 FORMULÁRIO CARREGADO. Dados Iniciais:", initialData);
-
+const PatientForm: React.FC<PatientFormProps> = ({
+  onSuccess,
+  onCancel,
+  initialData,
+  patientId,
+  readonly: initialReadonly = false
+}) => {
   const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>();
-  const { createPatient, updatePatient } = usePatients();
+  const { id: paramId } = useParams<{ id: string }>();
+  const { createPatientAsync, updatePatientAsync } = usePatients();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const isEditMode = !!id || !!initialData; // Edit mode if ID exists or initialData passed
+  const [isEditing, setIsEditing] = useState(!initialReadonly);
+
+  // A prop tem prioridade sobre a URL
+  const activeId = patientId || paramId;
+  const isEditMode = !!activeId && activeId !== 'new';
 
   const [formData, setFormData] = useState<Partial<Patient>>({
-    status: "Em Orçamento",
+    clinical_status: "Em Tratamento",
     gender: "Não Informado",
     marital_status: "SINGLE",
     contact_preference: "WHATSAPP",
-    insurance: "Particular",
     patient_score: "STANDARD",
     sentiment_status: "NEUTRAL",
     is_active: true,
@@ -50,21 +60,20 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSuccess, onCancel, initialD
   });
 
   // Duplicity Radar State
-  const [searchTerm, setSearchTerm] = useState("");
   const [possibleDuplicates, setPossibleDuplicates] = useState<Partial<Patient>[]>([]);
   const [showPinModal, setShowPinModal] = useState(false);
   const [isOverrideAuthorized, setIsOverrideAuthorized] = useState(false);
 
-  // Load patient data if in edit mode (and not using passed initialData)
+  // Load patient data if in edit mode
   useEffect(() => {
-    const isValidId = id && id !== ":id" && /^[0-9a-fA-F-]{36}$/.test(id);
+    const isValidId = activeId && activeId !== ":id" && /^[0-9a-fA-F-]{36}$/.test(activeId);
 
     if (isEditMode && isValidId && !initialData) {
       setLoading(true);
       supabase
         .from("patients")
         .select("*")
-        .eq("id", id)
+        .eq("id", activeId)
         .single()
         .then(({ data, error }) => {
           if (error) {
@@ -76,12 +85,11 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSuccess, onCancel, initialD
           setLoading(false);
         });
     }
-  }, [id, isEditMode, initialData]);
+  }, [activeId, isEditMode, initialData]);
 
   // Radar de Duplicidade: Monitoramento em Tempo Real
   useEffect(() => {
-    // Only search if name has > 3 chars and we haven't already authorized an override
-    if (!formData.name || formData.name.length < 3 || isOverrideAuthorized || isEditMode) {
+    if (!formData.name || formData.name.length < 3 || isOverrideAuthorized || isEditMode || !isEditing) {
       setPossibleDuplicates([]);
       return;
     }
@@ -101,16 +109,15 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSuccess, onCancel, initialD
     }, 500);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [formData.name, isOverrideAuthorized, isEditMode]);
+  }, [formData.name, isOverrideAuthorized, isEditMode, isEditing]);
 
   const handleSelectDuplicate = (patient: Partial<Patient>) => {
     if (confirm(`Deseja carregar os dados de ${patient.name}?`)) {
       setFormData(prev => ({
         ...prev,
         ...patient,
-        // Preserve current status/admin fields if needed, or overwrite all
       }));
-      setPossibleDuplicates([]); // Clear the alert
+      setPossibleDuplicates([]);
       toast.success('Dados carregados!');
     }
   };
@@ -120,8 +127,9 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSuccess, onCancel, initialD
       HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
     >
   ) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-    if (error && (e.target.name === "name" || e.target.name === "phone")) {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+    if (error && (name === "name" || name === "phone")) {
       setError("");
     }
   };
@@ -130,9 +138,7 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSuccess, onCancel, initialD
     e.preventDefault();
 
     if (!formData.name || !formData.phone) {
-      setError(
-        "Nome completo e Telefone são obrigatórios para iniciar o cadastro."
-      );
+      setError("Nome completo e Telefone são obrigatórios.");
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
@@ -158,24 +164,14 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSuccess, onCancel, initialD
       phone: formData.phone,
       email: formData.email || null,
       cpf: formData.cpf || null,
+      rg: formData.rg || null,
       birth_date: formData.birth_date || null,
       gender: formData.gender || null,
       address: compositeAddress || null,
-      clinical_status: "Em Tratamento",
-      total_approved: 0,
-      total_paid: 0,
-      balance_due: 0,
+      clinical_status: formData.clinical_status || "Em Tratamento",
 
-      // Classificação e Status
-      patient_score: formData.patient_score || "STANDARD",
-      sentiment_status: formData.sentiment_status || "NEUTRAL",
-      is_active: formData.is_active !== undefined ? formData.is_active : true,
-      bad_debtor: formData.bad_debtor || false,
-
-      // Novos campos persistidos
-      contact_preference: formData.contact_preference || formData.contactPreference || "WHATSAPP",
-      origin: formData.origin || "Instagram",
-      zip_code: formData.zip_code || formData.zipCode || null,
+      // Endereço Detalhado
+      zip_code: formData.zip_code || null,
       street: formData.street || null,
       number: formData.number || null,
       complement: formData.complement || null,
@@ -183,39 +179,50 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSuccess, onCancel, initialD
       city: formData.city || null,
       state: formData.state || null,
 
+      // Contato
+      contact_preference: formData.contact_preference || "WHATSAPP",
+      origin: formData.origin || "Instagram",
 
-      // Dossiê High-Ticket
+      // Perfil Social & Profissional
       nickname: formData.nickname || null,
       occupation: formData.occupation || null,
       instagram_handle: formData.instagram_handle || null,
       marital_status: formData.marital_status || null,
       wedding_anniversary: formData.wedding_anniversary || null,
+      indication_patient_id: formData.indication_patient_id || null,
+
+      // Classificação (apenas em edição)
+      patient_score: formData.patient_score || "STANDARD",
+      sentiment_status: formData.sentiment_status || "NEUTRAL",
+      is_active: formData.is_active !== undefined ? formData.is_active : true,
+      bad_debtor: formData.bad_debtor || false,
+
+      // Notas
       vip_notes: formData.vip_notes || null,
     };
-
 
     setError("");
 
     try {
-      let resultId = id;
-      if (isEditMode && id) {
-        // Update existing patient
-        await updatePatient({ id, data: newPatient });
-        resultId = id;
+      let resultId = activeId;
+
+      if (isEditMode && activeId) {
+        await updatePatientAsync({ id: activeId, data: newPatient });
+        resultId = activeId;
+        toast.success("Dados atualizados com sucesso!");
+        setIsEditing(false); // Volta para modo visualização
       } else {
-        // Create new patient
-        const created = await createPatient(newPatient);
-        // Assuming createPatient returns the object or ID, if not we might need to fetch last or adjust.
-        // If usePatients doesn't return ID, we might fallback to optimistic or navigation.
-        // For now, assume success flows to navigation.
+        const createdPatient = await createPatientAsync(newPatient);
+        resultId = createdPatient?.id;
+        toast.success("Paciente cadastrado com sucesso!");
       }
 
       // Handle Success / Navigation
       if (onSuccess) {
-        onSuccess(resultId || 'new-id'); // Pass ID if available
+        onSuccess(resultId || 'new-id');
       } else {
-        if (isEditMode && id) {
-          setTimeout(() => navigate(`/patients/${id}`), 500);
+        if (isEditMode && activeId) {
+          setTimeout(() => navigate(`/patients/${activeId}`), 500);
         } else {
           setTimeout(() => navigate("/patients"), 500);
         }
@@ -223,95 +230,193 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSuccess, onCancel, initialD
     } catch (e) {
       console.error(e);
       setError("Erro ao salvar paciente.");
+      toast.error("Erro ao salvar paciente.");
     }
   };
 
-  // Dense Input Styles - Updated for Mobile Touch Target
-  const inputClass =
-    "w-full bg-white text-gray-900 border border-gray-200 rounded-lg p-3 md:p-2 text-base md:text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none placeholder-gray-400 transition-all shadow-sm h-12 md:h-10";
-  const textareaClass =
-    "w-full bg-white text-gray-900 border border-gray-200 rounded-lg p-3 md:p-2 text-base md:text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none placeholder-gray-400 transition-all shadow-sm resize-none";
-  const labelClass =
-    "block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide";
+  // Estilos profissionais
+  const inputClass = "w-full bg-white dark:bg-slate-800 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-600 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all";
+  const labelClass = "block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wide";
+  const valueClass = "text-sm font-medium text-gray-900 dark:text-white";
+  const sectionClass = "bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-6 shadow-sm";
+  const sectionTitleClass = "text-sm font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wider mb-4 flex items-center gap-2 border-b border-gray-200 dark:border-slate-700 pb-2";
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
+          <p className="text-gray-600 dark:text-gray-400">Carregando dados do paciente...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Componente auxiliar para renderizar campo
+  const Field = ({ label, value, name, type = "text", options, required = false }: any) => (
+    <div>
+      <label className={labelClass}>
+        {label} {required && <span className="text-red-500">*</span>}
+      </label>
+      {isEditing ? (
+        options ? (
+          <select
+            name={name}
+            value={value || ""}
+            className={inputClass}
+            onChange={handleChange}
+          >
+            {options.map((opt: any) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+        ) : type === "textarea" ? (
+          <textarea
+            name={name}
+            value={value || ""}
+            className={`${inputClass} resize-none`}
+            rows={3}
+            onChange={handleChange}
+          />
+        ) : (
+          <input
+            name={name}
+            value={value || ""}
+            type={type}
+            className={inputClass}
+            onChange={handleChange}
+            required={required}
+          />
+        )
+      ) : (
+        <p className={valueClass}>{value || 'Não informado'}</p>
+      )}
+    </div>
+  );
 
   return (
-    <div className="max-w-6xl mx-auto pb-40 md:pb-24 animate-in fade-in">
-      {/* Header */}
-      <div className="mb-6 flex flex-row justify-between items-center gap-4 sticky top-0 z-20 bg-gray-50/95 dark:bg-gray-900/95 backdrop-blur py-4 border-b border-gray-200/50 dark:border-gray-800/50 -mx-4 px-4 md:-mx-8 md:px-8">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => onCancel ? onCancel() : navigate(-1)}
-            className="p-2 hover:bg-white dark:hover:bg-gray-800 rounded-full text-gray-500 dark:text-gray-400 transition-colors shadow-sm border border-transparent hover:border-gray-200"
-          >
-            <ArrowLeft size={20} />
-          </button>
-          <div>
+    <div className="max-w-6xl mx-auto pb-24">
+      {/* Security Pin Modal */}
+      <SecurityPinModal
+        isOpen={showPinModal}
+        onClose={() => setShowPinModal(false)}
+        onSuccess={() => {
+          setIsOverrideAuthorized(true);
+          setShowPinModal(false);
+          handleSubmit(new Event('submit') as any);
+        }}
+        title="Autorização Necessária"
+        message="Possíveis duplicidades detectadas. Digite o PIN de segurança para prosseguir."
+      />
 
-            <h1 className="text-xl font-bold text-gray-800 dark:text-white">
-              {isEditMode ? "Editar Paciente" : "Novo Paciente"}
-            </h1>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              {isEditMode ? "Atualize os dados do paciente." : "Preencha os dados obrigatórios (*)."}
-            </p>
+      {/* Header - Apenas se não estiver em modo readonly inicial */}
+      {!initialReadonly && (
+        <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 sticky top-0 z-20 bg-gray-50 dark:bg-slate-900 py-4 border-b border-gray-200 dark:border-slate-800">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => onCancel ? onCancel() : navigate(-1)}
+              className="p-2 hover:bg-white dark:hover:bg-slate-800 rounded-lg text-gray-600 dark:text-gray-400 transition-colors border border-gray-200 dark:border-slate-700"
+            >
+              <ArrowLeft size={20} />
+            </button>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                {isEditMode ? "Editar Paciente" : "Novo Paciente"}
+              </h1>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {isEditMode ? "Atualize os dados cadastrais" : "Preencha os campos obrigatórios (*)"}
+              </p>
+            </div>
           </div>
-        </div>
 
-        {/* Desktop Save Button */}
-        <button
-          onClick={handleSubmit}
-          className="hidden md:flex bg-primary-600 text-white px-6 py-2.5 rounded-lg font-bold hover:bg-primary-700 shadow-md items-center gap-2 transition-transform active:scale-95 text-sm"
-        >
-          <Save size={18} /> Salvar Ficha
-        </button>
-      </div>
-
-      {error && (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 p-3 rounded-lg mb-6 flex items-center gap-3 text-sm font-medium">
-          <AlertCircle size={18} />
-          <span>{error}</span>
+          <button
+            onClick={handleSubmit}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg font-semibold shadow-md transition-all active:scale-95"
+          >
+            <Save size={18} />
+            Salvar Cadastro
+          </button>
         </div>
       )}
 
-      {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
-            <p className="text-gray-500 dark:text-gray-400">Carregando dados do paciente...</p>
-          </div>
+      {/* Botão de Editar/Cancelar quando em modo readonly */}
+      {initialReadonly && (
+        <div className="mb-6 flex justify-end">
+          {isEditing ? (
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  setIsEditing(false);
+                  if (initialData) setFormData(initialData);
+                }}
+                className="flex items-center gap-2 bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-medium transition-all"
+              >
+                <X size={16} />
+                Cancelar
+              </button>
+              <button
+                onClick={handleSubmit}
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold shadow-md transition-all"
+              >
+                <Save size={18} />
+                Salvar Alterações
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setIsEditing(true)}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold shadow-md transition-all"
+            >
+              <Edit2 size={16} />
+              Editar Ficha
+            </button>
+          )}
         </div>
-      ) : (
-        <>
-          <form className="space-y-6">
-            {/* 1. DADOS OBRIGATÓRIOS (Highlight) */}
-            <div className="bg-white dark:bg-slate-800 p-5 rounded-xl shadow-sm border-l-4 border-primary-500 ring-1 ring-gray-100 dark:ring-slate-700">
-              <h3 className="text-xs font-bold text-primary-600 dark:text-primary-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-                <User size={16} /> Identificação Principal
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className={labelClass}>
-                    Nome Completo <span className="text-red-500">*</span>
-                  </label>
+      )}
+
+      {error && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 p-4 rounded-lg mb-6 flex items-center gap-3">
+          <AlertCircle size={20} />
+          <span className="font-medium">{error}</span>
+        </div>
+      )}
+
+      <form className="space-y-6" onSubmit={handleSubmit}>
+        {/* 1. IDENTIFICAÇÃO CIVIL */}
+        <div className={sectionClass}>
+          <h3 className={sectionTitleClass}>
+            <User size={16} className="text-blue-600" />
+            Identificação Civil
+          </h3>
+          <div className="grid grid-cols-12 gap-4">
+            {/* Nome Completo - 12 cols */}
+            <div className="col-span-12">
+              <label className={labelClass}>
+                Nome Completo <span className="text-red-500">*</span>
+              </label>
+              {isEditing ? (
+                <>
                   <input
                     name="name"
                     value={formData.name || ""}
                     className={inputClass}
-                    placeholder="Ex: João da Silva"
+                    placeholder="Nome completo do paciente"
                     onChange={handleChange}
+                    required
                   />
-                  {/* RADAR DE DUPLICIDADE - ALERTA VISUAL */}
+                  {/* RADAR DE DUPLICIDADE */}
                   {possibleDuplicates.length > 0 && !isOverrideAuthorized && (
-                    <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg animate-in fade-in slide-in-from-top-2">
-                      <div className="flex items-center gap-2 text-amber-800 font-bold text-xs uppercase mb-2">
+                    <div className="mt-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg">
+                      <div className="flex items-center gap-2 text-amber-800 dark:text-amber-200 font-bold text-xs uppercase mb-2">
                         <AlertTriangle size={14} />
-                        Possíveis Duplicidades Encontradas ({possibleDuplicates.length})
+                        Possíveis Duplicidades ({possibleDuplicates.length})
                       </div>
                       <div className="space-y-2 max-h-32 overflow-y-auto">
                         {possibleDuplicates.map(dup => (
                           <div
                             key={dup.id}
                             onClick={() => handleSelectDuplicate(dup)}
-                            className="text-xs text-amber-900 bg-amber-100/50 p-2 rounded flex justify-between items-center cursor-pointer hover:bg-amber-200 transition-colors"
+                            className="text-xs text-amber-900 dark:text-amber-100 bg-amber-100/50 dark:bg-amber-800/30 p-2 rounded flex justify-between items-center cursor-pointer hover:bg-amber-200 dark:hover:bg-amber-700/50 transition-colors"
                           >
                             <span className="font-medium">{dup.name}</span>
                             <span className="opacity-75">{dup.phone || dup.cpf || 'Sem contato'}</span>
@@ -320,530 +425,278 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSuccess, onCancel, initialD
                       </div>
                     </div>
                   )}
-                </div>
-                <div>
-                  <label className={labelClass}>
-                    Telefone / WhatsApp <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    name="phone"
-                    value={formData.phone || ""}
-                    type="tel"
-                    className={inputClass}
-                    placeholder="(00) 90000-0000"
-                    onChange={handleChange}
-                  />
-                </div>
-              </div>
+                </>
+              ) : (
+                <p className={valueClass}>{formData.name || 'Não informado'}</p>
+              )}
             </div>
 
-            {/* 1.5. DOSSIÊ HIGH-TICKET (CRM de Luxo) */}
-            <div className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 p-5 rounded-xl shadow-sm border-l-4 border-purple-500 ring-1 ring-purple-100 dark:ring-purple-800">
-              <h3 className="text-xs font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-                <User size={16} /> 💎 Dossiê High-Ticket (CRM de Luxo)
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-3">
-                {/* Apelido (4) / Instagram (4) / Profissão (4) */}
-                <div className="col-span-1 md:col-span-4">
-                  <label className={labelClass}>
-                    Apelido / Como Chamar
-                  </label>
-                  <input
-                    name="nickname"
-                    value={formData.nickname || ""}
-                    className={inputClass}
-                    placeholder="Ex: Janjão"
-                    onChange={handleChange}
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Para criar rapport</p>
-                </div>
-                <div className="col-span-1 md:col-span-4">
-                  <label className={labelClass}>
-                    Instagram
-                  </label>
-                  <input
-                    name="instagram_handle"
-                    value={formData.instagram_handle || ""}
-                    className={inputClass}
-                    placeholder="@usuario"
-                    onChange={handleChange}
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Análise de lifestyle</p>
-                </div>
-                <div className="col-span-1 md:col-span-4">
-                  <label className={labelClass}>
-                    Profissão
-                  </label>
-                  <input
-                    name="occupation"
-                    value={formData.occupation || ""}
-                    className={inputClass}
-                    placeholder="Ex: Empresário"
-                    onChange={handleChange}
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Indica poder aquisitivo</p>
-                </div>
-
-                {/* Estado Civil (4) / Aniversário de Casamento (4) */}
-                <div className="col-span-1 md:col-span-4">
-                  <label className={labelClass}>
-                    Estado Civil
-                  </label>
-                  <select
-                    name="marital_status"
-                    value={formData.marital_status || ""}
-                    className={inputClass}
-                    onChange={handleChange}
-                  >
-                    <option value="">Selecione...</option>
-                    <option value="SINGLE">Solteiro(a)</option>
-                    <option value="MARRIED">Casado(a)</option>
-                    <option value="DIVORCED">Divorciado(a)</option>
-                    <option value="WIDOWED">Viúvo(a)</option>
-                    <option value="OTHER">Outro</option>
-                  </select>
-                </div>
-                <div className="col-span-1 md:col-span-4">
-                  <label className={labelClass}>
-                    Aniversário de Casamento
-                  </label>
-                  <input
-                    name="wedding_anniversary"
-                    value={formData.wedding_anniversary || ""}
-                    type="date"
-                    className={inputClass}
-                    onChange={handleChange}
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Para enviar presentes</p>
-                </div>
-
-                {/* Notas VIP (12) */}
-                <div className="col-span-1 md:col-span-12">
-                  <label className={labelClass}>
-                    🌟 Notas VIP (Preferências Pessoais)
-                  </label>
-                  <textarea
-                    name="vip_notes"
-                    value={formData.vip_notes || ""}
-                    className={`${textareaClass} h-20`}
-                    placeholder="Ex: Gosta de café sem açúcar, prefere ar condicionado fraco, sempre chega 10min adiantado..."
-                    onChange={handleChange}
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Detalhes para atendimento personalizado e experiência VIP
-                  </p>
-                </div>
-              </div>
+            {/* CPF - 3 cols */}
+            <div className="col-span-12 md:col-span-3">
+              <Field label="CPF" value={formData.cpf} name="cpf" />
             </div>
 
-            {/* 1.6. CLASSIFICAÇÃO E STATUS */}
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-5 rounded-xl shadow-sm border-l-4 border-blue-500 ring-1 ring-blue-100 dark:ring-blue-800">
-              <h3 className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-                <Shield size={16} /> 📊 Classificação e Status
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-3">
-                {/* Classificação (4) / Status de Sentimento (4) / Ativo (2) / Devedor (2) */}
-                <div className="col-span-1 md:col-span-4">
-                  <label className={labelClass}>
-                    Classificação (Score)
-                  </label>
-                  <select
-                    name="patient_score"
-                    value={formData.patient_score || "STANDARD"}
-                    className={inputClass}
-                    onChange={handleChange}
-                  >
-                    <option value="DIAMOND">💎 DIAMOND (High-Ticket)</option>
-                    <option value="GOLD">🥇 GOLD (Bom Pagador)</option>
-                    <option value="STANDARD">⭐ STANDARD (Normal)</option>
-                    <option value="RISK">⚠️ RISK (Inadimplente)</option>
-                    <option value="BLACKLIST">🚫 BLACKLIST (Bloqueado)</option>
-                  </select>
-                  <p className="text-xs text-gray-500 mt-1">Classificação ABC do paciente</p>
-                </div>
-
-                <div className="col-span-1 md:col-span-4">
-                  <label className={labelClass}>
-                    Status de Sentimento
-                  </label>
-                  <select
-                    name="sentiment_status"
-                    value={formData.sentiment_status || "NEUTRAL"}
-                    className={inputClass}
-                    onChange={handleChange}
-                  >
-                    <option value="VERY_HAPPY">😄 Muito Satisfeito</option>
-                    <option value="HAPPY">😊 Satisfeito</option>
-                    <option value="NEUTRAL">😐 Neutro</option>
-                    <option value="UNHAPPY">😟 Insatisfeito</option>
-                    <option value="COMPLAINING">😡 Reclamando</option>
-                  </select>
-                  <p className="text-xs text-gray-500 mt-1">Nível de satisfação</p>
-                </div>
-
-                <div className="col-span-1 md:col-span-2">
-                  <label className={labelClass}>
-                    Status
-                  </label>
-                  <select
-                    name="is_active"
-                    value={String(formData.is_active !== undefined ? formData.is_active : true)}
-                    className={inputClass}
-                    onChange={(e) => setFormData({ ...formData, is_active: e.target.value === 'true' })}
-                  >
-                    <option value="true">✅ Ativo</option>
-                    <option value="false">❌ Inativo</option>
-                  </select>
-                </div>
-
-                <div className="col-span-1 md:col-span-2">
-                  <label className={labelClass}>
-                    Devedor
-                  </label>
-                  <select
-                    name="bad_debtor"
-                    value={String(formData.bad_debtor || false)}
-                    className={inputClass}
-                    onChange={(e) => setFormData({ ...formData, bad_debtor: e.target.value === 'true' })}
-                  >
-                    <option value="false">Não</option>
-                    <option value="true">Sim</option>
-                  </select>
-                </div>
-              </div>
+            {/* RG - 3 cols */}
+            <div className="col-span-12 md:col-span-3">
+              <Field label="RG / Identidade" value={formData.rg} name="rg" />
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* 2. DOCUMENTOS & PESSOAL */}
-              <div className="bg-white dark:bg-slate-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700">
-                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-                  <FileText size={16} /> Pessoal
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-3">
-                  {/* CPF (6) / RG (6) */}
-                  <div className="col-span-1 md:col-span-6">
-                    <label className={labelClass}>CPF</label>
-                    <input
-                      name="cpf"
-                      type="tel"
-                      className={inputClass}
-                      placeholder="000.000.000-00"
-                      onChange={handleChange}
-                    />
-                  </div>
-                  <div className="col-span-1 md:col-span-6">
-                    <label className={labelClass}>CPF</label>
-                    <input
-                      name="cpf"
-                      value={formData.cpf || ""}
-                      type="tel"
-                      className={inputClass}
-                      placeholder="000.000.000-00"
-                      onChange={handleChange}
-                    />
-                  </div>
-                  <div className="col-span-1 md:col-span-6">
-                    <label className={labelClass}>RG</label>
-                    <input
-                      name="rg"
-                      value={formData.rg || ""}
-                      className={inputClass}
-                      placeholder="00.000.000-0"
-                      onChange={handleChange}
-                    />
-                  </div>
-
-                  {/* Nascimento (7) / Gênero (5) */}
-                  <div className="col-span-1 md:col-span-7">
-                    <label className={labelClass}>Data de Nascimento</label>
-                    <input
-                      name="birth_date"
-                      type="date"
-                      className={inputClass}
-                      onChange={handleChange}
-                    />
-                  </div>
-                  <div className="col-span-1 md:col-span-7">
-                    <label className={labelClass}>Data de Nascimento</label>
-                    <input
-                      name="birth_date"
-                      value={formData.birth_date || ""}
-                      type="date"
-                      className={inputClass}
-                      onChange={handleChange}
-                    />
-                  </div>
-                  <div className="col-span-1 md:col-span-5">
-                    <label className={labelClass}>Gênero</label>
-                    <select
-                      name="gender"
-                      value={formData.gender || "Não Informado"}
-                      className={inputClass}
-                      onChange={handleChange}
-                    >
-                      <option>Masculino</option>
-                      <option>Feminino</option>
-                      <option>Outro</option>
-                      <option>Não Informado</option>
-                    </select>
-                  </div>
-
-                  {/* Estado Civil (5) / Profissão (7) */}
-                  <div className="col-span-1 md:col-span-5">
-                    <label className={labelClass}>Estado Civil</label>
-                    <select
-                      name="marital_status"
-                      value={formData.marital_status || "SINGLE"}
-                      className={inputClass}
-                      onChange={handleChange}
-                    >
-                      <option value="SINGLE">Solteiro(a)</option>
-                      <option value="MARRIED">Casado(a)</option>
-                      <option value="DIVORCED">Divorciado(a)</option>
-                      <option value="WIDOWED">Viúvo(a)</option>
-                      <option value="OTHER">Outro</option>
-                    </select>
-                  </div>
-                  <div className="col-span-1 md:col-span-7">
-                    <label className={labelClass}>Profissão</label>
-                    <input
-                      name="occupation"
-                      value={formData.occupation || ""}
-                      className={inputClass}
-                      placeholder="Ex: Advogado"
-                      onChange={handleChange}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* 3. ENDEREÇO & CONTATO */}
-              <div className="bg-white dark:bg-slate-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700">
-                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-                  <MapPin size={16} /> Endereço
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-3">
-                  {/* Email (8) / Pref (4) */}
-                  <div className="col-span-1 md:col-span-8">
-                    <label className={labelClass}>Email</label>
-                    <input
-                      name="email"
-                      value={formData.email || ""}
-                      type="email"
-                      className={inputClass}
-                      placeholder="cliente@email.com"
-                      onChange={handleChange}
-                    />
-                  </div>
-                  <div className="col-span-1 md:col-span-4">
-                    <label className={labelClass}>Origem (Marketing)</label>
-                    <select
-                      name="origin"
-                      value={formData.origin || "Instagram"}
-                      className={inputClass}
-                      onChange={handleChange}
-                    >
-                      <option>Instagram</option>
-                      <option>Google Ads</option>
-                      <option>Indicação</option>
-                      <option>Facebook</option>
-                      <option>Orgânico</option>
-                      <option>WhatsApp</option>
-                    </select>
-                  </div>
-                  <div className="col-span-1 md:col-span-4">
-                    <label className={labelClass}>Pref. Contato</label>
-                    <select
-                      name="contact_preference"
-                      value={formData.contact_preference || "WhatsApp"}
-                      className={inputClass}
-                      onChange={handleChange}
-                    >
-                      <option value="WHATSAPP">WhatsApp</option>
-                      <option value="PHONE">Ligação</option>
-                      <option value="EMAIL">Email</option>
-                    </select>
-                  </div>
-
-                  {/* CEP (4) / Rua (8) */}
-                  <div className="col-span-1 md:col-span-4">
-                    <label className={labelClass}>CEP</label>
-                    <input
-                      name="zip_code"
-                      value={formData.zip_code || ""}
-                      type="tel"
-                      className={inputClass}
-                      placeholder="00000-000"
-                      onChange={handleChange}
-                    />
-                  </div>
-                  <div className="col-span-1 md:col-span-8">
-                    <label className={labelClass}>Logradouro</label>
-                    <input
-                      name="street"
-                      value={formData.street || ""}
-                      className={inputClass}
-                      placeholder="Rua / Av."
-                      onChange={handleChange}
-                    />
-                  </div>
-
-                  <div className="col-span-1 md:col-span-2">
-                    <label className={labelClass}>Número</label>
-                    <input
-                      name="number"
-                      value={formData.number || ""}
-                      className={inputClass}
-                      placeholder="123"
-                      onChange={handleChange}
-                    />
-                  </div>
-                  <div className="col-span-1 md:col-span-4">
-                    <label className={labelClass}>Complemento</label>
-                    <input
-                      name="complement"
-                      value={formData.complement || ""}
-                      className={inputClass}
-                      placeholder="Apto 101"
-                      onChange={handleChange}
-                    />
-                  </div>
-                  <div className="col-span-1 md:col-span-6">
-                    <label className={labelClass}>Bairro</label>
-                    <input
-                      name="neighborhood"
-                      value={formData.neighborhood || ""}
-                      className={inputClass}
-                      placeholder="Bairro"
-                      onChange={handleChange}
-                    />
-                  </div>
-
-                  <div className="col-span-1 md:col-span-9">
-                    <label className={labelClass}>Cidade</label>
-                    <input
-                      name="city"
-                      value={formData.city || ""}
-                      className={inputClass}
-                      placeholder="Cidade"
-                      onChange={handleChange}
-                    />
-                  </div>
-                  <div className="col-span-1 md:col-span-3">
-                    <label className={labelClass}>UF</label>
-                    <input
-                      name="state"
-                      value={formData.state || ""}
-                      className={inputClass}
-                      maxLength={2}
-                      placeholder="UF"
-                      onChange={handleChange}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* 4. CLÍNICO & CONVÊNIO */}
-              <div className="bg-white dark:bg-slate-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700">
-                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-                  <Shield size={16} /> Convênio & Clínico
-                </h3>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className={labelClass}>Convênio</label>
-                      <select
-                        name="insurance"
-                        className={inputClass}
-                        onChange={handleChange}
-                        defaultValue="Particular"
-                      >
-                        <option>Particular</option>
-                        <option>Unimed</option>
-                        <option>Amil</option>
-                        <option>Bradesco Saúde</option>
-                        <option>SulAmérica</option>
-                        <option>Outro</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className={labelClass}>Nº Carteirinha</label>
-                      <input
-                        name="insuranceCardNumber"
-                        className={inputClass}
-                        placeholder="Opcional"
-                        onChange={handleChange}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className={labelClass}>Anamnese Inicial (Resumo)</label>
-                    <textarea
-                      name="initialClinicalNotes"
-                      className={`${textareaClass} h-24`}
-                      placeholder="Alergias, queixas principais, histórico..."
-                      onChange={handleChange}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* 5. GERAL */}
-              <div className="bg-white dark:bg-slate-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700">
-                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-                  <File size={16} /> Observações Gerais
-                </h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className={labelClass}>Observações de Perfil</label>
-                    <textarea
-                      name="generalNotes"
-                      className={`${textareaClass} h-24`}
-                      placeholder="Perfil comportamental, indicações, restrições de horário..."
-                      onChange={handleChange}
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-center border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg p-6 bg-gray-50 dark:bg-slate-900/30">
-                    <div className="text-center">
-                      <Upload size={20} className="mx-auto text-gray-400 mb-2" />
-                      <p className="text-xs font-medium text-gray-500">
-                        Upload de Foto (Opcional)
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
+            {/* Data de Nascimento - 3 cols */}
+            <div className="col-span-12 md:col-span-3">
+              <Field label="Data de Nascimento" value={formData.birth_date} name="birth_date" type="date" />
             </div>
-          </form>
 
-          {/* MOBILE FIXED BOTTOM ACTION BAR */}
-          <div className="fixed bottom-0 left-0 right-0 p-4 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 z-50 md:hidden shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] safe-bottom">
-            <button
-              onClick={handleSubmit}
-              className="w-full bg-primary-600 text-white py-3 rounded-xl font-bold shadow-md flex justify-center items-center gap-2 active:scale-95 transition-transform text-base"
-            >
-              <Save size={20} /> Salvar Ficha
-            </button>
+            {/* Gênero - 3 cols */}
+            <div className="col-span-12 md:col-span-3">
+              <Field
+                label="Gênero"
+                value={formData.gender}
+                name="gender"
+                options={[
+                  { value: "Masculino", label: "Masculino" },
+                  { value: "Feminino", label: "Feminino" },
+                  { value: "Outro", label: "Outro" },
+                  { value: "Não Informado", label: "Não Informado" }
+                ]}
+              />
+            </div>
+
+            {/* Estado Civil - 6 cols */}
+            <div className="col-span-12 md:col-span-6">
+              <Field
+                label="Estado Civil"
+                value={formData.marital_status}
+                name="marital_status"
+                options={[
+                  { value: "SINGLE", label: "Solteiro(a)" },
+                  { value: "MARRIED", label: "Casado(a)" },
+                  { value: "DIVORCED", label: "Divorciado(a)" },
+                  { value: "WIDOWED", label: "Viúvo(a)" },
+                  { value: "OTHER", label: "Outro" }
+                ]}
+              />
+            </div>
+
+            {/* Profissão - 6 cols */}
+            <div className="col-span-12 md:col-span-6">
+              <Field label="Profissão" value={formData.occupation} name="occupation" />
+            </div>
           </div>
-        </>
-      )}
+        </div>
 
-      {/* MODAL DE SEGURANÇA - PIN OVERRIDE */}
-      <SecurityPinModal
-        isOpen={showPinModal}
-        onClose={() => setShowPinModal(false)}
-        onSuccess={() => {
-          setIsOverrideAuthorized(true);
-          setPossibleDuplicates([]); // Clear duplicates to allow save on next click
-          // Optional: Auto-submit here if desired, or let user click save again
-          // For safety, let user click save again but now authorized
-        }}
-        title="Duplicidade Detectada"
-        description={`O sistema encontrou ${possibleDuplicates.length} paciente(s) com nome similar. Para forçar a criação desta duplicidade, é necessária autorização de supervisor.`}
-        actionType="CUSTOM" // Could add DUPLICATE_OVERRIDE if supported
-        entityName={formData.name}
-      />
+        {/* 2. CONTATO */}
+        <div className={sectionClass}>
+          <h3 className={sectionTitleClass}>
+            <Phone size={16} className="text-green-600" />
+            Informações de Contato
+          </h3>
+          <div className="grid grid-cols-12 gap-4">
+            {/* Telefone/WhatsApp - 6 cols */}
+            <div className="col-span-12 md:col-span-6">
+              <Field
+                label="Celular / WhatsApp"
+                value={formData.phone}
+                name="phone"
+                type="tel"
+                required
+              />
+            </div>
+
+            {/* Email - 6 cols */}
+            <div className="col-span-12 md:col-span-6">
+              <Field label="Email" value={formData.email} name="email" type="email" />
+            </div>
+
+            {/* Preferência de Contato - 6 cols */}
+            <div className="col-span-12 md:col-span-6">
+              <Field
+                label="Preferência de Contato"
+                value={formData.contact_preference}
+                name="contact_preference"
+                options={[
+                  { value: "WHATSAPP", label: "WhatsApp" },
+                  { value: "PHONE", label: "Ligação" },
+                  { value: "EMAIL", label: "Email" },
+                  { value: "SMS", label: "SMS" }
+                ]}
+              />
+            </div>
+
+            {/* Origem/Marketing - 6 cols */}
+            <div className="col-span-12 md:col-span-6">
+              <Field
+                label="Como Conheceu a Clínica"
+                value={formData.origin}
+                name="origin"
+                options={[
+                  { value: "Instagram", label: "Instagram" },
+                  { value: "Google Ads", label: "Google Ads" },
+                  { value: "Indicação", label: "Indicação" },
+                  { value: "Facebook", label: "Facebook" },
+                  { value: "Orgânico", label: "Orgânico" },
+                  { value: "WhatsApp", label: "WhatsApp" },
+                  { value: "Outro", label: "Outro" }
+                ]}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* 3. LOGRADOURO (ENDEREÇO) */}
+        <div className={sectionClass}>
+          <h3 className={sectionTitleClass}>
+            <MapPin size={16} className="text-purple-600" />
+            Logradouro
+          </h3>
+          <div className="grid grid-cols-12 gap-4">
+            {/* CEP - 3 cols */}
+            <div className="col-span-12 md:col-span-3">
+              <Field label="CEP" value={formData.zip_code} name="zip_code" />
+            </div>
+
+            {/* Logradouro - 7 cols */}
+            <div className="col-span-12 md:col-span-7">
+              <Field label="Rua / Avenida" value={formData.street} name="street" />
+            </div>
+
+            {/* Número - 2 cols */}
+            <div className="col-span-12 md:col-span-2">
+              <Field label="Número" value={formData.number} name="number" />
+            </div>
+
+            {/* Complemento - 4 cols */}
+            <div className="col-span-12 md:col-span-4">
+              <Field label="Complemento" value={formData.complement} name="complement" />
+            </div>
+
+            {/* Bairro - 4 cols */}
+            <div className="col-span-12 md:col-span-4">
+              <Field label="Bairro" value={formData.neighborhood} name="neighborhood" />
+            </div>
+
+            {/* Cidade - 3 cols */}
+            <div className="col-span-12 md:col-span-3">
+              <Field label="Cidade" value={formData.city} name="city" />
+            </div>
+
+            {/* UF - 1 col */}
+            <div className="col-span-12 md:col-span-1">
+              <Field label="UF" value={formData.state} name="state" />
+            </div>
+          </div>
+        </div>
+
+        {/* 4. PERFIL PROFISSIONAL E SOCIAL */}
+        <div className={sectionClass}>
+          <h3 className={sectionTitleClass}>
+            <FileText size={16} className="text-indigo-600" />
+            Perfil Profissional e Social
+          </h3>
+          <div className="grid grid-cols-12 gap-4">
+            {/* Apelido - 6 cols */}
+            <div className="col-span-12 md:col-span-6">
+              <Field label="Apelido / Como Chamar" value={formData.nickname} name="nickname" />
+            </div>
+
+            {/* Instagram - 6 cols */}
+            <div className="col-span-12 md:col-span-6">
+              <Field label="Instagram" value={formData.instagram_handle} name="instagram_handle" />
+            </div>
+
+            {/* Observações Gerais - 12 cols */}
+            <div className="col-span-12">
+              <Field
+                label="Observações Gerais"
+                value={formData.vip_notes}
+                name="vip_notes"
+                type="textarea"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* 5. CLASSIFICAÇÃO (Apenas em Edição) */}
+        {isEditMode && (
+          <div className={sectionClass}>
+            <h3 className={sectionTitleClass}>
+              <Shield size={16} className="text-orange-600" />
+              Classificação e Status
+            </h3>
+            <div className="grid grid-cols-12 gap-4">
+              {/* Score - 3 cols */}
+              <div className="col-span-12 md:col-span-3">
+                <Field
+                  label="Classificação"
+                  value={formData.patient_score}
+                  name="patient_score"
+                  options={[
+                    { value: "DIAMOND", label: "💎 DIAMOND" },
+                    { value: "GOLD", label: "🥇 GOLD" },
+                    { value: "STANDARD", label: "⭐ STANDARD" },
+                    { value: "RISK", label: "⚠️ RISK" },
+                    { value: "BLACKLIST", label: "🚫 BLACKLIST" }
+                  ]}
+                />
+              </div>
+
+              {/* Sentimento - 3 cols */}
+              <div className="col-span-12 md:col-span-3">
+                <Field
+                  label="Status de Sentimento"
+                  value={formData.sentiment_status}
+                  name="sentiment_status"
+                  options={[
+                    { value: "VERY_HAPPY", label: "😄 Muito Satisfeito" },
+                    { value: "HAPPY", label: "😊 Satisfeito" },
+                    { value: "NEUTRAL", label: "😐 Neutro" },
+                    { value: "UNHAPPY", label: "😟 Insatisfeito" },
+                    { value: "COMPLAINING", label: "😡 Reclamando" }
+                  ]}
+                />
+              </div>
+
+              {/* Ativo - 3 cols */}
+              <div className="col-span-12 md:col-span-3">
+                <Field
+                  label="Status"
+                  value={String(formData.is_active !== undefined ? formData.is_active : true)}
+                  name="is_active"
+                  options={[
+                    { value: "true", label: "✅ Ativo" },
+                    { value: "false", label: "❌ Inativo" }
+                  ]}
+                />
+              </div>
+
+              {/* Inadimplente - 3 cols */}
+              <div className="col-span-12 md:col-span-3">
+                <Field
+                  label="Inadimplente"
+                  value={String(formData.bad_debtor || false)}
+                  name="bad_debtor"
+                  options={[
+                    { value: "false", label: "Não" },
+                    { value: "true", label: "Sim" }
+                  ]}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+      </form>
+
+      {/* Sticky Footer com Botão de Salvar (apenas mobile e se não for readonly) */}
+      {!initialReadonly && (
+        <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-800 p-4 shadow-lg z-30 md:hidden">
+          <button
+            onClick={handleSubmit}
+            className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold shadow-md transition-all active:scale-95"
+          >
+            <Save size={20} />
+            Salvar Cadastro
+          </button>
+        </div>
+      )}
     </div>
   );
 };

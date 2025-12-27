@@ -268,30 +268,42 @@ export const AppLayout: React.FC<{ children?: React.ReactNode }> = ({ children }
             {/* MOBILE HEADER & BOTTOM NAVIGATION */}
             {/* ============================================ */}
             <div className="md:hidden">
-                {/* Mobile Header */}
-                <header className="fixed top-0 left-0 right-0 h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 z-40 flex items-center justify-between px-4 shadow-sm">
-                    <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 bg-violet-600 dark:bg-violet-500 rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-sm">
+                {/* Mobile Header - Optimized h-14 */}
+                <header className="fixed top-0 left-0 right-0 h-14 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 z-40 flex items-center justify-between px-3 shadow-sm">
+                    {/* Left: Menu Button */}
+                    <button
+                        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                        className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors text-slate-700 dark:text-slate-300"
+                    >
+                        {isMobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
+                    </button>
+
+                    {/* Center: Logo */}
+                    <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 bg-violet-600 dark:bg-violet-500 rounded-lg flex items-center justify-center text-white font-bold text-xs shadow-sm">
                             CP
                         </div>
                         <div className="flex flex-col">
-                            <span className="text-sm font-bold text-slate-800 dark:text-white">ClinicPro</span>
-                            <span className="text-[10px] text-slate-500 dark:text-slate-400">{profile?.clinics?.name || 'Clínica'}</span>
+                            <span className="text-xs font-bold text-slate-800 dark:text-white">ClinicPro</span>
+                            <span className="text-[9px] text-slate-500 dark:text-slate-400 leading-none">{profile?.clinics?.name || 'Clínica'}</span>
                         </div>
                     </div>
-                    <div className="flex items-center gap-2">
+
+                    {/* Right: Theme + Avatar */}
+                    <div className="flex items-center gap-1">
                         <button
                             onClick={toggleTheme}
                             className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
                         >
-                            {theme === 'dark' ? <Sun size={20} className="text-amber-400" /> : <Moon size={20} className="text-slate-600" />}
+                            {theme === 'dark' ? <Sun size={18} className="text-amber-400" /> : <Moon size={18} className="text-slate-600" />}
                         </button>
-                        <button
-                            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors text-slate-700 dark:text-slate-300"
-                        >
-                            {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-                        </button>
+                        <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center overflow-hidden">
+                            {(profile as any)?.avatar_url ? (
+                                <img src={(profile as any).avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                            ) : (
+                                <span className="font-bold text-slate-500 dark:text-slate-300 text-[10px]">{profile?.name?.substring(0, 2).toUpperCase() || 'US'}</span>
+                            )}
+                        </div>
                     </div>
                 </header>
 
@@ -379,10 +391,11 @@ export const AppLayout: React.FC<{ children?: React.ReactNode }> = ({ children }
             <main className={`
                 flex-1 flex flex-col min-h-screen transition-all duration-300
                 md:ml-20 ${isSidebarExpanded && 'md:ml-64'} 
-                pt-16 md:pt-0 pb-20 md:pb-0 
+                pt-14 md:pt-0 pb-16 md:pb-0 
                 bg-slate-50 dark:bg-slate-950
+                overflow-x-hidden
             `}>
-                <div className="flex-1 p-4 md:p-6 lg:p-8 overflow-x-hidden">
+                <div className="flex-1 p-3 md:p-6 lg:p-8">
                     {/* Page Content */}
                     <div className="animate-in fade-in duration-500">
                         {children || <Outlet />}

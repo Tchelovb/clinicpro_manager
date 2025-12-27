@@ -273,24 +273,24 @@ const Agenda: React.FC = () => {
     }
 
     return (
-        <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950">
+        <div className="h-full flex flex-col bg-slate-50 dark:bg-slate-950 overflow-hidden">
             {/* ============================================ */}
-            {/* HEADER - JIRA STYLE */}
+            {/* HEADER - FIXO */}
             {/* ============================================ */}
-            <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4">
-                <div className="flex items-center justify-between mb-4">
+            <div className="flex-none bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-3 md:p-4">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4 mb-3 md:mb-4">
                     <div>
-                        <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                            <CalendarIcon className="text-blue-600" size={28} />
+                        <h1 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                            <CalendarIcon className="text-blue-600" size={24} />
                             Agenda
                         </h1>
-                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                        <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-1">
                             Gestão de Agendamentos • {appointments.length} compromissos
                         </p>
                     </div>
                     <button
                         onClick={() => setNewAppointmentSheetOpen(true)}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm shadow-md"
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm shadow-md w-full md:w-auto justify-center"
                     >
                         <Plus size={16} />
                         Novo Agendamento
@@ -298,37 +298,37 @@ const Agenda: React.FC = () => {
                 </div>
 
                 {/* Navigation & Filters */}
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
                         <button
                             onClick={() => setCurrentDate(prev => addDays(prev, viewMode === 'week' ? -7 : -1))}
-                            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
                         >
                             <ChevronLeft size={20} className="text-slate-600 dark:text-slate-400" />
                         </button>
                         <button
                             onClick={() => setCurrentDate(new Date())}
-                            className="px-3 py-1.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                            className="px-3 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors min-h-[44px]"
                         >
                             Hoje
                         </button>
                         <button
                             onClick={() => setCurrentDate(prev => addDays(prev, viewMode === 'week' ? 7 : 1))}
-                            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
                         >
                             <ChevronRight size={20} className="text-slate-600 dark:text-slate-400" />
                         </button>
-                        <span className="ml-4 text-lg font-bold text-slate-900 dark:text-white">
+                        <span className="ml-2 md:ml-4 text-sm md:text-lg font-bold text-slate-900 dark:text-white">
                             {format(currentDate, viewMode === 'week' ? "'Semana de' dd/MM/yyyy" : "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
                         </span>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 overflow-x-auto">
                         {/* Professional Filter */}
                         <select
                             value={filterProfessional}
                             onChange={(e) => setFilterProfessional(e.target.value)}
-                            className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                            className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white min-h-[44px]"
                         >
                             <option value="ALL">Todos Profissionais</option>
                             {professionals.map(prof => (
@@ -340,7 +340,7 @@ const Agenda: React.FC = () => {
                         <div className="flex bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg">
                             <button
                                 onClick={() => setViewMode('week')}
-                                className={`px-3 py-1.5 rounded text-xs font-bold transition-all ${viewMode === 'week'
+                                className={`px-3 py-2 rounded text-xs font-bold transition-all min-h-[40px] ${viewMode === 'week'
                                     ? 'bg-white dark:bg-slate-600 text-slate-900 dark:text-white shadow'
                                     : 'text-slate-600 dark:text-slate-400'
                                     }`}
@@ -349,7 +349,7 @@ const Agenda: React.FC = () => {
                             </button>
                             <button
                                 onClick={() => setViewMode('day')}
-                                className={`px-3 py-1.5 rounded text-xs font-bold transition-all ${viewMode === 'day'
+                                className={`px-3 py-2 rounded text-xs font-bold transition-all min-h-[40px] ${viewMode === 'day'
                                     ? 'bg-white dark:bg-slate-600 text-slate-900 dark:text-white shadow'
                                     : 'text-slate-600 dark:text-slate-400'
                                     }`}
@@ -362,9 +362,9 @@ const Agenda: React.FC = () => {
             </div>
 
             {/* ============================================ */}
-            {/* CALENDAR GRID */}
+            {/* CALENDAR GRID - SCROLLÁVEL */}
             {/* ============================================ */}
-            <div className="flex-1 overflow-auto p-4">
+            <div className="flex-1 overflow-y-auto scroll-smooth p-3 md:p-4">
                 {viewMode === 'week' ? (
                     <div className="grid grid-cols-7 gap-2">
                         {getWeekDays().map((day, idx) => {

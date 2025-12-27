@@ -480,15 +480,10 @@ const PatientsList: React.FC = () => {
                                     <Search className="text-slate-400" size={32} />
                                 </div>
                                 <h3 className="text-lg font-bold text-slate-700 dark:text-slate-300">Nenhum resultado encontrado</h3>
-                                <p className="text-slate-500 max-w-sm mx-auto mb-6">
+                                <p className="text-slate-500 max-w-sm mx-auto">
                                     Não encontramos registros para "<strong>{searchTerm}</strong>".
                                 </p>
-                                <button
-                                    onClick={handleNewPatientClick}
-                                    className="bg-violet-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-violet-700 transition-colors shadow-lg shadow-violet-200"
-                                >
-                                    Cadastrar {searchTerm} agora
-                                </button>
+                                {/* Botão removido para evitar redundância com o header */}
                             </div>
                         );
                     }

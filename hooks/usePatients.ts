@@ -100,7 +100,9 @@ export const usePatients = () => {
     isLoading: patientsQuery.isLoading,
     error: patientsQuery.error,
     createPatient: createPatientMutation.mutate,
+    createPatientAsync: createPatientMutation.mutateAsync,
     updatePatient: updatePatientMutation.mutate,
+    updatePatientAsync: updatePatientMutation.mutateAsync,
     isCreating: createPatientMutation.isPending,
     isUpdating: updatePatientMutation.isPending,
   };
