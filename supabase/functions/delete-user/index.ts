@@ -19,24 +19,19 @@ serve(async (req) => {
 
         const { user_id } = await req.json()
 
-        if (!user_id) {
-            throw new Error('user_id é obrigatório')
-        }
+        if (!user_id) throw new Error('user_id is required')
 
-        // Delete from auth.users (cascade will handle public.users and user_permissions)
-        const { error } = await supabaseAdmin.auth.admin.deleteUser(user_id)
+        // Delete from Auth (Cascade should handle public table usually, but we delete from Auth primarily)
+        const { data, error } = await supabaseAdmin.auth.admin.deleteUser(user_id)
 
         if (error) throw error
 
-        return new Response(JSON.stringify({
-            message: "Usuário deletado com sucesso!"
-        }), {
+        return new Response(JSON.stringify({ message: 'User deleted successfully' }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 200,
         })
 
-    } catch (error) {
-        console.error('Error deleting user:', error)
+    } catch (error: any) {
         return new Response(JSON.stringify({ error: error.message }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 400,

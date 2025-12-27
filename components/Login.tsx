@@ -16,15 +16,11 @@ const Login: React.FC = () => {
 
   // Navigate when user is authenticated
   useEffect(() => {
-    if (!loading && user && profile) {
-      // Redirecionar baseado no role
-      if (profile.role === 'MASTER') {
-        navigate("/master", { replace: true });
-      } else {
-        navigate("/dashboard", { replace: true });
-      }
+    if (!loading && user) {
+      // Redirecionar para dashboard sempre (O AppLayout vai tratar se o perfil estiver quebrado)
+      navigate("/dashboard", { replace: true });
     }
-  }, [loading, user, profile, navigate]);
+  }, [loading, user, navigate]);
 
   // Se já está carregando ou já tem user → redireciona imediatamente ou não renderiza
   if (loading) {

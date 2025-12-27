@@ -1,69 +1,58 @@
-import React, { useState, ReactNode } from "react";
-import Sidebar from "./Sidebar";
-import BottomNav from "./BottomNav";
-import CashOpeningModal from "./CashOpeningModal";
-import { useData } from "../contexts/DataContext";
-import { useAuth } from "../contexts/AuthContext";
-import { BOSFloatingButton } from "./BOSFloatingButton";
+import React, { useState } from 'react';
+import { Outlet, Navigate } from 'react-router-dom';
+import Sidebar from './Sidebar';
+import { useAuth } from '../contexts/AuthContext';
+import { Loader2 } from 'lucide-react';
+import BottomNav from './BottomNav';
+import { BOSFloatingButton } from './BOSFloatingButton';
 
-interface AppLayoutProps {
-  children: ReactNode;
-}
-
-const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
+export default function AppLayout() {
+  const { user, clinicId, loading, signOut } = useAuth();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
-  const { currentRegister, financialSettings } = useData();
-  const { profile } = useAuth(); // Assuming profile has needed info if accessed directly, but useData handles settings
 
-  // Logic to determine if blocking modal is needed
-  // Only blocking if setting is TRUE and no register is OPEN
-  // Also only if user is logged in (profile exists)
-  const shouldBlock =
-    profile &&
-    financialSettings?.force_cash_opening &&
-    !currentRegister;
+  // 1. Loading Inicial
+  if (loading) {
+    return (
+      <div className="h-screen w-full flex items-center justify-center bg-slate-50">
+        <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
+        <span className="ml-3 text-gray-500 font-medium">Iniciando sistema...</span>
+      </div>
+    );
+  }
 
+  // 2. Não Autenticado
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // 3. Logado mas sem Clínica (Proteção contra Visitante/Broken State)
+  if (user && !clinicId) {
+    console.error("⛔ [AppLayout] Usuário logado sem Clinic ID. Forçando Logout para correção.");
+    signOut(); // Força logout para tentar pegar metadados frescos no próximo login
+    return <Navigate to="/login" replace />;
+  }
+
+  // 4. Modo Visitante (Removido/Unreachable devido ao check acima)
+  const isVisitor = false;
+
+  // 4. Sucesso
   return (
-    <div className="flex w-full h-full bg-gray-50 dark:bg-gray-900 transition-colors duration-300 overflow-hidden">
-
-      {/* GLOBAL BLOCKING MODAL FOR CASH OPENING */}
-      {shouldBlock && (
-        <CashOpeningModal
-          onClose={() => { }} // Empty function because it is blocking, cannot close without action
-          onSuccess={() => { window.location.reload(); }} // Simple reload to refresh context
-          isBlocking={true}
-        />
-      )}
-
-      {/* SIDEBAR AREA (Desktop Only) - Static Flex Item */}
-      <div
-        className={`hidden md:flex flex-col h-full bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 shadow-sm z-30 transition-all duration-300 ease-in-out flex-shrink-0
-        ${isSidebarCollapsed ? "w-20" : "w-64"}`}
-      >
+    <div className="flex h-screen w-full bg-slate-50 overflow-hidden">
+      <div className={`hidden md:flex flex-col h-full bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 shadow-sm z-30 flex-shrink-0 ${isSidebarCollapsed ? "w-20" : "w-64"}`}>
         <Sidebar
           isCollapsed={isSidebarCollapsed}
           toggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
         />
       </div>
 
-      {/* WORKSPACE AREA - Takes remaining width */}
-      <div className="flex-1 flex flex-col h-full min-w-0 relative overflow-hidden">
-        {/* SCROLLABLE CONTENT AREA - The ONLY place with scroll in the entire app */}
-        <main className="flex-1 overflow-y-auto overflow-x-hidden w-full scroll-smooth relative">
-          <div className="p-4 md:p-8 w-full max-w-7xl mx-auto min-h-full flex flex-col pb-24 md:pb-8">
-            {children}
-          </div>
-        </main>
-      </div>
+      <main className="flex-1 flex flex-col h-full overflow-hidden relative">
+        <div className="flex-1 overflow-y-auto p-4 md:p-8">
+          <Outlet />
+        </div>
+      </main>
 
-
-      {/* FIXED BOTTOM NAV (Mobile Only) - Outside scroll area */}
       <BottomNav />
-
-      {/* BOS FLOATING BUTTON - Global Access */}
       <BOSFloatingButton />
     </div>
   );
-};
-
-export default AppLayout;
+}

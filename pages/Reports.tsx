@@ -472,10 +472,10 @@ const Reports: React.FC = () => {
             case 'status':
                 return (
                     <span className={`px-2 py-0.5 rounded text-xs font-bold ${['PAID', 'APPROVED', 'COMPLETED', 'CONFIRMED'].includes(value)
-                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
-                            : ['PENDING', 'DRAFT'].includes(value)
-                                ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300'
-                                : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                        : ['PENDING', 'DRAFT'].includes(value)
+                            ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300'
+                            : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
                         }`}>
                         {value}
                     </span>
@@ -494,11 +494,11 @@ const Reports: React.FC = () => {
     }
 
     return (
-        <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950">
+        <div className="h-full flex flex-col overflow-hidden bg-slate-50 dark:bg-slate-950">
             {/* ============================================ */}
-            {/* HEADER - JIRA STYLE */}
+            {/* HEADER - JIRA STYLE (FIXED) */}
             {/* ============================================ */}
-            <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 print:hidden">
+            <div className="flex-none bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 print:hidden z-10">
                 <div className="flex items-center justify-between mb-4">
                     <div>
                         <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -530,16 +530,16 @@ const Reports: React.FC = () => {
                 </div>
 
                 {/* PILLAR SELECTOR */}
-                <div className="flex gap-2 mb-4">
+                <div className="flex gap-2 mb-4 overflow-x-auto pb-1 hide-scrollbar">
                     {REPORT_CONFIG.map(pillar => {
                         const Icon = pillar.icon;
                         return (
                             <button
                                 key={pillar.id}
                                 onClick={() => handlePillarChange(pillar)}
-                                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-all ${selectedPillar.id === pillar.id
-                                        ? `bg-${pillar.color}-600 text-white shadow-md`
-                                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                                className={`flex flex-none items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-all ${selectedPillar.id === pillar.id
+                                    ? `bg-${pillar.color}-600 text-white shadow-md`
+                                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
                                     }`}
                             >
                                 <Icon size={16} />
@@ -550,14 +550,14 @@ const Reports: React.FC = () => {
                 </div>
 
                 {/* SOURCE SELECTOR */}
-                <div className="flex gap-2">
+                <div className="flex gap-2 overflow-x-auto pb-1 hide-scrollbar">
                     {selectedPillar.sources.map(source => (
                         <button
                             key={source.id}
                             onClick={() => handleSourceChange(source)}
-                            className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${selectedSource.id === source.id
-                                    ? 'bg-slate-900 dark:bg-slate-200 text-white dark:text-slate-900'
-                                    : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-slate-300'
+                            className={`flex-none px-3 py-1.5 rounded-md text-xs font-bold transition-all ${selectedSource.id === source.id
+                                ? 'bg-slate-900 dark:bg-slate-200 text-white dark:text-slate-900'
+                                : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-slate-300'
                                 }`}
                         >
                             {source.label}
@@ -567,9 +567,9 @@ const Reports: React.FC = () => {
             </div>
 
             {/* ============================================ */}
-            {/* FILTER BAR - DYNAMIC CASCADE */}
+            {/* FILTER BAR - DYNAMIC CASCADE (FIXED) */}
             {/* ============================================ */}
-            <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 print:hidden">
+            <div className="flex-none bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 print:hidden z-10">
                 <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3">
                     {selectedSource.filters.map(filter => (
                         <div key={filter.id}>
@@ -634,9 +634,9 @@ const Reports: React.FC = () => {
             </div>
 
             {/* ============================================ */}
-            {/* RESULTS TABLE - JIRA DENSE STYLE */}
+            {/* RESULTS TABLE - JIRA DENSE STYLE (SCROLLABLE) */}
             {/* ============================================ */}
-            <div className="flex-1 overflow-auto p-4" ref={printRef}>
+            <div className="flex-1 overflow-y-auto p-4" ref={printRef}>
                 {results.length === 0 && !loading ? (
                     <div className="flex flex-col items-center justify-center h-full text-slate-400">
                         <AlertCircle size={48} className="mb-4 opacity-50" />
@@ -644,7 +644,7 @@ const Reports: React.FC = () => {
                         <p className="text-sm">Ajuste os filtros e clique em "Buscar"</p>
                     </div>
                 ) : (
-                    <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+                    <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden min-h-[500px]">
                         <table className="w-full text-sm">
                             <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
                                 <tr>

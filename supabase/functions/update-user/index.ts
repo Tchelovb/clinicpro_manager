@@ -6,6 +6,8 @@ const corsHeaders = {
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+const VALID_ROLES = ['MASTER', 'ADMIN', 'PROFESSIONAL', 'SECRETARY'];
+
 serve(async (req) => {
     if (req.method === 'OPTIONS') {
         return new Response('ok', { headers: corsHeaders })
@@ -17,72 +19,81 @@ serve(async (req) => {
             Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
         )
 
-        const { user_id, email, full_name, role, permissions } = await req.json()
+        const { user_id, email, password, name, role, clinic_id, email_confirm, photo_url } = await req.json()
 
-        if (!user_id) {
-            throw new Error('user_id é obrigatório')
+        if (!user_id) throw new Error('user_id is required')
+
+        if (role && !VALID_ROLES.includes(role)) {
+            throw new Error(`Role inválida. Tipos permitidos: ${VALID_ROLES.join(', ')}`);
         }
 
-        // Update user metadata if email or full_name changed
-        if (email || full_name || role) {
-            const updateData: any = {}
-            if (email) updateData.email = email
-            if (full_name || role) {
-                updateData.user_metadata = {}
-                if (full_name) updateData.user_metadata.full_name = full_name
-                if (role) updateData.user_metadata.role = role
+        // Prepare updates object
+        const updates: any = { user_metadata: {} }
+
+        if (email) updates.email = email
+        if (password) updates.password = password
+        if (email_confirm) updates.email_confirm = true
+
+        // Metadata updates (merged)
+        if (name) updates.user_metadata.name = name
+        if (role) updates.user_metadata.role = role
+        if (clinic_id) updates.user_metadata.clinic_id = clinic_id
+        if (photo_url) updates.user_metadata.avatar_url = photo_url
+
+        const { data, error } = await supabaseAdmin.auth.admin.updateUserById(
+            user_id,
+            updates
+        )
+
+        if (error) throw error
+
+        // Sync to public.users and handle Professional Promotion
+        if (name || role || photo_url) {
+            const publicUpdate: any = {}
+            if (name) publicUpdate.name = name
+            if (role) publicUpdate.role = role
+            if (photo_url) publicUpdate.photo_url = photo_url
+
+            // If promoting to PROFESSIONAL, ensure professional record exists
+            if (role === 'PROFESSIONAL' || role === 'MASTER') {
+                // Check if user already has professional_id
+                const { data: currentUser } = await supabaseAdmin
+                    .from('users')
+                    .select('professional_id')
+                    .eq('id', user_id)
+                    .single();
+
+                if (currentUser && !currentUser.professional_id) {
+                    // Create Professional
+                    const { data: newProf } = await supabaseAdmin
+                        .from('professionals')
+                        .insert({
+                            clinic_id: clinic_id || data.user.user_metadata.clinic_id, // fallback to existing meta
+                            name: name || data.user.user_metadata.name,
+                            is_active: true
+                        })
+                        .select()
+                        .single();
+
+                    if (newProf) {
+                        publicUpdate.professional_id = newProf.id;
+                        publicUpdate.is_clinical_provider = true;
+                    }
+                }
             }
 
-            const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(
-                user_id,
-                updateData
-            )
-
-            if (authError) throw authError
-        }
-
-        // Update public.users if email or name changed
-        if (email || full_name || role) {
-            const updateFields: any = {}
-            if (email) updateFields.email = email
-            if (full_name) updateFields.name = full_name
-            if (role) updateFields.role = role
-
-            const { error: usersError } = await supabaseAdmin
+            await supabaseAdmin
                 .from('users')
-                .update(updateFields)
+                .update(publicUpdate)
                 .eq('id', user_id)
-
-            if (usersError) throw usersError
         }
 
-        // Update permissions if provided
-        if (permissions) {
-            const { error: permError } = await supabaseAdmin.rpc('update_user_permission', {
-                target_user_id: user_id,
-                new_role: role || permissions.role,
-                view_financial: permissions.can_view_financial,
-                edit_calendar: permissions.can_edit_calendar,
-                manage_settings: permissions.can_manage_settings,
-                delete_patient: permissions.can_delete_patient,
-                give_discount: permissions.can_give_discount,
-                max_discount: permissions.max_discount_percent
-            })
-
-            if (permError) {
-                console.warn('Failed to update permissions:', permError)
-            }
-        }
-
-        return new Response(JSON.stringify({
-            message: "Usuário atualizado com sucesso!"
-        }), {
+        return new Response(JSON.stringify({ user: data.user }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 200,
         })
 
-    } catch (error) {
-        console.error('Error updating user:', error)
+    } catch (error: any) {
         return new Response(JSON.stringify({ error: error.message }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 400,

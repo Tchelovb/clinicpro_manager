@@ -150,232 +150,237 @@ const AttendanceQueue: React.FC = () => {
     }
 
     return (
-        <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950 p-6 gap-6">
-            {/* HEADER */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                        <UserCheck className="text-green-600" size={28} />
-                        Fila de Atendimento
-                    </h1>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                        Pacientes que chegaram hoje • Atualização automática
-                    </p>
+        <div className="h-full flex flex-col overflow-hidden bg-slate-50 dark:bg-slate-950">
+            {/* FIXED HEADER SECTION (Title + KPIs) */}
+            <div className="flex-none p-6 space-y-6 z-10">
+                {/* HEADER */}
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                            <UserCheck className="text-green-600" size={28} />
+                            Fila de Atendimento
+                        </h1>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                            Pacientes que chegaram hoje • Atualização automática
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+                            <input
+                                type="checkbox"
+                                checked={autoRefresh}
+                                onChange={(e) => setAutoRefresh(e.target.checked)}
+                                className="rounded"
+                            />
+                            Auto-refresh
+                        </label>
+                        <button
+                            onClick={() => loadQueue(false)}
+                            className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                        >
+                            <Loader2 size={16} className={loading ? 'animate-spin' : ''} />
+                        </button>
+                    </div>
                 </div>
-                <div className="flex items-center gap-2">
-                    <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
-                        <input
-                            type="checkbox"
-                            checked={autoRefresh}
-                            onChange={(e) => setAutoRefresh(e.target.checked)}
-                            className="rounded"
-                        />
-                        Auto-refresh
-                    </label>
-                    <button
-                        onClick={() => loadQueue(false)}
-                        className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                    >
-                        <Loader2 size={16} className={loading ? 'animate-spin' : ''} />
-                    </button>
+
+                {/* KPI CARDS */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-blue-100 dark:border-blue-900 shadow-sm flex items-center gap-4">
+                        <div className="p-3 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg">
+                            <DollarSign size={24} />
+                        </div>
+                        <div>
+                            <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase">Fila de Orçamentos</p>
+                            <p className="text-2xl font-black text-slate-900 dark:text-white">
+                                {budgetQueue.length} {budgetQueue.length === 1 ? 'Paciente' : 'Pacientes'}
+                            </p>
+                        </div>
+                    </div>
+                    <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-purple-100 dark:border-purple-900 shadow-sm flex items-center gap-4">
+                        <div className="p-3 bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-lg">
+                            <Stethoscope size={24} />
+                        </div>
+                        <div>
+                            <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase">Em Atendimento Clínico</p>
+                            <p className="text-2xl font-black text-slate-900 dark:text-white">
+                                {clinicalQueue.filter(q => q.status === 'IN_PROGRESS').length} {clinicalQueue.filter(q => q.status === 'IN_PROGRESS').length === 1 ? 'Paciente' : 'Pacientes'}
+                            </p>
+                        </div>
+                    </div>
+                    <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-green-100 dark:border-green-900 shadow-sm flex items-center gap-4">
+                        <div className="p-3 bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-lg">
+                            <Clock size={24} />
+                        </div>
+                        <div>
+                            <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase">Total na Fila</p>
+                            <p className="text-2xl font-black text-slate-900 dark:text-white">
+                                {queue.length} {queue.length === 1 ? 'Paciente' : 'Pacientes'}
+                            </p>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            {/* KPI CARDS */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-blue-100 dark:border-blue-900 shadow-sm flex items-center gap-4">
-                    <div className="p-3 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg">
-                        <DollarSign size={24} />
-                    </div>
-                    <div>
-                        <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase">Fila de Orçamentos</p>
-                        <p className="text-2xl font-black text-slate-900 dark:text-white">
-                            {budgetQueue.length} {budgetQueue.length === 1 ? 'Paciente' : 'Pacientes'}
-                        </p>
-                    </div>
-                </div>
-                <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-purple-100 dark:border-purple-900 shadow-sm flex items-center gap-4">
-                    <div className="p-3 bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-lg">
-                        <Stethoscope size={24} />
-                    </div>
-                    <div>
-                        <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase">Em Atendimento Clínico</p>
-                        <p className="text-2xl font-black text-slate-900 dark:text-white">
-                            {clinicalQueue.filter(q => q.status === 'IN_PROGRESS').length} {clinicalQueue.filter(q => q.status === 'IN_PROGRESS').length === 1 ? 'Paciente' : 'Pacientes'}
-                        </p>
-                    </div>
-                </div>
-                <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-green-100 dark:border-green-900 shadow-sm flex items-center gap-4">
-                    <div className="p-3 bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-lg">
-                        <Clock size={24} />
-                    </div>
-                    <div>
-                        <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase">Total na Fila</p>
-                        <p className="text-2xl font-black text-slate-900 dark:text-white">
-                            {queue.length} {queue.length === 1 ? 'Paciente' : 'Pacientes'}
-                        </p>
-                    </div>
-                </div>
-            </div>
+            {/* SCROLLABLE LISTS */}
+            <div className="flex-1 overflow-y-auto px-6 pb-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* ORCAMENTISTA */}
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col overflow-hidden">
+                        <div className="p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 rounded-t-2xl flex justify-between items-center">
+                            <h2 className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                                <DollarSign size={18} className="text-green-600 dark:text-green-400" />
+                                Lista de Orçamentos (Prioridade)
+                            </h2>
+                            <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-2 py-1 rounded-full font-black">
+                                HIGH TICKET
+                            </span>
+                        </div>
+                        <div className="p-4 space-y-3 overflow-y-auto flex-1">
+                            {budgetQueue.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center h-full text-slate-400 dark:text-slate-600">
+                                    <AlertCircle size={48} className="mb-4 opacity-50" />
+                                    <p className="text-sm font-medium">Nenhum orçamento na fila</p>
+                                </div>
+                            ) : (
+                                budgetQueue.map(item => (
+                                    <div
+                                        key={item.id}
+                                        className={`group p-4 border rounded-xl transition-all cursor-pointer ${item.status === 'IN_PROGRESS'
+                                            ? 'border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20 shadow-md'
+                                            : 'border-slate-100 dark:border-slate-800 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-md bg-white dark:bg-slate-800'
+                                            }`}
+                                    >
+                                        <div className="flex justify-between items-start">
+                                            <div className="flex-1">
+                                                <h3 className="font-bold text-slate-900 dark:text-white">{item.patients?.name || 'Paciente'}</h3>
+                                                <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-1">
+                                                    <Clock size={12} />
+                                                    Espera: <span className="text-orange-600 dark:text-orange-400 font-bold">
+                                                        {getWaitingTime(item.arrival_time)}
+                                                    </span>
+                                                </p>
+                                                {item.risk_level && (
+                                                    <span className={`inline-block mt-2 text-xs font-bold px-2 py-0.5 rounded ${item.risk_level === 'A'
+                                                        ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                                                        : item.risk_level === 'B'
+                                                            ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                                                            : 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300'
+                                                        }`}>
+                                                        Risco {item.risk_level}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            {item.status === 'IN_PROGRESS' && (
+                                                <div className="flex items-center gap-1 text-green-600 dark:text-green-400">
+                                                    <Play size={16} className="animate-pulse" />
+                                                    <span className="text-xs font-bold">EM ATENDIMENTO</span>
+                                                </div>
+                                            )}
+                                        </div>
 
-            {/* DUAL COLUMN LAYOUT */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 text">
-                {/* ORCAMENTISTA */}
-                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col overflow-hidden">
-                    <div className="p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 rounded-t-2xl flex justify-between items-center">
-                        <h2 className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
-                            <DollarSign size={18} className="text-green-600 dark:text-green-400" />
-                            Lista de Orçamentos (Prioridade)
-                        </h2>
-                        <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-2 py-1 rounded-full font-black">
-                            HIGH TICKET
-                        </span>
+                                        {/* Ações Rápidas */}
+                                        <div className="mt-4 flex gap-2">
+                                            <button
+                                                onClick={() => { setSelectedItem(item); setSheetOpen(true); }}
+                                                className="text-xs font-bold uppercase tracking-wider px-3 py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded text-slate-600 dark:text-slate-300 flex items-center gap-1 transition-colors"
+                                            >
+                                                <FileText size={12} /> Abrir Ficha
+                                            </button>
+                                            {item.status === 'WAITING' ? (
+                                                <button
+                                                    onClick={() => handleCallPatient(item)}
+                                                    className="text-xs font-bold uppercase tracking-wider px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded flex items-center gap-1 transition-colors"
+                                                >
+                                                    <UserCheck size={12} /> Chamar Agora
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    onClick={() => handleCompleteAttendance(item)}
+                                                    className="text-xs font-bold uppercase tracking-wider px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded flex items-center gap-1 transition-colors"
+                                                >
+                                                    <CheckCircle2 size={12} /> Finalizar
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
                     </div>
-                    <div className="p-4 space-y-3 overflow-y-auto flex-1">
-                        {budgetQueue.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center h-full text-slate-400 dark:text-slate-600">
-                                <AlertCircle size={48} className="mb-4 opacity-50" />
-                                <p className="text-sm font-medium">Nenhum orçamento na fila</p>
-                            </div>
-                        ) : (
-                            budgetQueue.map(item => (
-                                <div
-                                    key={item.id}
-                                    className={`group p-4 border rounded-xl transition-all cursor-pointer ${item.status === 'IN_PROGRESS'
-                                        ? 'border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20 shadow-md'
-                                        : 'border-slate-100 dark:border-slate-800 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-md bg-white dark:bg-slate-800'
-                                        }`}
-                                >
-                                    <div className="flex justify-between items-start">
-                                        <div className="flex-1">
-                                            <h3 className="font-bold text-slate-900 dark:text-white">{item.patients?.name || 'Paciente'}</h3>
-                                            <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-1">
-                                                <Clock size={12} />
-                                                Espera: <span className="text-orange-600 dark:text-orange-400 font-bold">
-                                                    {getWaitingTime(item.arrival_time)}
-                                                </span>
-                                            </p>
-                                            {item.risk_level && (
-                                                <span className={`inline-block mt-2 text-xs font-bold px-2 py-0.5 rounded ${item.risk_level === 'A'
-                                                    ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
-                                                    : item.risk_level === 'B'
-                                                        ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
-                                                        : 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300'
-                                                    }`}>
-                                                    Risco {item.risk_level}
+
+                    {/* CLINICA */}
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col overflow-hidden">
+                        <div className="p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 rounded-t-2xl">
+                            <h2 className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                                <Stethoscope size={18} className="text-purple-600 dark:text-purple-400" />
+                                Lista de Atendimento Clínico
+                            </h2>
+                        </div>
+
+                        <div className="p-4 space-y-3 overflow-y-auto flex-1">
+                            {clinicalQueue.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center h-full text-slate-400 dark:text-slate-600">
+                                    <AlertCircle size={48} className="mb-4 opacity-50" />
+                                    <p className="text-sm font-medium">Nenhum paciente clínico na fila</p>
+                                </div>
+                            ) : (
+                                clinicalQueue.map(item => (
+                                    <div
+                                        key={item.id}
+                                        className={`p-4 rounded-xl border transition-all ${item.status === 'IN_PROGRESS'
+                                            ? 'border-l-4 border-l-purple-500 dark:border-l-purple-400 bg-purple-50/30 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800'
+                                            : 'border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-800'
+                                            }`}
+                                    >
+                                        <div className="flex justify-between items-start">
+                                            <div className="flex-1">
+                                                <h3 className="font-bold text-slate-900 dark:text-white">{item.patients?.name || 'Paciente'}</h3>
+                                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                                    {item.professional?.name || 'Sem profissional'}
+                                                </p>
+                                                <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-1">
+                                                    <Clock size={12} />
+                                                    Espera: <span className="text-orange-600 dark:text-orange-400 font-bold">
+                                                        {getWaitingTime(item.arrival_time)}
+                                                    </span>
+                                                </p>
+                                            </div>
+                                            {item.status === 'IN_PROGRESS' && (
+                                                <span className="text-xs font-bold text-purple-600 dark:text-purple-400">
+                                                    EM ATENDIMENTO
                                                 </span>
                                             )}
                                         </div>
-                                        {item.status === 'IN_PROGRESS' && (
-                                            <div className="flex items-center gap-1 text-green-600 dark:text-green-400">
-                                                <Play size={16} className="animate-pulse" />
-                                                <span className="text-xs font-bold">EM ATENDIMENTO</span>
-                                            </div>
-                                        )}
-                                    </div>
 
-                                    {/* Ações Rápidas */}
-                                    <div className="mt-4 flex gap-2">
-                                        <button
-                                            onClick={() => { setSelectedItem(item); setSheetOpen(true); }}
-                                            className="text-xs font-bold uppercase tracking-wider px-3 py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded text-slate-600 dark:text-slate-300 flex items-center gap-1 transition-colors"
-                                        >
-                                            <FileText size={12} /> Abrir Ficha
-                                        </button>
-                                        {item.status === 'WAITING' ? (
-                                            <button
-                                                onClick={() => handleCallPatient(item)}
-                                                className="text-xs font-bold uppercase tracking-wider px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded flex items-center gap-1 transition-colors"
-                                            >
-                                                <UserCheck size={12} /> Chamar Agora
-                                            </button>
-                                        ) : (
-                                            <button
-                                                onClick={() => handleCompleteAttendance(item)}
-                                                className="text-xs font-bold uppercase tracking-wider px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded flex items-center gap-1 transition-colors"
-                                            >
-                                                <CheckCircle2 size={12} /> Finalizar
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-                            ))
-                        )}
-                    </div>
-                </div>
-
-                {/* CLINICA */}
-                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col overflow-hidden">
-                    <div className="p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 rounded-t-2xl">
-                        <h2 className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
-                            <Stethoscope size={18} className="text-purple-600 dark:text-purple-400" />
-                            Lista de Atendimento Clínico
-                        </h2>
-                    </div>
-
-                    <div className="p-4 space-y-3 overflow-y-auto flex-1">
-                        {clinicalQueue.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center h-full text-slate-400 dark:text-slate-600">
-                                <AlertCircle size={48} className="mb-4 opacity-50" />
-                                <p className="text-sm font-medium">Nenhum paciente clínico na fila</p>
-                            </div>
-                        ) : (
-                            clinicalQueue.map(item => (
-                                <div
-                                    key={item.id}
-                                    className={`p-4 rounded-xl border transition-all ${item.status === 'IN_PROGRESS'
-                                        ? 'border-l-4 border-l-purple-500 dark:border-l-purple-400 bg-purple-50/30 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800'
-                                        : 'border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-800'
-                                        }`}
-                                >
-                                    <div className="flex justify-between items-start">
-                                        <div className="flex-1">
-                                            <h3 className="font-bold text-slate-900 dark:text-white">{item.patients?.name || 'Paciente'}</h3>
-                                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                                                {item.professional?.name || 'Sem profissional'}
-                                            </p>
-                                            <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-1">
-                                                <Clock size={12} />
-                                                Espera: <span className="text-orange-600 dark:text-orange-400 font-bold">
-                                                    {getWaitingTime(item.arrival_time)}
-                                                </span>
-                                            </p>
-                                        </div>
-                                        {item.status === 'IN_PROGRESS' && (
-                                            <span className="text-xs font-bold text-purple-600 dark:text-purple-400">
-                                                EM ATENDIMENTO
-                                            </span>
-                                        )}
-                                    </div>
-
-                                    <div className="mt-3 flex gap-2">
-                                        {item.status === 'WAITING' ? (
-                                            <button
-                                                onClick={() => handleCallPatient(item)}
-                                                className="text-xs font-bold text-purple-700 dark:text-purple-300 underline hover:no-underline"
-                                            >
-                                                Chamar Paciente
-                                            </button>
-                                        ) : (
-                                            <>
+                                        <div className="mt-3 flex gap-2">
+                                            {item.status === 'WAITING' ? (
                                                 <button
-                                                    onClick={() => { setSelectedItem(item); setSheetOpen(true); }}
+                                                    onClick={() => handleCallPatient(item)}
                                                     className="text-xs font-bold text-purple-700 dark:text-purple-300 underline hover:no-underline"
                                                 >
-                                                    Acessar Prontuário
+                                                    Chamar Paciente
                                                 </button>
-                                                <button
-                                                    onClick={() => handleCompleteAttendance(item)}
-                                                    className="text-xs font-bold text-green-700 dark:text-green-300 underline hover:no-underline"
-                                                >
-                                                    Finalizar Atendimento
-                                                </button>
-                                            </>
-                                        )}
+                                            ) : (
+                                                <>
+                                                    <button
+                                                        onClick={() => { setSelectedItem(item); setSheetOpen(true); }}
+                                                        className="text-xs font-bold text-purple-700 dark:text-purple-300 underline hover:no-underline"
+                                                    >
+                                                        Acessar Prontuário
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleCompleteAttendance(item)}
+                                                        className="text-xs font-bold text-green-700 dark:text-green-300 underline hover:no-underline"
+                                                    >
+                                                        Finalizar Atendimento
+                                                    </button>
+                                                </>
+                                            )}
+                                        </div>
                                     </div>
-                                </div>
-                            ))
-                        )}
+                                ))
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>

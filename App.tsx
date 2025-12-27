@@ -41,6 +41,7 @@ import Settings from "./pages/Settings";
 import Profile from "./pages/Profile";
 import AuditLogs from "./pages/AuditLogs";
 import CostWizard from "./pages/settings/CostWizard";
+import { Team } from "./pages/settings/Team";
 
 // ============================================
 // FORMS
@@ -83,10 +84,10 @@ const App: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
-        <AuthProvider>
-          <FinancialProvider>
-            <DataProvider>
-              <HashRouter>
+        <HashRouter>
+          <AuthProvider>
+            <FinancialProvider>
+              <DataProvider>
                 <Routes>
                   {/* PUBLIC ROUTES */}
                   <Route path="/login" element={<Login />} />
@@ -157,6 +158,7 @@ const App: React.FC = () => {
                     <Route path="/reports" element={<Reports />} />
                     <Route path="/chat-bos" element={<ChatBOS />} />
                     <Route path="/settings" element={<Settings />} />
+                    <Route path="/settings/team" element={<Team />} /> {/* Nova Rota de Equipe */}
                     <Route path="/settings/costs" element={<CostWizard />} />
                     <Route path="/audit-logs" element={<AuditLogs />} />
 
@@ -195,10 +197,10 @@ const App: React.FC = () => {
                   {/* FALLBACK (404) */}
                   <Route path="*" element={<Navigate to="/dashboard" replace />} />
                 </Routes>
-              </HashRouter>
-            </DataProvider>
-          </FinancialProvider>
-        </AuthProvider>
+              </DataProvider>
+            </FinancialProvider>
+          </AuthProvider>
+        </HashRouter>
       </ThemeProvider>
     </QueryClientProvider>
   );

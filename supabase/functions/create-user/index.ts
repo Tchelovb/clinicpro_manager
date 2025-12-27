@@ -6,70 +6,109 @@ const corsHeaders = {
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+const VALID_ROLES = ['MASTER', 'ADMIN', 'PROFESSIONAL', 'SECRETARY'];
+
 serve(async (req) => {
-    // 1. Handle CORS pre-flight request
+    // 1. CORS Pre-flight
     if (req.method === 'OPTIONS') {
         return new Response('ok', { headers: corsHeaders })
     }
 
     try {
-        // 2. Create Supabase Admin client with Service Role privileges
+        // 2. Initialize Admin Client
         const supabaseAdmin = createClient(
             Deno.env.get('SUPABASE_URL') ?? '',
             Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
         )
 
-        // 3. Get data from frontend
-        const { email, password, full_name, role, clinic_id } = await req.json()
+        // 3. Parse Request Body
+        const { email, name, role, clinic_id, password, photo_url } = await req.json()
 
-        // Basic validation
-        if (!email || !password || !clinic_id) {
-            throw new Error('Dados incompletos: email, password e clinic_id são obrigatórios.')
+        // Validation
+        if (!email || !clinic_id) {
+            throw new Error('Email e Clinic ID são obrigatórios.')
         }
 
-        // 4. Create user in Auth (without logging in)
-        const { data, error } = await supabaseAdmin.auth.admin.createUser({
+        if (role && !VALID_ROLES.includes(role)) {
+            throw new Error(`Role inválida. Tipos permitidos: ${VALID_ROLES.join(', ')}`);
+        }
+
+        // 4. Create User in Auth
+        const tempPassword = password || "Mudar@123"
+
+        const { data: { user }, error: createError } = await supabaseAdmin.auth.admin.createUser({
             email: email,
-            password: password,
-            email_confirm: true, // Create already confirmed
+            password: tempPassword,
+            email_confirm: true,
             user_metadata: {
-                full_name: full_name || email,
-                role: role || 'secretary',
-                clinic_id: clinic_id
+                name: name || email.split('@')[0],
+                role: role || 'PROFESSIONAL',
+                clinic_id: clinic_id,
+                avatar_url: photo_url
             }
         })
 
-        if (error) throw error
+        if (createError) throw createError
+        if (!user) throw new Error('Falha ao criar usuário (sem dados retornados).');
 
-        // The database trigger (Step 1) will automatically run here and create the public.users record
+        // 5. Update Photo URL in Public Users
+        if (photo_url) {
+            const { error: photoErr } = await supabaseAdmin
+                .from('users')
+                .update({ photo_url: photo_url })
+                .eq('id', user.id);
+            if (photoErr) console.error('Error updating photo_url:', photoErr);
+        }
 
-        // 5. Create initial permissions
-        if (data.user) {
-            await supabaseAdmin.rpc('update_user_permission', {
-                target_user_id: data.user.id,
-                new_role: role || 'secretary',
-                view_financial: role === 'admin',
-                edit_calendar: true,
-                manage_settings: role === 'admin',
-                delete_patient: role === 'admin',
-                give_discount: role === 'admin' || role === 'dentist',
-                max_discount: role === 'admin' ? 100.00 : 10.00
-            }).catch(err => {
-                console.warn('Failed to set permissions:', err)
-                // Don't fail the whole operation if permissions fail
-            })
+        // 6. Handle Professional Record Creation
+        // If the role implies a clinical provider, we ensure a record exists in 'professionals'
+        if (role === 'PROFESSIONAL' || role === 'MASTER') {
+            // We wait a brief moment for the Trigger to fire and create public.users
+            // Alternatively, we safely upsert into public.professionals
+
+            // Create Professional Entity
+            const { data: professional, error: profError } = await supabaseAdmin
+                .from('professionals')
+                .insert({
+                    clinic_id: clinic_id,
+                    name: name || email.split('@')[0],
+                    is_active: true
+                })
+                .select()
+                .single();
+
+            if (profError) {
+                console.error('Error creating professional record:', profError);
+                // We don't block the response but log it
+            } else if (professional) {
+                // Link to User
+                // We need to ensure public.users row exists. The trigger usually does this.
+                // We'll update the public.users row with professional_id
+                // Delaying slightly might be needed if trigger is slow, but usually it's robust enough or we retry?
+                // Supabase triggers are synchronous-ish within the same transaction but this is API.
+                // We'll update public.users
+                const { error: linkError } = await supabaseAdmin
+                    .from('users')
+                    .update({
+                        professional_id: professional.id,
+                        is_clinical_provider: true
+                    })
+                    .eq('id', user.id);
+
+                if (linkError) console.error('Error linking professional to user:', linkError);
+            }
         }
 
         return new Response(JSON.stringify({
-            user: data.user,
+            user: user,
             message: "Usuário criado com sucesso!"
         }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 200,
         })
 
-    } catch (error) {
-        console.error('Error creating user:', error)
+    } catch (error: any) {
+        console.error('Error in create-user:', error)
         return new Response(JSON.stringify({ error: error.message }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 400,
