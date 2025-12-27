@@ -148,7 +148,7 @@ const PatientForm: React.FC<PatientFormProps> = ({
 
     if (!formData.name || !formData.phone) {
       setError("Nome completo e Telefone são obrigatórios.");
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      document.getElementById('main-content')?.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
 

@@ -5,10 +5,12 @@ import { useAuth } from '../contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
 import BottomNav from './BottomNav';
 import { BOSFloatingButton } from './BOSFloatingButton';
+import { useScrollTop } from '../hooks/useScrollTop';
 
 export default function AppLayout() {
   const { user, clinicId, loading, signOut } = useAuth();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
+  useScrollTop(); // Auto-scroll to top on route change
 
   // 1. Loading Inicial
   if (loading) {
@@ -46,7 +48,7 @@ export default function AppLayout() {
       </div>
 
       <main className="flex-1 flex flex-col h-full overflow-hidden relative">
-        <div className="flex-1 overflow-y-auto p-4 md:p-8">
+        <div id="main-content" className="flex-1 overflow-y-auto p-4 md:p-8">
           <Outlet />
         </div>
       </main>

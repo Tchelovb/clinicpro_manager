@@ -19,6 +19,7 @@ import {
 } from "../components/ui/dropdown-menu";
 import { cn } from "../lib/utils";
 import { LeadDetailsSheet } from "../components/pipeline/LeadDetailsSheet";
+import { LeadDetailSheet } from "../components/crm/LeadDetailSheet";
 
 // Priority Badge Configuration
 const getPriorityConfig = (priority: string) => {
@@ -82,6 +83,10 @@ export const PipelinePage: React.FC = () => {
     // Sheet State
     const [isSheetOpen, setIsSheetOpen] = useState(false);
     const [selectedLead, setSelectedLead] = useState<HighTicketLead | null>(null);
+
+    // New Detail Sheet State
+    const [isDetailSheetOpen, setIsDetailSheetOpen] = useState(false);
+    const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
 
     // Filter State
     const [filterPriority, setFilterPriority] = useState<'ALL' | 'HIGH' | 'MEDIUM' | 'LOW'>('ALL');
@@ -150,8 +155,9 @@ export const PipelinePage: React.FC = () => {
     };
 
     const handleEditLead = (lead: HighTicketLead) => {
-        setSelectedLead(lead);
-        setIsSheetOpen(true);
+        // Open new App Shell detail sheet
+        setSelectedLeadId(lead.id);
+        setIsDetailSheetOpen(true);
     };
 
     // Drag & Drop Logic
@@ -389,27 +395,26 @@ export const PipelinePage: React.FC = () => {
                             return (
                                 <div
                                     key={stage.id}
-                                    className={`flex flex-col flex-1 min-w-[280px] bg-slate-50/50 dark:bg-slate-900/50 rounded-xl border-t-4 ${borderColor} border-x border-b border-slate-200/60 dark:border-slate-800/60 shadow-sm transition-colors`}
+
+                                    className={`w-full md:w-72 flex flex-col min-h-[500px] md:min-h-0 md:h-full rounded-xl bg-slate-50/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 md:max-h-full shrink-0`}
                                     onDragOver={handleDragOver}
                                     onDrop={() => handleDrop(stage.id)}
                                 >
                                     {/* Column Header */}
-                                    <div className="p-3 border-b border-slate-100 dark:border-slate-800 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm rounded-t-lg transition-colors">
-                                        <div className="flex items-center justify-between mb-1">
-                                            <div className="flex items-center gap-2">
-                                                <Icon size={16} className="text-slate-500 dark:text-slate-400" />
-                                                <span className="font-bold text-sm text-slate-700 dark:text-slate-200">
-                                                    {stage.name}
-                                                </span>
-                                            </div>
-                                            <span className="text-[10px] font-bold bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-300 px-2 py-0.5 rounded-full shadow-sm transition-colors">
-                                                {columnLeads.length}
+                                    <div className={`p-3 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-white dark:bg-slate-800 rounded-t-xl border-t-4 ${borderColor} flex-shrink-0 sticky top-0 z-10 md:static`}>
+                                        <div className="flex items-center gap-2">
+                                            <Icon size={16} className="text-slate-500 dark:text-slate-400" />
+                                            <span className="font-bold text-sm text-slate-700 dark:text-slate-200">
+                                                {stage.name}
                                             </span>
                                         </div>
+                                        <span className="text-[10px] font-bold bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-300 px-2 py-0.5 rounded-full shadow-sm transition-colors">
+                                            {columnLeads.length}
+                                        </span>
                                     </div>
 
                                     {/* Cards Container */}
-                                    <div className="p-2 flex-1 overflow-y-auto space-y-2">
+                                    <div className="p-2 flex-1 md:overflow-y-auto scrollbar-hide">
                                         {columnLeads.length > 0 ? (
                                             columnLeads.map(lead => {
                                                 const priorityConfig = getPriorityConfig(lead.priority);
@@ -566,6 +571,13 @@ export const PipelinePage: React.FC = () => {
                 lead={selectedLead}
                 onSave={loadData}
                 pipeline={pipeline}
+            />
+
+            {/* New App Shell Lead Detail Sheet */}
+            <LeadDetailSheet
+                leadId={selectedLeadId}
+                open={isDetailSheetOpen}
+                onOpenChange={setIsDetailSheetOpen}
             />
         </div>
     );

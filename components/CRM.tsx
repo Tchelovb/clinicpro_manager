@@ -10,12 +10,17 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useLeads } from '../hooks/useLeads';
 import { useUnapprovedBudgets } from '../hooks/useBudgets';
+import { LeadDetailSheet } from './crm/LeadDetailSheet';
 
 const CRM: React.FC = () => {
     const { leads, isLoading, createLead } = useLeads();
     const { budgets: unapprovedBudgets, isLoading: budgetsLoading } = useUnapprovedBudgets();
     const navigate = useNavigate();
     const [activeView, setActiveView] = useState<'kanban' | 'list' | 'budgets'>('kanban');
+
+    // Lead Detail Sheet State
+    const [isDetailSheetOpen, setIsDetailSheetOpen] = useState(false);
+    const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
 
     const conversionRate = leads.length ? (leads.filter(l => l.status === LeadStatus.WON).length / leads.length) * 100 : 0;
     const totalValue = leads.reduce((acc, l) => acc + (l.value || 0), 0);
@@ -41,6 +46,11 @@ const CRM: React.FC = () => {
         });
     };
 
+    const handleLeadClick = (leadId: string) => {
+        setSelectedLeadId(leadId);
+        setIsDetailSheetOpen(true);
+    };
+
     if (isLoading) {
         return <div className="flex h-full items-center justify-center"><Loader className="animate-spin text-blue-600" size={32} /></div>;
     }
@@ -51,7 +61,7 @@ const CRM: React.FC = () => {
 
         return (
             <div
-                onClick={() => navigate(`/crm/${lead.id}`)}
+                onClick={() => handleLeadClick(lead.id)}
                 className="bg-white dark:bg-gray-800 p-4 md:p-3 rounded-xl md:rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-600 transition-all cursor-pointer mb-3 group relative w-full"
             >
                 <div className="flex justify-between items-start mb-2">
@@ -122,14 +132,14 @@ const CRM: React.FC = () => {
 
             {/* --- VIEW: KANBAN --- */}
             {activeView === 'kanban' && (
-                <div className="flex-1 md:overflow-x-auto md:overflow-y-hidden">
+                <div className="flex-1 overflow-hidden">
                     {/* MOBILE: Flex Column (Vertical Stack) | DESKTOP: Flex Row (Horizontal) */}
-                    <div className="flex flex-col md:flex-row gap-4 h-auto md:h-full w-full md:min-w-max pb-4">
+                    <div className="flex flex-col md:flex-row gap-4 h-full w-full md:min-w-max pb-20 md:pb-4 overflow-y-auto md:overflow-y-hidden md:overflow-x-auto">
                         {KANBAN_COLUMNS.map((column) => {
                             const columnLeads = leads.filter(l => l.status === column.id);
 
                             return (
-                                <div key={column.id} className="w-full md:w-72 flex flex-col md:h-full rounded-xl bg-gray-50/50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 md:max-h-full shrink-0">
+                                <div key={column.id} className="w-full md:w-72 flex flex-col min-h-[500px] md:min-h-0 md:h-full rounded-xl bg-gray-50/50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 md:max-h-full shrink-0">
                                     <div className={`p-3 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-white dark:bg-gray-800 rounded-t-xl border-t-4 ${column.color} flex-shrink-0 sticky top-0 z-10 md:static`}>
                                         <h3 className="font-bold text-gray-700 dark:text-gray-200 text-sm">{column.title}</h3>
                                         <span className="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[10px] px-2 py-0.5 rounded-full font-bold">
@@ -162,8 +172,8 @@ const CRM: React.FC = () => {
                         {leads.map(lead => (
                             <div
                                 key={lead.id}
-                                onClick={() => navigate(`/crm/${lead.id}`)}
-                                className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm active:scale-[0.98] transition-all"
+                                onClick={() => handleLeadClick(lead.id)}
+                                className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm active:scale-[0.98] transition-all cursor-pointer"
                             >
                                 <div className="flex justify-between items-start mb-2">
                                     <div>
@@ -201,7 +211,7 @@ const CRM: React.FC = () => {
                                 </thead>
                                 <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                                     {leads.map(lead => (
-                                        <tr key={lead.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors" onClick={() => navigate(`/crm/${lead.id}`)}>
+                                        <tr key={lead.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors" onClick={() => handleLeadClick(lead.id)}>
                                             <td className="px-6 py-3 font-medium text-gray-900 dark:text-white">{lead.name}</td>
                                             <td className="px-6 py-3 text-gray-500 dark:text-gray-400">{lead.source}</td>
                                             <td className="px-6 py-3">
@@ -352,6 +362,13 @@ const CRM: React.FC = () => {
                     <Plus size={20} /> Novo Contato
                 </button>
             </div>
+
+            {/* Lead Detail Sheet */}
+            <LeadDetailSheet
+                leadId={selectedLeadId}
+                open={isDetailSheetOpen}
+                onOpenChange={setIsDetailSheetOpen}
+            />
         </div>
     );
 };

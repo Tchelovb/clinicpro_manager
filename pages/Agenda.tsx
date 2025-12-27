@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
+import { useMediaQuery } from '../hooks/useMediaQuery';
 import {
     Calendar as CalendarIcon, ChevronLeft, ChevronRight, Plus, Filter,
     Clock, User, Phone, CheckCircle, XCircle, AlertCircle, Loader2,
@@ -49,6 +50,7 @@ const Agenda: React.FC = () => {
     const navigate = useNavigate();
     const [currentDate, setCurrentDate] = useState(new Date());
     const [viewMode, setViewMode] = useState<'week' | 'day'>('week');
+    const isMobile = useMediaQuery('(max-width: 768px)');
     const [appointments, setAppointments] = useState<Appointment[]>([]);
     const [professionals, setProfessionals] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -76,6 +78,12 @@ const Agenda: React.FC = () => {
     useEffect(() => {
         loadData();
     }, [currentDate, profile?.clinic_id]);
+
+    useEffect(() => {
+        if (isMobile) {
+            setViewMode('day');
+        }
+    }, [isMobile]);
 
     // Search patients when typing (min 3 characters)
     useEffect(() => {
