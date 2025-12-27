@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { usePatients } from "../hooks/usePatients";
+import { useAuth } from "../contexts/AuthContext";
 import { Patient } from "../types";
 import { supabase } from "../lib/supabase";
 import {
@@ -39,6 +40,7 @@ const PatientForm: React.FC<PatientFormProps> = ({
   const navigate = useNavigate();
   const { id: paramId } = useParams<{ id: string }>();
   const { createPatientAsync, updatePatientAsync } = usePatients();
+  const { clinicId } = useAuth();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(!initialReadonly);
@@ -136,6 +138,13 @@ const PatientForm: React.FC<PatientFormProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // 🛡️ SESSÃO BLINDADA: Validação Crítica de Segurança
+    if (!clinicId) {
+      toast.error("Erro Crítico de Segurança: Identificação da clínica não encontrada. Por favor, faça login novamente.");
+      setError("Erro de Sessão: clinic_id ausente. Recarregue a página.");
+      return;
+    }
 
     if (!formData.name || !formData.phone) {
       setError("Nome completo e Telefone são obrigatórios.");

@@ -23,6 +23,7 @@ interface AuthContextType {
   profile: Profile | null;
   loading: boolean;
   activeClinicId: string | null;
+  clinicId?: string; // Atalho direto para profile.clinic_id
   setActiveClinic: (clinicId: string | null) => void;
   updateProfileSettings: (settings: Partial<Profile>) => Promise<void>;
   signIn: (
@@ -51,27 +52,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log("Auth event:", event);
 
       setUser(session?.user ?? null);
 
       if (session?.user) {
         if (session.user.id) {
-          // Faz o fetchProfile em background, sem bloquear o loading
-          fetchProfile(session.user.id).catch((err) => {
+          // AWAIT CRÍTICO: Bloqueia o app até carregar o clinic_id
+          // Isso garante "Sessão Blindada" - nada roda sem profile
+          try {
+            await fetchProfile(session.user.id);
+          } catch (err) {
             console.error(
-              "Falha ao carregar profile (continuando sem ele):",
+              "Falha crítica ao carregar profile:",
               err
             );
             setProfile(null);
-          });
+          }
         }
       } else {
         setProfile(null);
       }
 
-      // SEMPRE termina o loading, independentemente do profile
+      // Só libera o app depois de garantir que temos (ou tentamos ter) o profile
       setLoading(false);
     });
 
@@ -222,7 +226,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, activeClinicId, setActiveClinic, signIn, signUp, signOut, updateProfileSettings }}>
+    <AuthContext.Provider value={{
+      user,
+      profile,
+      loading,
+      activeClinicId,
+      // Helper direto para garantir acesso fácil ao ID blindado
+      clinicId: profile?.clinic_id,
+      setActiveClinic,
+      signIn,
+      signUp,
+      signOut,
+      updateProfileSettings
+    }}>
       {children}
     </AuthContext.Provider>
   );
