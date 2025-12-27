@@ -27,16 +27,26 @@ const Inventory: React.FC = () => {
     const [filterCategory, setFilterCategory] = useState<'ALL' | 'IMPLANTS' | 'MATERIALS' | 'PROSTHESIS' | 'CONSUMABLES'>('ALL');
 
     useEffect(() => {
-        loadInventory();
-    }, []);
+        // Guard clause: só carrega se clinic_id estiver disponível
+        if (profile?.clinic_id) {
+            loadInventory();
+        }
+    }, [profile?.clinic_id]);
 
     const loadInventory = async () => {
+        // Double check: não faz requisição se clinic_id for undefined
+        if (!profile?.clinic_id) {
+            console.warn('Inventory: clinic_id não disponível ainda');
+            setLoading(false);
+            return;
+        }
+
         try {
             setLoading(true);
             const { data, error } = await supabase
                 .from('inventory_items')
                 .select('*')
-                .eq('clinic_id', profile?.clinic_id)
+                .eq('clinic_id', profile.clinic_id)
                 .order('name');
 
             if (error) throw error;

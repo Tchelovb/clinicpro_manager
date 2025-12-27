@@ -53,6 +53,11 @@ export const usePatients = () => {
 
   const createPatientMutation = useMutation({
     mutationFn: async (patient: any) => {
+      // Guard clause: não permite criar paciente sem clinic_id
+      if (!clinicId) {
+        throw new Error('clinic_id não disponível. Por favor, faça login novamente.');
+      }
+
       const { data, error } = await supabase
         .from("patients")
         .insert([
