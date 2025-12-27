@@ -31,7 +31,7 @@ import PriceTablesSettings from '../components/settings/PriceTablesSettings';
 import ProceduresManager from '../components/settings/ProceduresManager';
 import { AIIntegrationsSettings } from '../src/components/settings/AIIntegrationsSettings';
 import FinancialRulesSettings from '../components/settings/financial-rules/FinancialRulesSettings';
-import { TeamSettings } from '../src/components/settings/TeamSettings';
+import { TeamManagement } from '../components/TeamManagement';
 
 const Settings: React.FC = () => {
     const navigate = useNavigate();
@@ -162,7 +162,7 @@ const Settings: React.FC = () => {
 
                         {/* FOUNDATION TAB */}
                         {activeTab === 'foundation' && subTab === 'clinic' && <ClinicSettings />}
-                        {activeTab === 'foundation' && subTab === 'users' && <TeamSettings />}
+                        {activeTab === 'foundation' && subTab === 'users' && <TeamManagement />}
                         {activeTab === 'foundation' && subTab === 'professionals' && <ProfessionalsSettings />}
                         {activeTab === 'foundation' && subTab === 'security' && <SetupSecurityPin />}
 
