@@ -206,183 +206,181 @@ export const PipelinePage: React.FC = () => {
 
 
     return (
-        <div className="flex flex-col h-full space-y-4 p-4">
+        <div className="h-full flex flex-col bg-slate-50 dark:bg-slate-950 overflow-hidden">
 
             {/* ============================================ */}
-            {/* HEADER - JIRA STYLE */}
+            {/* HEADER - FIXO */}
             {/* ============================================ */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm shrink-0 transition-colors">
-                <div>
+            <div className="flex-none bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-3 md:p-4">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-3">
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" className="p-0 h-auto hover:bg-transparent text-lg md:text-xl font-bold text-slate-800 dark:text-white tracking-tight flex items-center gap-2">
+                                        <Sparkles className="text-amber-500 fill-amber-500" size={20} />
+                                        {pipeline?.name || 'Pipeline'}
+                                        <ChevronDown size={18} className="text-slate-400" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="start" className="w-56 dark:bg-slate-800 dark:border-slate-700">
+                                    {allPipelines.map(p => (
+                                        <DropdownMenuItem
+                                            key={p.id}
+                                            onClick={() => handlePipelineChange(p.id)}
+                                            className={cn("cursor-pointer font-medium dark:text-slate-200 dark:focus:bg-slate-700", p.id === pipeline?.id && "bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300")}
+                                        >
+                                            {p.name}
+                                            {p.is_default && <span className="ml-auto text-[10px] text-slate-400">Padrão</span>}
+                                        </DropdownMenuItem>
+                                    ))}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
+                        <div className="flex items-center gap-2 mt-1 text-xs text-slate-500 dark:text-slate-400">
+                            <span>Funil de Vendas</span>
+                            <span className="w-1 h-1 bg-slate-300 dark:bg-slate-600 rounded-full" />
+                            <span>{leads.length} leads ativos</span>
+                        </div>
+                    </div>
+
                     <div className="flex items-center gap-2">
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="p-0 h-auto hover:bg-transparent text-xl font-bold text-slate-800 dark:text-white tracking-tight flex items-center gap-2">
-                                    <Sparkles className="text-amber-500 fill-amber-500" size={20} />
-                                    {pipeline?.name || 'Pipeline'}
-                                    <ChevronDown size={18} className="text-slate-400" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="start" className="w-56 dark:bg-slate-800 dark:border-slate-700">
-                                {allPipelines.map(p => (
-                                    <DropdownMenuItem
-                                        key={p.id}
-                                        onClick={() => handlePipelineChange(p.id)}
-                                        className={cn("cursor-pointer font-medium dark:text-slate-200 dark:focus:bg-slate-700", p.id === pipeline?.id && "bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300")}
-                                    >
-                                        {p.name}
-                                        {p.is_default && <span className="ml-auto text-[10px] text-slate-400">Padrão</span>}
-                                    </DropdownMenuItem>
-                                ))}
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    </div>
-                    <div className="flex items-center gap-2 mt-1 text-xs text-slate-500 dark:text-slate-400">
-                        <span>Funil de Vendas</span>
-                        <span className="w-1 h-1 bg-slate-300 dark:bg-slate-600 rounded-full" />
-                        <span>{leads.length} leads ativos</span>
+                        {/* View Toggles */}
+                        <div className="hidden lg:flex bg-slate-100 dark:bg-slate-700 p-0.5 rounded-lg">
+                            <button
+                                onClick={() => setViewMode('board')}
+                                className={`px-2 py-1 rounded text-[10px] font-bold flex items-center gap-1 transition-all ${viewMode === 'board'
+                                    ? 'bg-white dark:bg-slate-600 text-slate-800 dark:text-white shadow'
+                                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                                    }`}
+                            >
+                                <Briefcase size={12} /> Board
+                            </button>
+                            <button
+                                onClick={() => setViewMode('list')}
+                                className={`px-2 py-1 rounded text-[10px] font-bold flex items-center gap-1 transition-all ${viewMode === 'list'
+                                    ? 'bg-white dark:bg-slate-600 text-slate-800 dark:text-white shadow'
+                                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                                    }`}
+                            >
+                                <Users size={12} /> Lista
+                            </button>
+                        </div>
+
+                        <Button
+                            onClick={handleNewLead}
+                            className="bg-violet-600 hover:bg-violet-700 text-white shadow-md hover:shadow-lg transition-all h-9 px-4 font-bold text-sm w-full md:w-auto"
+                        >
+                            <Plus size={16} className="mr-1" />
+                            NOVO LEAD
+                        </Button>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                    {/* View Toggles */}
-                    <div className="hidden lg:flex bg-slate-100 dark:bg-slate-700 p-0.5 rounded-lg">
-                        <button
-                            onClick={() => setViewMode('board')}
-                            className={`px-2 py-1 rounded text-[10px] font-bold flex items-center gap-1 transition-all ${viewMode === 'board'
-                                ? 'bg-white dark:bg-slate-600 text-slate-800 dark:text-white shadow'
-                                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-                                }`}
-                        >
-                            <Briefcase size={12} /> Board
-                        </button>
-                        <button
-                            onClick={() => setViewMode('list')}
-                            className={`px-2 py-1 rounded text-[10px] font-bold flex items-center gap-1 transition-all ${viewMode === 'list'
-                                ? 'bg-white dark:bg-slate-600 text-slate-800 dark:text-white shadow'
-                                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-                                }`}
-                        >
-                            <Users size={12} /> Lista
-                        </button>
+                {/* KPI CARDS (Compact) */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 mb-3">
+                    {/* Pipeline Total */}
+                    <div className="bg-white dark:bg-slate-800 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between transition-colors">
+                        <div>
+                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Pipeline</p>
+                            <p className="text-base md:text-lg font-bold text-violet-600 dark:text-violet-400">
+                                {stats ? `R$ ${(stats.totalValue / 1000).toFixed(1)}k` : '...'}
+                            </p>
+                        </div>
+                        <div className="p-1.5 bg-violet-50 dark:bg-violet-900/20 rounded">
+                            <DollarSign className="text-violet-600 dark:text-violet-400" size={14} />
+                        </div>
                     </div>
 
-                    <Button
-                        onClick={handleNewLead}
-                        className="bg-violet-600 hover:bg-violet-700 text-white shadow-md hover:shadow-lg transition-all h-9 px-4 font-bold text-sm"
+                    {/* Leads Quentes */}
+                    <div className="bg-white dark:bg-slate-800 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between hover:border-rose-200 dark:hover:border-rose-800 transition-colors cursor-pointer" onClick={() => setFilterPriority('HIGH')}>
+                        <div>
+                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Quentes</p>
+                            <p className="text-base md:text-lg font-bold text-rose-600 dark:text-rose-400">{stats?.hotLeads || 0}</p>
+                        </div>
+                        <div className="p-1.5 bg-rose-50 dark:bg-rose-900/20 rounded">
+                            <Zap className="text-rose-600 dark:text-rose-400 fill-rose-600 dark:fill-rose-400" size={14} />
+                        </div>
+                    </div>
+
+                    {/* Taxa de Conversão */}
+                    <div className="bg-white dark:bg-slate-800 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between transition-colors">
+                        <div>
+                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Conversão</p>
+                            <p className="text-base md:text-lg font-bold text-teal-600 dark:text-teal-400">
+                                {stats?.conversionRate.toFixed(1) || 0}%
+                            </p>
+                        </div>
+                        <div className="p-1.5 bg-teal-50 dark:bg-teal-900/20 rounded">
+                            <TrendingUp className="text-teal-600 dark:text-teal-400" size={14} />
+                        </div>
+                    </div>
+
+                    {/* Total de Leads */}
+                    <div className="bg-white dark:bg-slate-800 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between transition-colors">
+                        <div>
+                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Total</p>
+                            <p className="text-base md:text-lg font-bold text-blue-600 dark:text-blue-400">
+                                {leads.length}
+                            </p>
+                        </div>
+                        <div className="p-1.5 bg-blue-50 dark:bg-blue-900/20 rounded">
+                            <Users className="text-blue-600 dark:text-blue-400" size={14} />
+                        </div>
+                    </div>
+                </div>
+
+                {/* FILTERS */}
+                <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">Filtros:</span>
+
+                    {/* Priority Filter */}
+                    <button
+                        onClick={() => setFilterPriority('ALL')}
+                        className={`px-2 py-1 rounded-full text-[10px] font-bold transition-all border whitespace-nowrap ${filterPriority === 'ALL'
+                            ? 'bg-slate-800 text-white border-slate-800 dark:bg-slate-200 dark:text-slate-900 dark:border-slate-200'
+                            : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+                            }`}
                     >
-                        <Plus size={16} className="mr-1" />
-                        NOVO LEAD
-                    </Button>
+                        Todos
+                    </button>
+                    <button
+                        onClick={() => setFilterPriority('HIGH')}
+                        className={`px-2 py-1 rounded-full text-[10px] font-bold transition-all border whitespace-nowrap ${filterPriority === 'HIGH'
+                            ? 'bg-rose-100 text-rose-700 border-rose-200 dark:bg-rose-900/30 dark:text-rose-300 dark:border-rose-800'
+                            : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-rose-200 hover:text-rose-600'
+                            }`}
+                    >
+                        Alta 🔥
+                    </button>
+
+                    {/* Stage Filter (Only in List View) */}
+                    {viewMode === 'list' && (
+                        <>
+                            <div className="h-4 w-[1px] bg-slate-300 dark:bg-slate-600 mx-1" />
+                            <select
+                                value={filterStage}
+                                onChange={(e) => setFilterStage(e.target.value)}
+                                className="px-2 py-1 rounded border border-slate-200 dark:border-slate-700 text-[10px] font-bold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 hover:border-violet-300 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all"
+                            >
+                                <option value="ALL">Todas Etapas</option>
+                                {stages.map(stage => (
+                                    <option key={stage.id} value={stage.id}>
+                                        {stage.name}
+                                    </option>
+                                ))}
+                            </select>
+                        </>
+                    )}
                 </div>
             </div>
 
-            {/* ============================================ */}
-            {/* KPI CARDS (Compact) */}
-            {/* ============================================ */}
-            <div className="grid grid-cols-4 gap-3 shrink-0">
-                {/* Pipeline Total */}
-                <div className="bg-white dark:bg-slate-800 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between transition-colors">
-                    <div>
-                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Pipeline</p>
-                        <p className="text-lg font-bold text-violet-600 dark:text-violet-400">
-                            {stats ? `R$ ${(stats.totalValue / 1000).toFixed(1)}k` : '...'}
-                        </p>
-                    </div>
-                    <div className="p-1.5 bg-violet-50 dark:bg-violet-900/20 rounded">
-                        <DollarSign className="text-violet-600 dark:text-violet-400" size={14} />
-                    </div>
-                </div>
 
-                {/* Leads Quentes */}
-                <div className="bg-white dark:bg-slate-800 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between hover:border-rose-200 dark:hover:border-rose-800 transition-colors cursor-pointer" onClick={() => setFilterPriority('HIGH')}>
-                    <div>
-                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Quentes</p>
-                        <p className="text-lg font-bold text-rose-600 dark:text-rose-400">{stats?.hotLeads || 0}</p>
-                    </div>
-                    <div className="p-1.5 bg-rose-50 dark:bg-rose-900/20 rounded">
-                        <Zap className="text-rose-600 dark:text-rose-400 fill-rose-600 dark:fill-rose-400" size={14} />
-                    </div>
-                </div>
-
-                {/* Taxa de Conversão */}
-                <div className="bg-white dark:bg-slate-800 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between transition-colors">
-                    <div>
-                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Conversão</p>
-                        <p className="text-lg font-bold text-teal-600 dark:text-teal-400">
-                            {stats?.conversionRate.toFixed(1) || 0}%
-                        </p>
-                    </div>
-                    <div className="p-1.5 bg-teal-50 dark:bg-teal-900/20 rounded">
-                        <TrendingUp className="text-teal-600 dark:text-teal-400" size={14} />
-                    </div>
-                </div>
-
-                {/* Total de Leads */}
-                <div className="bg-white dark:bg-slate-800 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between transition-colors">
-                    <div>
-                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Total</p>
-                        <p className="text-lg font-bold text-blue-600 dark:text-blue-400">
-                            {leads.length}
-                        </p>
-                    </div>
-                    <div className="p-1.5 bg-blue-50 dark:bg-blue-900/20 rounded">
-                        <Users className="text-blue-600 dark:text-blue-400" size={14} />
-                    </div>
-                </div>
-            </div>
-
-            {/* ============================================ */}
-            {/* FILTERS & BOARD */}
-            {/* ============================================ */}
-            <div className="flex items-center gap-2 px-1 shrink-0">
-                <span className="text-[10px] font-bold text-slate-400 uppercase">Filtros:</span>
-
-                {/* Priority Filter */}
-                <button
-                    onClick={() => setFilterPriority('ALL')}
-                    className={`px-2 py-1 rounded-full text-[10px] font-bold transition-all border ${filterPriority === 'ALL'
-                        ? 'bg-slate-800 text-white border-slate-800 dark:bg-slate-200 dark:text-slate-900 dark:border-slate-200'
-                        : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
-                        }`}
-                >
-                    Todos
-                </button>
-                <button
-                    onClick={() => setFilterPriority('HIGH')}
-                    className={`px-2 py-1 rounded-full text-[10px] font-bold transition-all border ${filterPriority === 'HIGH'
-                        ? 'bg-rose-100 text-rose-700 border-rose-200 dark:bg-rose-900/30 dark:text-rose-300 dark:border-rose-800'
-                        : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-rose-200 hover:text-rose-600'
-                        }`}
-                >
-                    Alta 🔥
-                </button>
-
-                {/* Stage Filter (Only in List View) */}
-                {viewMode === 'list' && (
-                    <>
-                        <div className="h-4 w-[1px] bg-slate-300 dark:bg-slate-600 mx-1" />
-                        <select
-                            value={filterStage}
-                            onChange={(e) => setFilterStage(e.target.value)}
-                            className="px-2 py-1 rounded border border-slate-200 dark:border-slate-700 text-[10px] font-bold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 hover:border-violet-300 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all"
-                        >
-                            <option value="ALL">Todas Etapas</option>
-                            {stages.map(stage => (
-                                <option key={stage.id} value={stage.id}>
-                                    {stage.name}
-                                </option>
-                            ))}
-                        </select>
-                    </>
-                )}
-            </div>
-
-
-            {/* BOARD OR LIST VIEW */}
+            {/* BOARD OR LIST VIEW - SCROLLÁVEL */}
             {viewMode === 'board' ? (
-                // KANBAN BOARD VIEW
-                <div className="flex-1 overflow-x-auto overflow-y-hidden pb-2">
-                    <div className="flex gap-3 h-full">
+                // KANBAN BOARD VIEW - Scroll horizontal, colunas com scroll vertical
+                <div className="flex-1 overflow-x-auto overflow-y-hidden p-3 md:p-4">
+                    <div className="flex gap-3 h-full min-w-min">
                         {stages.map(stage => {
                             const Icon = getStageIcon(stage.name);
                             const columnLeads = filteredLeads.filter(l => l.stage_id === stage.id);
