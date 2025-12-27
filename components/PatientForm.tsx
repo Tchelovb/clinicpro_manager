@@ -15,15 +15,26 @@ import {
   Shield,
   File,
   AlertCircle,
+  AlertTriangle,
 } from "lucide-react";
+import SecurityPinModal from "./SecurityPinModal";
+import toast from "react-hot-toast";
 
-const PatientForm: React.FC = () => {
+interface PatientFormProps {
+  onSuccess?: (newId: string) => void;
+  onCancel?: () => void;
+  initialData?: any;
+}
+
+const PatientForm: React.FC<PatientFormProps> = ({ onSuccess, onCancel, initialData }) => {
+  console.log("📋 FORMULÁRIO CARREGADO. Dados Iniciais:", initialData);
+
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { createPatient, updatePatient } = usePatients();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const isEditMode = !!id;
+  const isEditMode = !!id || !!initialData; // Edit mode if ID exists or initialData passed
 
   const [formData, setFormData] = useState<Partial<Patient>>({
     status: "Em Orçamento",
@@ -35,13 +46,20 @@ const PatientForm: React.FC = () => {
     sentiment_status: "NEUTRAL",
     is_active: true,
     bad_debtor: false,
+    ...initialData
   });
 
-  // Load patient data if in edit mode
+  // Duplicity Radar State
+  const [searchTerm, setSearchTerm] = useState("");
+  const [possibleDuplicates, setPossibleDuplicates] = useState<Partial<Patient>[]>([]);
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [isOverrideAuthorized, setIsOverrideAuthorized] = useState(false);
+
+  // Load patient data if in edit mode (and not using passed initialData)
   useEffect(() => {
     const isValidId = id && id !== ":id" && /^[0-9a-fA-F-]{36}$/.test(id);
 
-    if (isEditMode && isValidId) {
+    if (isEditMode && isValidId && !initialData) {
       setLoading(true);
       supabase
         .from("patients")
@@ -58,7 +76,44 @@ const PatientForm: React.FC = () => {
           setLoading(false);
         });
     }
-  }, [id, isEditMode]);
+  }, [id, isEditMode, initialData]);
+
+  // Radar de Duplicidade: Monitoramento em Tempo Real
+  useEffect(() => {
+    // Only search if name has > 3 chars and we haven't already authorized an override
+    if (!formData.name || formData.name.length < 3 || isOverrideAuthorized || isEditMode) {
+      setPossibleDuplicates([]);
+      return;
+    }
+
+    const delayDebounceFn = setTimeout(async () => {
+      const { data, error } = await supabase
+        .from("patients")
+        .select("id, name, cpf, phone")
+        .ilike("name", `%${formData.name}%`)
+        .limit(5);
+
+      if (data && data.length > 0) {
+        setPossibleDuplicates(data);
+      } else {
+        setPossibleDuplicates([]);
+      }
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [formData.name, isOverrideAuthorized, isEditMode]);
+
+  const handleSelectDuplicate = (patient: Partial<Patient>) => {
+    if (confirm(`Deseja carregar os dados de ${patient.name}?`)) {
+      setFormData(prev => ({
+        ...prev,
+        ...patient,
+        // Preserve current status/admin fields if needed, or overwrite all
+      }));
+      setPossibleDuplicates([]); // Clear the alert
+      toast.success('Dados carregados!');
+    }
+  };
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -71,7 +126,7 @@ const PatientForm: React.FC = () => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.name || !formData.phone) {
@@ -79,6 +134,12 @@ const PatientForm: React.FC = () => {
         "Nome completo e Telefone são obrigatórios para iniciar o cadastro."
       );
       window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
+    // TRAVA DE SEGURANÇA: Bloqueio de Duplicidade
+    if (possibleDuplicates.length > 0 && !isOverrideAuthorized && !isEditMode) {
+      setShowPinModal(true);
       return;
     }
 
@@ -135,18 +196,33 @@ const PatientForm: React.FC = () => {
 
     setError("");
 
-    if (isEditMode && id) {
-      // Update existing patient
-      updatePatient({ id, data: newPatient });
-      setTimeout(() => {
-        navigate(`/patients/${id}`);
-      }, 500);
-    } else {
-      // Create new patient
-      createPatient(newPatient);
-      setTimeout(() => {
-        navigate("/patients");
-      }, 500);
+    try {
+      let resultId = id;
+      if (isEditMode && id) {
+        // Update existing patient
+        await updatePatient({ id, data: newPatient });
+        resultId = id;
+      } else {
+        // Create new patient
+        const created = await createPatient(newPatient);
+        // Assuming createPatient returns the object or ID, if not we might need to fetch last or adjust.
+        // If usePatients doesn't return ID, we might fallback to optimistic or navigation.
+        // For now, assume success flows to navigation.
+      }
+
+      // Handle Success / Navigation
+      if (onSuccess) {
+        onSuccess(resultId || 'new-id'); // Pass ID if available
+      } else {
+        if (isEditMode && id) {
+          setTimeout(() => navigate(`/patients/${id}`), 500);
+        } else {
+          setTimeout(() => navigate("/patients"), 500);
+        }
+      }
+    } catch (e) {
+      console.error(e);
+      setError("Erro ao salvar paciente.");
     }
   };
 
@@ -159,17 +235,18 @@ const PatientForm: React.FC = () => {
     "block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide";
 
   return (
-    <div className="max-w-6xl mx-auto pb-24 md:pb-20 animate-in fade-in">
+    <div className="max-w-6xl mx-auto pb-40 md:pb-24 animate-in fade-in">
       {/* Header */}
       <div className="mb-6 flex flex-row justify-between items-center gap-4 sticky top-0 z-20 bg-gray-50/95 dark:bg-gray-900/95 backdrop-blur py-4 border-b border-gray-200/50 dark:border-gray-800/50 -mx-4 px-4 md:-mx-8 md:px-8">
         <div className="flex items-center gap-4">
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => onCancel ? onCancel() : navigate(-1)}
             className="p-2 hover:bg-white dark:hover:bg-gray-800 rounded-full text-gray-500 dark:text-gray-400 transition-colors shadow-sm border border-transparent hover:border-gray-200"
           >
             <ArrowLeft size={20} />
           </button>
           <div>
+
             <h1 className="text-xl font-bold text-gray-800 dark:text-white">
               {isEditMode ? "Editar Paciente" : "Novo Paciente"}
             </h1>
@@ -222,6 +299,27 @@ const PatientForm: React.FC = () => {
                     placeholder="Ex: João da Silva"
                     onChange={handleChange}
                   />
+                  {/* RADAR DE DUPLICIDADE - ALERTA VISUAL */}
+                  {possibleDuplicates.length > 0 && !isOverrideAuthorized && (
+                    <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg animate-in fade-in slide-in-from-top-2">
+                      <div className="flex items-center gap-2 text-amber-800 font-bold text-xs uppercase mb-2">
+                        <AlertTriangle size={14} />
+                        Possíveis Duplicidades Encontradas ({possibleDuplicates.length})
+                      </div>
+                      <div className="space-y-2 max-h-32 overflow-y-auto">
+                        {possibleDuplicates.map(dup => (
+                          <div
+                            key={dup.id}
+                            onClick={() => handleSelectDuplicate(dup)}
+                            className="text-xs text-amber-900 bg-amber-100/50 p-2 rounded flex justify-between items-center cursor-pointer hover:bg-amber-200 transition-colors"
+                          >
+                            <span className="font-medium">{dup.name}</span>
+                            <span className="opacity-75">{dup.phone || dup.cpf || 'Sem contato'}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className={labelClass}>
@@ -730,6 +828,22 @@ const PatientForm: React.FC = () => {
           </div>
         </>
       )}
+
+      {/* MODAL DE SEGURANÇA - PIN OVERRIDE */}
+      <SecurityPinModal
+        isOpen={showPinModal}
+        onClose={() => setShowPinModal(false)}
+        onSuccess={() => {
+          setIsOverrideAuthorized(true);
+          setPossibleDuplicates([]); // Clear duplicates to allow save on next click
+          // Optional: Auto-submit here if desired, or let user click save again
+          // For safety, let user click save again but now authorized
+        }}
+        title="Duplicidade Detectada"
+        description={`O sistema encontrou ${possibleDuplicates.length} paciente(s) com nome similar. Para forçar a criação desta duplicidade, é necessária autorização de supervisor.`}
+        actionType="CUSTOM" // Could add DUPLICATE_OVERRIDE if supported
+        entityName={formData.name}
+      />
     </div>
   );
 };

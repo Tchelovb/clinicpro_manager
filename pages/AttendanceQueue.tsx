@@ -13,19 +13,21 @@ import { ptBR } from 'date-fns/locale';
 
 interface QueueItem {
     id: string;
-    appointment_id: string;
     patient_id: string;
-    patient_name: string;
-    patient_phone: string;
-    doctor_id: string;
-    doctor_name: string;
-    type: 'ORCAMENTO' | 'CLINICA';
+    // Relations
+    patients?: {
+        name: string;
+        phone: string;
+        profile_photo_url?: string;
+    };
+    professional?: {
+        name: string;
+    };
+    // Fields
     status: 'WAITING' | 'IN_PROGRESS' | 'COMPLETED';
-    arrived_at: string;
-    called_at?: string;
-    completed_at?: string;
+    arrival_time: string;
+    type: 'ORCAMENTO' | 'CLINICA';
     risk_level?: 'A' | 'B' | 'C' | 'D';
-    estimated_value?: number;
     notes?: string;
 }
 
@@ -41,76 +43,70 @@ const AttendanceQueue: React.FC = () => {
     useAttendanceNotifications(profile?.clinic_id, profile?.id);
 
     useEffect(() => {
-        loadQueue();
-
-        // Auto-refresh every 30 seconds
-        const interval = autoRefresh ? setInterval(loadQueue, 30000) : null;
+        loadQueue(false); // Initial load: show spinner
+        const interval = autoRefresh ? setInterval(() => loadQueue(true), 15000) : null; // Background: silent
         return () => { if (interval) clearInterval(interval); };
     }, [profile?.clinic_id, autoRefresh]);
 
-    const loadQueue = async () => {
+    const loadQueue = async (isBackground = false) => {
         if (!profile?.clinic_id) return;
 
         try {
-            // Get all appointments with status ARRIVED or IN_PROGRESS for today
-            const today = new Date().toISOString().split('T')[0];
+            // SILENT REFRESH: Only show spinner on initial load or manual refresh
+            if (!isBackground) setLoading(true);
 
-            const { data: appointments, error } = await supabase
-                .from('appointments')
+            // CORRECT TABLE: attendance_queue
+            const { data, error } = await supabase
+                .from('attendance_queue')
                 .select(`
                     *,
-                    patients!appointments_patient_id_fkey(name, phone),
-                    users!appointments_doctor_id_fkey(name)
+                    patients (name, phone, profile_photo_url),
+                    professional: users!professional_id (name)
                 `)
                 .eq('clinic_id', profile.clinic_id)
-                .gte('date', `${today}T00:00:00`)
-                .lte('date', `${today}T23:59:59`)
-                .or('status.eq.ARRIVED,status.eq.IN_PROGRESS')
-                .order('date');
+                .in('status', ['WAITING', 'IN_PROGRESS'])
+                .order('arrival_time', { ascending: true });
 
             if (error) throw error;
 
-            // Transform to queue items
-            const queueItems: QueueItem[] = (appointments || []).map((apt: any) => ({
-                id: apt.id,
-                appointment_id: apt.id,
-                patient_id: apt.patient_id,
-                patient_name: apt.patients?.name || 'Paciente',
-                patient_phone: apt.patients?.phone || '',
-                doctor_id: apt.doctor_id,
-                doctor_name: apt.users?.name || 'Profissional',
-                type: apt.type === 'EVALUATION' ? 'ORCAMENTO' : 'CLINICA',
-                status: apt.status === 'IN_PROGRESS' ? 'IN_PROGRESS' : 'WAITING',
-                arrived_at: apt.date,
-                risk_level: 'B' // Would come from credit_profiles table
+            // Transform to strict QueueItem structure
+            const queueItems: QueueItem[] = (data || []).map((item: any) => ({
+                id: item.id,
+                patient_id: item.patient_id,
+                patients: item.patients, // Safe access in render
+                professional: item.professional,
+                status: item.status,
+                arrival_time: item.arrival_time || item.created_at, // Fallback
+                type: item.type || 'CLINICA', // Fallback
+                risk_level: item.risk_level,
+                notes: item.notes
             }));
 
             setQueue(queueItems);
         } catch (error) {
             console.error('Error loading queue:', error);
-            toast.error('Erro ao carregar fila de atendimento');
+            // Don't toast on silent refresh errors to avoid spamming the user
+            if (!isBackground) toast.error('Erro ao carregar fila');
         } finally {
-            setLoading(false);
+            if (!isBackground) setLoading(false);
         }
     };
 
     const handleCallPatient = async (item: QueueItem) => {
         try {
             const { error } = await supabase
-                .from('appointments')
+                .from('attendance_queue')
                 .update({ status: 'IN_PROGRESS' })
-                .eq('id', item.appointment_id);
+                .eq('id', item.id);
 
             if (error) throw error;
 
             setQueue(prev => prev.map(q =>
-                q.id === item.id ? { ...q, status: 'IN_PROGRESS', called_at: new Date().toISOString() } : q
+                q.id === item.id ? { ...q, status: 'IN_PROGRESS' } : q
             ));
 
-            toast.success(`${item.patient_name} foi chamado!`, {
-                icon: '📢',
-                duration: 3000
-            });
+            const patientName = item.patients?.name || 'Paciente';
+            toast.success(`${patientName} foi chamado!`, { icon: '📢' });
         } catch (error) {
             console.error('Error calling patient:', error);
             toast.error('Erro ao chamar paciente');
@@ -120,18 +116,14 @@ const AttendanceQueue: React.FC = () => {
     const handleCompleteAttendance = async (item: QueueItem) => {
         try {
             const { error } = await supabase
-                .from('appointments')
+                .from('attendance_queue')
                 .update({ status: 'COMPLETED' })
-                .eq('id', item.appointment_id);
+                .eq('id', item.id);
 
             if (error) throw error;
 
             setQueue(prev => prev.filter(q => q.id !== item.id));
-
-            toast.success('Atendimento finalizado!', {
-                icon: '✅',
-                duration: 3000
-            });
+            toast.success('Atendimento finalizado!', { icon: '✅' });
         } catch (error) {
             console.error('Error completing attendance:', error);
             toast.error('Erro ao finalizar atendimento');
@@ -139,6 +131,7 @@ const AttendanceQueue: React.FC = () => {
     };
 
     const getWaitingTime = (arrivedAt: string) => {
+        if (!arrivedAt) return 'N/A';
         return formatDistanceToNow(new Date(arrivedAt), {
             addSuffix: false,
             locale: ptBR
@@ -158,9 +151,7 @@ const AttendanceQueue: React.FC = () => {
 
     return (
         <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950 p-6 gap-6">
-            {/* ============================================ */}
-            {/* HEADER ESTATÍSTICO */}
-            {/* ============================================ */}
+            {/* HEADER */}
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -182,7 +173,7 @@ const AttendanceQueue: React.FC = () => {
                         Auto-refresh
                     </label>
                     <button
-                        onClick={loadQueue}
+                        onClick={() => loadQueue(false)}
                         className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                     >
                         <Loader2 size={16} className={loading ? 'animate-spin' : ''} />
@@ -227,12 +218,9 @@ const AttendanceQueue: React.FC = () => {
                 </div>
             </div>
 
-            {/* ============================================ */}
-            {/* DUAL COLUMN LAYOUT - JIRA STYLE */}
-            {/* ============================================ */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1">
-
-                {/* COLUNA: ORÇAMENTISTA (FOCO EM VENDA) */}
+            {/* DUAL COLUMN LAYOUT */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 text">
+                {/* ORCAMENTISTA */}
                 <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col overflow-hidden">
                     <div className="p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 rounded-t-2xl flex justify-between items-center">
                         <h2 className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
@@ -243,7 +231,6 @@ const AttendanceQueue: React.FC = () => {
                             HIGH TICKET
                         </span>
                     </div>
-
                     <div className="p-4 space-y-3 overflow-y-auto flex-1">
                         {budgetQueue.length === 0 ? (
                             <div className="flex flex-col items-center justify-center h-full text-slate-400 dark:text-slate-600">
@@ -261,11 +248,11 @@ const AttendanceQueue: React.FC = () => {
                                 >
                                     <div className="flex justify-between items-start">
                                         <div className="flex-1">
-                                            <h3 className="font-bold text-slate-900 dark:text-white">{item.patient_name}</h3>
+                                            <h3 className="font-bold text-slate-900 dark:text-white">{item.patients?.name || 'Paciente'}</h3>
                                             <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-1">
                                                 <Clock size={12} />
                                                 Espera: <span className="text-orange-600 dark:text-orange-400 font-bold">
-                                                    {getWaitingTime(item.arrived_at)}
+                                                    {getWaitingTime(item.arrival_time)}
                                                 </span>
                                             </p>
                                             {item.risk_level && (
@@ -317,7 +304,7 @@ const AttendanceQueue: React.FC = () => {
                     </div>
                 </div>
 
-                {/* COLUNA: CLÍNICA (FOCO EM EXECUÇÃO) */}
+                {/* CLINICA */}
                 <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col overflow-hidden">
                     <div className="p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 rounded-t-2xl">
                         <h2 className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
@@ -343,14 +330,14 @@ const AttendanceQueue: React.FC = () => {
                                 >
                                     <div className="flex justify-between items-start">
                                         <div className="flex-1">
-                                            <h3 className="font-bold text-slate-900 dark:text-white">{item.patient_name}</h3>
+                                            <h3 className="font-bold text-slate-900 dark:text-white">{item.patients?.name || 'Paciente'}</h3>
                                             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                                                {item.doctor_name}
+                                                {item.professional?.name || 'Sem profissional'}
                                             </p>
                                             <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-1">
                                                 <Clock size={12} />
                                                 Espera: <span className="text-orange-600 dark:text-orange-400 font-bold">
-                                                    {getWaitingTime(item.arrived_at)}
+                                                    {getWaitingTime(item.arrival_time)}
                                                 </span>
                                             </p>
                                         </div>
@@ -391,12 +378,8 @@ const AttendanceQueue: React.FC = () => {
                         )}
                     </div>
                 </div>
-
             </div>
 
-            {/* ============================================ */}
-            {/* DETAIL SHEET */}
-            {/* ============================================ */}
             <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
                 <SheetContent className="w-full sm:max-w-lg overflow-auto">
                     <SheetHeader>
@@ -406,10 +389,10 @@ const AttendanceQueue: React.FC = () => {
                         <div className="mt-6 space-y-6">
                             <div>
                                 <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2">Paciente</p>
-                                <p className="text-lg font-bold text-slate-900 dark:text-white">{selectedItem.patient_name}</p>
+                                <p className="text-lg font-bold text-slate-900 dark:text-white">{selectedItem.patients?.name || 'N/A'}</p>
                                 <p className="text-sm text-slate-600 dark:text-slate-400 flex items-center gap-2 mt-1">
                                     <Phone size={14} />
-                                    {selectedItem.patient_phone}
+                                    {selectedItem.patients?.phone || 'N/A'}
                                 </p>
                             </div>
 
@@ -425,13 +408,13 @@ const AttendanceQueue: React.FC = () => {
 
                             <div>
                                 <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Profissional Responsável</p>
-                                <p className="text-sm font-medium text-slate-900 dark:text-white">{selectedItem.doctor_name}</p>
+                                <p className="text-sm font-medium text-slate-900 dark:text-white">{selectedItem.professional?.name || 'Não definido'}</p>
                             </div>
 
                             <div>
                                 <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Tempo de Espera</p>
                                 <p className="text-sm font-medium text-slate-900 dark:text-white">
-                                    {getWaitingTime(selectedItem.arrived_at)}
+                                    {getWaitingTime(selectedItem.arrival_time)}
                                 </p>
                             </div>
 
@@ -466,10 +449,8 @@ const AttendanceQueue: React.FC = () => {
                 </SheetContent>
             </Sheet>
 
-            {/* RODAPÉ A4: PARA IMPRESSÃO DE MAPA DIÁRIO */}
             <div className="hidden print:block">
                 <h1 className="text-xl font-bold">Mapa de Fluxo de Pacientes - {new Date().toLocaleDateString('pt-BR')}</h1>
-                {/* Tabela de auditoria para o Dr Marcelo */}
             </div>
         </div>
     );

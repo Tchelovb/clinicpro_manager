@@ -8,13 +8,14 @@ import {
     User, DollarSign, TrendingUp, Heart, Clock, CheckCircle,
     XCircle, Loader2
 } from "lucide-react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "./ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "./ui/sheet";
 import { Drawer, DrawerContent } from "./ui/drawer";
 import { useMediaQuery } from "../hooks/useMediaQuery";
 import { PatientInstallments } from "./PatientInstallments";
 import { OrthoTab } from "./ortho/OrthoTab";
 import toast from "react-hot-toast";
 import BudgetForm from "./BudgetForm";
+import PatientForm from "./PatientForm";
 
 // Patient Score Badge (VIP Status)
 const ScoreBadge = ({ score }: { score?: string }) => {
@@ -37,6 +38,9 @@ interface PatientDetailProps {
     onClose?: () => void;
     onEdit?: (patient: any) => void;
     onDelete?: () => void;
+    mode?: 'view' | 'create' | 'edit';
+    initialData?: any;
+    onSuccess?: (newId?: string) => void;
 }
 
 export const PatientDetailSheet: React.FC<PatientDetailProps> = ({
@@ -44,17 +48,42 @@ export const PatientDetailSheet: React.FC<PatientDetailProps> = ({
     open = false,
     onClose,
     onEdit,
-    onDelete
+    onDelete,
+    mode = 'view',
+    initialData,
+    onSuccess
 }) => {
-    const { id: paramId } = useParams<{ id: string }>();
-    const id = patientId || paramId;
+    console.log("%c ✅ ESTE É O ARQUIVO NOVO: PatientDetail.tsx", "background: green; color: white; font-size: 20px");
 
+    const { id: paramId } = useParams<{ id: string }>();
+    // PRIORITIZE PROP (Flash Fix): Immediate use of prop if available
+    const initialId = patientId || paramId;
+    const [activeId, setActiveId] = useState(initialId);
+    const [activeMode, setActiveMode] = useState(mode);
+
+    // Sync props to state when they change externally
+    useEffect(() => {
+        // Only update if explicit prop change to avoid overrides
+        if (patientId && patientId !== activeId) setActiveId(patientId);
+        if (mode && mode !== activeMode) setActiveMode(mode);
+    }, [patientId, mode]);
+
+    // If no props, fallback to URL param (but keep state source of truth)
+    useEffect(() => {
+        if (!patientId && paramId && paramId !== activeId) setActiveId(paramId);
+    }, [paramId]);
+
+    const id = activeId;
+    const isCreateMode = activeMode === 'create';
 
     const navigate = useNavigate();
 
     const [patient, setPatient] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(activeMode !== 'create');
     const [activeTab, setActiveTab] = useState('overview');
+
+    // Scroll Diagnostic Ref
+    const scrollContainerRef = React.useRef<HTMLDivElement>(null);
 
     // Estados para workflow de orçamentos inline
     const [showBudgetForm, setShowBudgetForm] = useState(false);
@@ -73,11 +102,37 @@ export const PatientDetailSheet: React.FC<PatientDetailProps> = ({
         balanceDue: 0
     });
 
+    // Scroll Diagnostic Effect
     useEffect(() => {
-        if (open && id) {
-            loadPatientData();
+        if (scrollContainerRef.current) {
+            const { scrollHeight, clientHeight, scrollTop } = scrollContainerRef.current;
+            console.log(`📏 DIAGNÓSTICO DE SCROLL:
+            - Altura do Conteúdo (ScrollHeight): ${scrollHeight}px
+            - Altura Visível (ClientHeight): ${clientHeight}px
+            - Posição Atual (ScrollTop): ${scrollTop}px
+            - DEVERIA ROLAR? ${scrollHeight > clientHeight ? 'SIM ✅' : 'NÃO ❌ (Conteúdo menor que a tela)'}
+            `);
         }
-    }, [id, open]);
+    }, [patient, activeTab]);
+
+    // Auto-focus scroll container for keyboard accessibility
+    useEffect(() => {
+        if (open && scrollContainerRef.current) {
+            scrollContainerRef.current.focus();
+        }
+    }, [open]);
+
+    useEffect(() => {
+        if (open) {
+            if (isCreateMode) {
+                setLoading(false);
+                setPatient(null);
+                setActiveTab('overview');
+            } else if (id) {
+                loadPatientData();
+            }
+        }
+    }, [id, open, isCreateMode]);
 
     const loadPatientData = async () => {
         if (!id) return;
@@ -254,7 +309,7 @@ export const PatientDetailSheet: React.FC<PatientDetailProps> = ({
     // Loading State
     if (loading) {
         const LoadingContent = (
-            <div className="flex items-center justify-center h-screen">
+            <div className="flex items-center justify-center h-full w-full">
                 <div className="text-center">
                     <Loader2 className="w-12 h-12 text-blue-500 animate-spin mx-auto mb-4" />
                     <p className="text-slate-600 dark:text-slate-400 font-medium">Carregando dossiê...</p>
@@ -264,13 +319,18 @@ export const PatientDetailSheet: React.FC<PatientDetailProps> = ({
 
         return isMobile ? (
             <Drawer open={open} onOpenChange={onClose}>
-                <DrawerContent className="h-[100vh] overflow-auto">
+                <DrawerContent className="h-[100vh] overflow-hidden flex flex-col">
                     {LoadingContent}
                 </DrawerContent>
             </Drawer>
         ) : (
             <Sheet open={open} onOpenChange={onClose}>
-                <SheetContent className="w-full sm:max-w-[70vw] overflow-auto border-l border-slate-200 dark:border-slate-800 p-0 gap-0 shadow-[-10px_0_30px_-15px_rgba(0,0,0,0.3)]">
+                {/* SCROLL FIX 1: Parent has NO scroll, full height */}
+                <SheetContent className="w-full sm:max-w-[70vw] h-full flex flex-col p-0 gap-0 overflow-hidden border-l border-slate-200 dark:border-slate-800 shadow-[-10px_0_30px_-15px_rgba(0,0,0,0.3)]">
+                    <SheetHeader className="sr-only">
+                        <SheetTitle>Carregando...</SheetTitle>
+                        <SheetDescription>Aguarde enquanto carregamos os dados do paciente</SheetDescription>
+                    </SheetHeader>
                     {LoadingContent}
                 </SheetContent>
             </Sheet>
@@ -278,9 +338,9 @@ export const PatientDetailSheet: React.FC<PatientDetailProps> = ({
     }
 
     // Not Found State
-    if (!patient) {
+    if (!patient && !isCreateMode) {
         const NotFoundContent = (
-            <div className="flex items-center justify-center h-screen">
+            <div className="flex items-center justify-center h-full w-full">
                 <div className="text-center">
                     <p className="text-slate-600 dark:text-slate-400">Paciente não encontrado</p>
                     <button
@@ -295,13 +355,18 @@ export const PatientDetailSheet: React.FC<PatientDetailProps> = ({
 
         return isMobile ? (
             <Drawer open={open} onOpenChange={onClose}>
-                <DrawerContent className="h-[100vh]">
+                <DrawerContent className="h-[100vh] flex flex-col overflow-hidden">
                     {NotFoundContent}
                 </DrawerContent>
             </Drawer>
         ) : (
             <Sheet open={open} onOpenChange={onClose}>
-                <SheetContent className="w-full sm:max-w-[70vw] border-l border-slate-200 dark:border-slate-800 p-0 gap-0 shadow-[-10px_0_30px_-15px_rgba(0,0,0,0.3)]">
+                {/* SCROLL FIX 1: Parent has NO scroll */}
+                <SheetContent className="w-full sm:max-w-[70vw] h-full flex flex-col p-0 gap-0 overflow-hidden shadow-[-10px_0_30px_-15px_rgba(0,0,0,0.3)]">
+                    <SheetHeader className="sr-only">
+                        <SheetTitle>Paciente não encontrado</SheetTitle>
+                        <SheetDescription>O paciente solicitado não pode ser exibido</SheetDescription>
+                    </SheetHeader>
                     {NotFoundContent}
                 </SheetContent>
             </Sheet>
@@ -311,8 +376,8 @@ export const PatientDetailSheet: React.FC<PatientDetailProps> = ({
     // Conteúdo principal do prontuário
     const ProntuarioContent = (
         <>
-            {/* HEADER */}
-            <div className="sticky top-0 z-10 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-6">
+            {/* HEADER (FIXED - OUTSIDE SCROLL) */}
+            <div className="flex-none bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-6 z-50 shadow-sm">
                 <div className="flex items-center justify-between mb-4">
                     <button
                         onClick={onClose}
@@ -338,290 +403,328 @@ export const PatientDetailSheet: React.FC<PatientDetailProps> = ({
                     </div>
                 </div>
 
-                {/* Patient Identity com Sobretítulo */}
-                <div className="flex items-start gap-4 mb-4">
-                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-2xl font-black shadow-lg shrink-0">
-                        {patient.name?.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                        {/* Sobretítulo: PRONTUÁRIO Nº [ID] */}
-                        <p className="text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wide mb-1">
-                            Prontuário Nº {patient.id.slice(0, 8).toUpperCase()}
-                        </p>
-                        <h1 className="text-2xl font-black text-slate-900 dark:text-white mb-2 truncate">
-                            {patient.name}
+                {/* ADAPTIVE HEADER CONTENT */}
+                {isCreateMode ? (
+                    <div className="mb-4">
+                        <h1 className="text-2xl font-black text-slate-900 dark:text-white mb-1">
+                            Novo Paciente
                         </h1>
-                        <div className="flex flex-wrap items-center gap-2 mb-2">
-                            <ScoreBadge score={patient.patient_score} />
-                            {patient.bad_debtor && (
-                                <span className="px-3 py-1 bg-rose-100 dark:bg-rose-900/30 border border-rose-300 dark:border-rose-600 text-rose-700 dark:text-rose-300 rounded-full text-xs font-bold">
-                                    ⚠️ INADIMPLENTE
-                                </span>
-                            )}
-                        </div>
-                        <div className="flex flex-wrap items-center gap-3 text-xs text-slate-600 dark:text-slate-400">
-                            <span className="flex items-center gap-1">
-                                <Phone size={12} />
-                                {patient.phone}
-                            </span>
-                            {patient.email && (
-                                <span className="flex items-center gap-1">
-                                    <Mail size={12} />
-                                    <span className="truncate max-w-[150px]">{patient.email}</span>
-                                </span>
-                            )}
-                        </div>
+                        <p className="text-slate-500 dark:text-slate-400 text-sm">
+                            Preencha a ficha cadastral para iniciar o prontuário
+                        </p>
                     </div>
-                </div>
+                ) : (
+                    <>
+                        {/* Patient Identity com Sobretítulo */}
+                        <div className="flex items-start gap-4 mb-4">
+                            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-2xl font-black shadow-lg shrink-0">
+                                {patient.name?.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                {/* Sobretítulo: PRONTUÁRIO Nº [ID] */}
+                                <p className="text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wide mb-1">
+                                    Prontuário Nº {patient.id.slice(0, 8).toUpperCase()}
+                                </p>
+                                <h1 className="text-2xl font-black text-slate-900 dark:text-white mb-2 truncate">
+                                    {patient.name}
+                                </h1>
+                                <div className="flex flex-wrap items-center gap-2 mb-2">
+                                    <ScoreBadge score={patient.patient_score} />
+                                    {patient.bad_debtor && (
+                                        <span className="px-3 py-1 bg-rose-100 dark:bg-rose-900/30 border border-rose-300 dark:border-rose-600 text-rose-700 dark:text-rose-300 rounded-full text-xs font-bold">
+                                            ⚠️ INADIMPLENTE
+                                        </span>
+                                    )}
+                                </div>
+                                <div className="flex flex-wrap items-center gap-3 text-xs text-slate-600 dark:text-slate-400">
+                                    <span className="flex items-center gap-1">
+                                        <Phone size={12} />
+                                        {patient.phone}
+                                    </span>
+                                    {patient.email && (
+                                        <span className="flex items-center gap-1">
+                                            <Mail size={12} />
+                                            <span className="truncate max-w-[150px]">{patient.email}</span>
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
 
-                {/* Financial Indicators */}
-                <div className="grid grid-cols-3 gap-3">
-                    <div className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-3">
-                        <p className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold mb-1">Saldo Devedor</p>
-                        <p className={`text-lg font-black ${financialData.balanceDue > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                            R$ {financialData.balanceDue.toLocaleString('pt-BR')}
-                        </p>
-                    </div>
-                    <div className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-3">
-                        <p className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold mb-1">Aprovado</p>
-                        <p className="text-lg font-black text-blue-600 dark:text-blue-400">
-                            R$ {financialData.totalApproved.toLocaleString('pt-BR')}
-                        </p>
-                    </div>
-                    <div className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-3">
-                        <p className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold mb-1">Pago</p>
-                        <p className="text-lg font-black text-emerald-600 dark:text-emerald-400">
-                            R$ {financialData.totalPaid.toLocaleString('pt-BR')}
-                        </p>
-                    </div>
+                        {/* Financial Indicators */}
+                        <div className="grid grid-cols-3 gap-3">
+                            <div className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-3">
+                                <p className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold mb-1">Saldo Devedor</p>
+                                <p className={`text-lg font-black ${financialData.balanceDue > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                                    R$ {financialData.balanceDue.toLocaleString('pt-BR')}
+                                </p>
+                            </div>
+                            <div className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-3">
+                                <p className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold mb-1">Aprovado</p>
+                                <p className="text-lg font-black text-blue-600 dark:text-blue-400">
+                                    R$ {financialData.totalApproved.toLocaleString('pt-BR')}
+                                </p>
+                            </div>
+                            <div className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-3">
+                                <p className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold mb-1">Pago</p>
+                                <p className="text-lg font-black text-emerald-600 dark:text-emerald-400">
+                                    R$ {financialData.totalPaid.toLocaleString('pt-BR')}
+                                </p>
+                            </div>
+                        </div>
+                    </>
+                )}
+            </div>
+
+            {/* TABS (FIXED - OUTSIDE SCROLL) */}
+            <div className="flex-none z-40 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-md">
+                <div className="flex gap-1 overflow-x-auto px-6">
+                    {[
+                        { id: 'overview', label: 'Visão Geral', icon: Activity },
+                        { id: 'budgets', label: `Propostas (${budgets.length})`, icon: FileText, hidden: isCreateMode },
+                        { id: 'clinical', label: `Clínica (${clinicalTreatments.length})`, icon: Stethoscope, hidden: isCreateMode },
+                        { id: 'ortho', label: `Ortho (${orthoTreatments.length})`, icon: Smile, hidden: isCreateMode },
+                        { id: 'hof', label: `HOF (${hofTreatments.length})`, icon: Sparkles, hidden: isCreateMode },
+                        { id: 'financial', label: 'Financeiro', icon: CreditCard, hidden: isCreateMode },
+                        { id: 'gallery', label: `Galeria (${clinicalImages.length})`, icon: Image, hidden: isCreateMode },
+                    ].filter(t => !t.hidden).map(tab => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id)}
+                            className={`flex items-center gap-2 px-3 py-2 text-xs font-medium transition-colors border-b-2 whitespace-nowrap ${activeTab === tab.id
+                                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                                : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                                }`}
+                        >
+                            <tab.icon size={14} />
+                            {tab.label}
+                        </button>
+                    ))}
                 </div>
             </div>
 
-            {/* SCROLLABLE BODY */}
-            < div className="flex-1 overflow-y-auto min-h-0 relative w-full" >
-
-                {/* TABS */}
-                < div className="sticky top-0 z-30 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm" >
-                    <div className="flex gap-1 overflow-x-auto px-6">
-                        {[
-                            { id: 'overview', label: 'Visão Geral', icon: Activity },
-                            { id: 'budgets', label: `Propostas (${budgets.length})`, icon: FileText },
-                            { id: 'clinical', label: `Clínica (${clinicalTreatments.length})`, icon: Stethoscope },
-                            { id: 'ortho', label: `Ortho (${orthoTreatments.length})`, icon: Smile },
-                            { id: 'hof', label: `HOF (${hofTreatments.length})`, icon: Sparkles },
-                            { id: 'financial', label: 'Financeiro', icon: CreditCard },
-                            { id: 'gallery', label: `Galeria (${clinicalImages.length})`, icon: Image },
-                        ].map(tab => (
-                            <button
-                                key={tab.id}
-                                onClick={() => setActiveTab(tab.id)}
-                                className={`flex items-center gap-2 px-3 py-2 text-xs font-medium transition-colors border-b-2 whitespace-nowrap ${activeTab === tab.id
-                                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                                    : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-                                    }`}
-                            >
-                                <tab.icon size={14} />
-                                {tab.label}
-                            </button>
-                        ))}
-                    </div>
-                </div >
-
-                {/* CONTENT */}
-                < div className="p-6" >
+            {/* SCROLLABLE CONTENT AREA (FLEX-1) */}
+            <div
+                ref={scrollContainerRef}
+                tabIndex={-1}
+                className="flex-1 overflow-y-auto min-h-0 bg-slate-50 dark:bg-slate-900 scroll-smooth outline-none"
+            >
+                <div className="p-6 min-h-full">
                     {/* OVERVIEW TAB */}
                     < div className={`space-y-4 pb-20 ${activeTab === 'overview' ? 'block' : 'hidden'}`}> {/* pb-20 para dar espaço ao footer fixo */}
-                        {/* Header da Aba com Ação de Editar */}
-                        <div className="flex justify-between items-center mb-2">
-                            <h3 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                Resumo Clínico & Dados
-                            </h3>
-                            {!isEditingOverview && (
-                                <button
-                                    onClick={() => setIsEditingOverview(true)}
-                                    className="text-blue-600 dark:text-blue-400 text-xs font-bold flex items-center gap-1 hover:bg-blue-50 dark:hover:bg-blue-900/20 px-2 py-1 rounded transition-colors"
-                                >
-                                    <Edit2 size={12} />
-                                    EDITAR DADOS
-                                </button>
-                            )}
-                        </div>
 
-                        {/* AI INSIGHTS (Sempre Visível) */}
-                        {
-                            insights.length > 0 && (
-                                <div className="bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-700/50 rounded-lg p-4">
-                                    <h3 className="text-sm font-bold text-rose-700 dark:text-rose-300 mb-3 flex items-center gap-2">
-                                        <AlertTriangle size={16} />
-                                        Alertas Inteligentes ({insights.length})
+                        {isCreateMode ? (
+                            <PatientForm
+                                initialData={initialData}
+                                onCancel={onClose}
+                                onSuccess={(newId) => {
+                                    if (newId) {
+                                        // Seamless context switch
+                                        setActiveId(newId);
+                                        setActiveMode('view');
+                                        toast.success("Prontuário carregado!");
+                                    } else {
+                                        toast.success("Paciente criado!");
+                                    }
+
+                                    if (onSuccess) onSuccess(newId); // Notify parent
+                                }}
+                            />
+                        ) : (
+                            <>
+                                {/* Header da Aba com Ação de Editar */}
+                                <div className="flex justify-between items-center mb-2">
+                                    <h3 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                        Resumo Clínico & Dados
                                     </h3>
-                                    <div className="space-y-2">
-                                        {insights.map(insight => (
-                                            <div key={insight.id} className="bg-white dark:bg-rose-900/30 border border-rose-200 dark:border-rose-700/30 rounded p-3">
-                                                <h4 className="font-bold text-rose-800 dark:text-rose-200 text-sm mb-1">{insight.title}</h4>
-                                                <p className="text-xs text-rose-700 dark:text-rose-100/70 mb-1">{insight.explanation}</p>
-                                                <p className="text-xs text-rose-600 dark:text-rose-300 font-medium">
-                                                    💡 {insight.recommended_action || insight.action_label}
-                                                </p>
+                                    {!isEditingOverview && (
+                                        <button
+                                            onClick={() => setIsEditingOverview(true)}
+                                            className="text-blue-600 dark:text-blue-400 text-xs font-bold flex items-center gap-1 hover:bg-blue-50 dark:hover:bg-blue-900/20 px-2 py-1 rounded transition-colors"
+                                        >
+                                            <Edit2 size={12} />
+                                            EDITAR DADOS
+                                        </button>
+                                    )}
+                                </div>
+
+                                {/* AI INSIGHTS (Sempre Visível) */}
+                                {
+                                    insights.length > 0 && (
+                                        <div className="bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-700/50 rounded-lg p-4">
+                                            <h3 className="text-sm font-bold text-rose-700 dark:text-rose-300 mb-3 flex items-center gap-2">
+                                                <AlertTriangle size={16} />
+                                                Alertas Inteligentes ({insights.length})
+                                            </h3>
+                                            <div className="space-y-2">
+                                                {insights.map(insight => (
+                                                    <div key={insight.id} className="bg-white dark:bg-rose-900/30 border border-rose-200 dark:border-rose-700/30 rounded p-3">
+                                                        <h4 className="font-bold text-rose-800 dark:text-rose-200 text-sm mb-1">{insight.title}</h4>
+                                                        <p className="text-xs text-rose-700 dark:text-rose-100/70 mb-1">{insight.explanation}</p>
+                                                        <p className="text-xs text-rose-600 dark:text-rose-300 font-medium">
+                                                            💡 {insight.recommended_action || insight.action_label}
+                                                        </p>
+                                                    </div>
+                                                ))}
                                             </div>
-                                        ))}
+                                        </div>
+                                    )
+                                }
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {/* Personal Data */}
+                                    <div className={`bg-slate-50 dark:bg-slate-800 border ${isEditingOverview ? 'border-blue-200 dark:border-blue-900 ring-1 ring-blue-100 dark:ring-blue-900' : 'border-slate-200 dark:border-slate-700'} rounded-xl p-6 transition-all`}>
+                                        <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                                            <Briefcase size={16} className="text-blue-600 dark:text-blue-400" />
+                                            Dados Pessoais
+                                        </h3>
+                                        <div className="space-y-4 text-xs">
+                                            <div>
+                                                <label className="block text-slate-500 dark:text-slate-400 uppercase font-bold mb-1.5">CPF</label>
+                                                {isEditingOverview ? (
+                                                    <input
+                                                        type="text"
+                                                        value={overviewData.cpf || ''}
+                                                        onChange={(e) => handleOverviewChange('cpf', e.target.value)}
+                                                        className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                                    />
+                                                ) : (
+                                                    <p className="text-slate-900 dark:text-slate-200 font-medium text-sm">{patient.cpf || 'Não informado'}</p>
+                                                )}
+                                            </div>
+                                            <div>
+                                                <label className="block text-slate-500 dark:text-slate-400 uppercase font-bold mb-1.5">Data de Nascimento</label>
+                                                {isEditingOverview ? (
+                                                    <input
+                                                        type="date"
+                                                        value={overviewData.birth_date ? overviewData.birth_date.split('T')[0] : ''}
+                                                        onChange={(e) => handleOverviewChange('birth_date', e.target.value)}
+                                                        className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                                    />
+                                                ) : (
+                                                    <p className="text-slate-900 dark:text-slate-200 font-medium text-sm">
+                                                        {patient.birth_date ? new Date(patient.birth_date).toLocaleDateString('pt-BR') : 'Não informado'}
+                                                    </p>
+                                                )}
+                                            </div>
+                                            <div>
+                                                <label className="block text-slate-500 dark:text-slate-400 uppercase font-bold mb-1.5">Profissão</label>
+                                                {isEditingOverview ? (
+                                                    <input
+                                                        type="text"
+                                                        value={overviewData.occupation || ''}
+                                                        onChange={(e) => handleOverviewChange('occupation', e.target.value)}
+                                                        className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                                    />
+                                                ) : (
+                                                    <p className="text-slate-900 dark:text-slate-200 font-medium text-sm">{patient.occupation || 'Não informado'}</p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Social & Marketing */}
+                                    <div className={`bg-slate-50 dark:bg-slate-800 border ${isEditingOverview ? 'border-purple-200 dark:border-purple-900 ring-1 ring-purple-100 dark:ring-purple-900' : 'border-slate-200 dark:border-slate-700'} rounded-xl p-6 transition-all`}>
+                                        <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                                            <Instagram size={16} className="text-purple-600 dark:text-purple-400" />
+                                            Social & Marketing
+                                        </h3>
+                                        <div className="space-y-4 text-xs">
+                                            <div>
+                                                <label className="block text-slate-500 dark:text-slate-400 uppercase font-bold mb-1.5">Instagram</label>
+                                                {isEditingOverview ? (
+                                                    <input
+                                                        type="text"
+                                                        value={overviewData.instagram_handle || ''}
+                                                        onChange={(e) => handleOverviewChange('instagram_handle', e.target.value)}
+                                                        placeholder="@usuario"
+                                                        className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 outline-none"
+                                                    />
+                                                ) : (
+                                                    <p className="text-slate-900 dark:text-slate-200 font-medium text-sm">{patient.instagram_handle || 'Não informado'}</p>
+                                                )}
+                                            </div>
+                                            <div>
+                                                <label className="block text-slate-500 dark:text-slate-400 uppercase font-bold mb-1.5">Como Conheceu</label>
+                                                {isEditingOverview ? (
+                                                    <select
+                                                        value={overviewData.origin || ''}
+                                                        onChange={(e) => handleOverviewChange('origin', e.target.value)}
+                                                        className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 outline-none"
+                                                    >
+                                                        <option value="">Selecione...</option>
+                                                        <option value="INSTAGRAM">Instagram</option>
+                                                        <option value="GOOGLE">Google</option>
+                                                        <option value="INDICATION">Indicação</option>
+                                                        <option value="PASSING_BY">Passou na frente</option>
+                                                        <option value="OTHER">Outro</option>
+                                                    </select>
+                                                ) : (
+                                                    <p className="text-slate-900 dark:text-slate-200 font-medium text-sm">{patient.origin || 'Não informado'}</p>
+                                                )}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                            )
-                        }
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {/* Personal Data */}
-                            <div className={`bg-slate-50 dark:bg-slate-800 border ${isEditingOverview ? 'border-blue-200 dark:border-blue-900 ring-1 ring-blue-100 dark:ring-blue-900' : 'border-slate-200 dark:border-slate-700'} rounded-xl p-6 transition-all`}>
-                                <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-                                    <Briefcase size={16} className="text-blue-600 dark:text-blue-400" />
-                                    Dados Pessoais
-                                </h3>
-                                <div className="space-y-4 text-xs">
-                                    <div>
-                                        <label className="block text-slate-500 dark:text-slate-400 uppercase font-bold mb-1.5">CPF</label>
-                                        {isEditingOverview ? (
-                                            <input
-                                                type="text"
-                                                value={overviewData.cpf || ''}
-                                                onChange={(e) => handleOverviewChange('cpf', e.target.value)}
-                                                className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                                            />
-                                        ) : (
-                                            <p className="text-slate-900 dark:text-slate-200 font-medium text-sm">{patient.cpf || 'Não informado'}</p>
-                                        )}
-                                    </div>
-                                    <div>
-                                        <label className="block text-slate-500 dark:text-slate-400 uppercase font-bold mb-1.5">Data de Nascimento</label>
-                                        {isEditingOverview ? (
-                                            <input
-                                                type="date"
-                                                value={overviewData.birth_date ? overviewData.birth_date.split('T')[0] : ''}
-                                                onChange={(e) => handleOverviewChange('birth_date', e.target.value)}
-                                                className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                                            />
-                                        ) : (
-                                            <p className="text-slate-900 dark:text-slate-200 font-medium text-sm">
-                                                {patient.birth_date ? new Date(patient.birth_date).toLocaleDateString('pt-BR') : 'Não informado'}
-                                            </p>
-                                        )}
-                                    </div>
-                                    <div>
-                                        <label className="block text-slate-500 dark:text-slate-400 uppercase font-bold mb-1.5">Profissão</label>
-                                        {isEditingOverview ? (
-                                            <input
-                                                type="text"
-                                                value={overviewData.occupation || ''}
-                                                onChange={(e) => handleOverviewChange('occupation', e.target.value)}
-                                                className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                                            />
-                                        ) : (
-                                            <p className="text-slate-900 dark:text-slate-200 font-medium text-sm">{patient.occupation || 'Não informado'}</p>
-                                        )}
-                                    </div>
+                                {/* VIP Notes */}
+                                <div className={`bg-amber-50 dark:bg-amber-900/10 border ${isEditingOverview ? 'border-amber-200 dark:border-amber-700' : 'border-amber-100 dark:border-amber-800/50'} rounded-xl p-6 transition-all`}>
+                                    <h3 className="text-sm font-bold text-amber-700 dark:text-amber-400 mb-3 flex items-center gap-2">
+                                        <Star size={16} fill="currentColor" />
+                                        Notas VIP (Preferências & Detalhes)
+                                    </h3>
+                                    {isEditingOverview ? (
+                                        <textarea
+                                            value={overviewData.vip_notes || ''}
+                                            onChange={(e) => handleOverviewChange('vip_notes', e.target.value)}
+                                            placeholder="Ex: Paciente prefere ar condicionado desligado; Gosta de café sem açúcar..."
+                                            rows={3}
+                                            className="w-full bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 outline-none"
+                                        />
+                                    ) : (
+                                        <p className="text-sm text-amber-800 dark:text-amber-200/80 italic">
+                                            {patient.vip_notes || 'Nenhuma observação registrada.'}
+                                        </p>
+                                    )}
                                 </div>
-                            </div>
 
-                            {/* Social & Marketing */}
-                            <div className={`bg-slate-50 dark:bg-slate-800 border ${isEditingOverview ? 'border-purple-200 dark:border-purple-900 ring-1 ring-purple-100 dark:ring-purple-900' : 'border-slate-200 dark:border-slate-700'} rounded-xl p-6 transition-all`}>
-                                <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-                                    <Instagram size={16} className="text-purple-600 dark:text-purple-400" />
-                                    Social & Marketing
-                                </h3>
-                                <div className="space-y-4 text-xs">
-                                    <div>
-                                        <label className="block text-slate-500 dark:text-slate-400 uppercase font-bold mb-1.5">Instagram</label>
-                                        {isEditingOverview ? (
-                                            <input
-                                                type="text"
-                                                value={overviewData.instagram_handle || ''}
-                                                onChange={(e) => handleOverviewChange('instagram_handle', e.target.value)}
-                                                placeholder="@usuario"
-                                                className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 outline-none"
-                                            />
-                                        ) : (
-                                            <p className="text-slate-900 dark:text-slate-200 font-medium text-sm">{patient.instagram_handle || 'Não informado'}</p>
-                                        )}
-                                    </div>
-                                    <div>
-                                        <label className="block text-slate-500 dark:text-slate-400 uppercase font-bold mb-1.5">Como Conheceu</label>
-                                        {isEditingOverview ? (
-                                            <select
-                                                value={overviewData.origin || ''}
-                                                onChange={(e) => handleOverviewChange('origin', e.target.value)}
-                                                className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 outline-none"
+                                {/* BARRA DE AÇÕES CONTEXTUAL (Apenas em modo edição) */}
+                                {
+                                    isEditingOverview && (
+                                        <div className="sticky bottom-0 -mx-6 -mb-6 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 p-4 md:p-6 flex gap-3 justify-end shadow-[0_-5px_20px_rgba(0,0,0,0.1)] z-20 animate-in slide-in-from-bottom-5">
+                                            <button
+                                                onClick={() => {
+                                                    setIsEditingOverview(false);
+                                                    // Reset data to original
+                                                    if (patient) {
+                                                        setOverviewData({
+                                                            cpf: patient.cpf,
+                                                            birth_date: patient.birth_date,
+                                                            occupation: patient.occupation,
+                                                            instagram_handle: patient.instagram_handle,
+                                                            origin: patient.origin,
+                                                            vip_notes: patient.vip_notes
+                                                        });
+                                                    }
+                                                    toast('Edição cancelada');
+                                                }}
+                                                className="px-5 py-2.5 rounded-xl font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                                             >
-                                                <option value="">Selecione...</option>
-                                                <option value="INSTAGRAM">Instagram</option>
-                                                <option value="GOOGLE">Google</option>
-                                                <option value="INDICATION">Indicação</option>
-                                                <option value="PASSING_BY">Passou na frente</option>
-                                                <option value="OTHER">Outro</option>
-                                            </select>
-                                        ) : (
-                                            <p className="text-slate-900 dark:text-slate-200 font-medium text-sm">{patient.origin || 'Não informado'}</p>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* VIP Notes */}
-                        <div className={`bg-amber-50 dark:bg-amber-900/10 border ${isEditingOverview ? 'border-amber-200 dark:border-amber-700' : 'border-amber-100 dark:border-amber-800/50'} rounded-xl p-6 transition-all`}>
-                            <h3 className="text-sm font-bold text-amber-700 dark:text-amber-400 mb-3 flex items-center gap-2">
-                                <Star size={16} fill="currentColor" />
-                                Notas VIP (Preferências & Detalhes)
-                            </h3>
-                            {isEditingOverview ? (
-                                <textarea
-                                    value={overviewData.vip_notes || ''}
-                                    onChange={(e) => handleOverviewChange('vip_notes', e.target.value)}
-                                    placeholder="Ex: Paciente prefere ar condicionado desligado; Gosta de café sem açúcar..."
-                                    rows={3}
-                                    className="w-full bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 outline-none"
-                                />
-                            ) : (
-                                <p className="text-sm text-amber-800 dark:text-amber-200/80 italic">
-                                    {patient.vip_notes || 'Nenhuma observação registrada.'}
-                                </p>
-                            )}
-                        </div>
-
-                        {/* BARRA DE AÇÕES CONTEXTUAL (Apenas em modo edição) */}
-                        {
-                            isEditingOverview && (
-                                <div className="sticky bottom-0 -mx-6 -mb-6 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 p-4 md:p-6 flex gap-3 justify-end shadow-[0_-5px_20px_rgba(0,0,0,0.1)] z-20 animate-in slide-in-from-bottom-5">
-                                    <button
-                                        onClick={() => {
-                                            setIsEditingOverview(false);
-                                            // Reset data to original
-                                            if (patient) {
-                                                setOverviewData({
-                                                    cpf: patient.cpf,
-                                                    birth_date: patient.birth_date,
-                                                    occupation: patient.occupation,
-                                                    instagram_handle: patient.instagram_handle,
-                                                    origin: patient.origin,
-                                                    vip_notes: patient.vip_notes
-                                                });
-                                            }
-                                            toast('Edição cancelada');
-                                        }}
-                                        className="px-5 py-2.5 rounded-xl font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                                    >
-                                        Cancelar
-                                    </button>
-                                    <button
-                                        onClick={handleSaveOverview}
-                                        className="bg-green-600 hover:bg-green-700 text-white px-8 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-green-600/20 transition-all active:scale-95"
-                                    >
-                                        <CheckCircle size={18} />
-                                        Salvar Alterações
-                                    </button>
-                                </div>
-                            )
-                        }
-                    </div >
+                                                Cancelar
+                                            </button>
+                                            <button
+                                                onClick={handleSaveOverview}
+                                                className="bg-green-600 hover:bg-green-700 text-white px-8 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-green-600/20 transition-all active:scale-95"
+                                            >
+                                                <CheckCircle size={18} />
+                                                Salvar Alterações
+                                            </button>
+                                        </div>
+                                    )
+                                }
+                            </>
+                        )}
+                    </div>
 
                     {/* BUDGETS TAB */}
                     < div className={`space-y-3 ${activeTab === 'budgets' ? 'block' : 'hidden'}`}>
@@ -890,6 +993,10 @@ export const PatientDetailSheet: React.FC<PatientDetailProps> = ({
             <SheetContent
                 className="w-full sm:max-w-[70vw] p-0 gap-0 bg-slate-50 dark:bg-slate-900 transition-all duration-300 ease-in-out h-full flex flex-col shadow-[-10px_0_30px_-15px_rgba(0,0,0,0.3)] border-l border-slate-200 dark:border-slate-800"
             >
+                <SheetHeader className="sr-only">
+                    <SheetTitle>Prontuário de {patient?.name}</SheetTitle>
+                    <SheetDescription>Detalhes completos do paciente incluindo orçamentos e tratamentos</SheetDescription>
+                </SheetHeader>
                 {ProntuarioContent}
             </SheetContent>
         </Sheet>

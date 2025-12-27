@@ -20,6 +20,7 @@ import { DocumentGeneratorModal } from './documents/DocumentGeneratorModal';
 import { ProfitBar } from './profit/ProfitBar';
 import { MarginAlert } from './profit/MarginAlert';
 import { BudgetProfitSummary } from './profit/BudgetProfitSummary';
+import { BudgetApprovalSheet } from './budgets/BudgetApprovalSheet';
 import profitAnalysisService from '../services/profitAnalysisService';
 import { fetchBudgetById } from '../services/budgetService';
 import SecurityPinModal from './SecurityPinModal';
@@ -103,6 +104,7 @@ const BudgetForm: React.FC<BudgetFormProps> = ({
 
     // Security PIN State
     const [showPinModal, setShowPinModal] = useState(false);
+    const [showApprovalSheet, setShowApprovalSheet] = useState(false);
 
     // Initial Load - Procedure
     useEffect(() => {
@@ -452,8 +454,15 @@ const BudgetForm: React.FC<BudgetFormProps> = ({
             return;
         }
 
-        // Se margem OK, aprova direto
-        await performApproval();
+        // Se margem OK, abre o Sheet de Aprovação (com Geração de Financeiro)
+        setShowApprovalSheet(true);
+    };
+
+    const handleApprovalSuccess = () => {
+        // Navigate or refresh
+        if (patient?.id) {
+            navigate(`/patients/${patient.id}`);
+        }
     };
 
     const performApproval = async () => {
@@ -477,10 +486,10 @@ const BudgetForm: React.FC<BudgetFormProps> = ({
             email: patient.email || '',
             source: 'Orçamento',
             status: LeadStatus.NEGOTIATION,
-            interest: categoryId || 'Não especificado',
+            interest: (categoryId || 'Não especificado') as any,
             value: finalTotal,
-            patient_id: patient.id,
-            budget_id: existingBudget.id
+            // patientId is not currently supported by createLead interface
+            budgetId: existingBudget.id
         });
     };
 
@@ -733,15 +742,18 @@ const BudgetForm: React.FC<BudgetFormProps> = ({
                             </div>
 
                             <ProfitBar
-                                revenue={budgetMarginAnalysis.totalPrice}
-                                costs={budgetMarginAnalysis.totalCosts}
+                                price={budgetMarginAnalysis.totalPrice}
                                 profit={budgetMarginAnalysis.totalProfit}
                                 marginPercent={budgetMarginAnalysis.marginPercent}
+                                status={(budgetMarginAnalysis.marginPercent ?? 0) >= 30 ? 'excellent' : (budgetMarginAnalysis.marginPercent ?? 0) >= 20 ? 'good' : (budgetMarginAnalysis.marginPercent ?? 0) >= 15 ? 'warning' : 'danger'}
                             />
 
                             {/* Alert for low margin will be handled by MarginAlert component inside ProfitBar or separately if needed */}
                             <div className="mt-4">
-                                <MarginAlert marginPercent={budgetMarginAnalysis.marginPercent} minMargin={20} />
+                                <MarginAlert
+                                    marginPercent={budgetMarginAnalysis.marginPercent}
+                                    status={(budgetMarginAnalysis.marginPercent ?? 0) < 20 ? 'danger' : 'warning'}
+                                />
                             </div>
                         </div>
                     )}
@@ -994,6 +1006,16 @@ const BudgetForm: React.FC<BudgetFormProps> = ({
                         <MoreVertical size={20} />
                     </button>
                 </div>
+            )}
+            {/* APPROVAL SHEET - ADDED FOR INTEGRATION */}
+            {existingBudget && (
+                <BudgetApprovalSheet
+                    open={showApprovalSheet}
+                    onOpenChange={setShowApprovalSheet}
+                    budget={existingBudget}
+                    clinicId={profile?.clinic_id || ''}
+                    onSuccess={handleApprovalSuccess}
+                />
             )}
         </div>
     );

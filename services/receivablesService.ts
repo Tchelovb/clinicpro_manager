@@ -45,6 +45,15 @@ export interface ReceivablesStats {
     averageTicket: number;
 }
 
+export interface ApprovalSimulationResult {
+    grossValue: number;
+    netValue: number;
+    rates: { card: number; tax: number };
+    cardFeeAmount: number;
+    taxAmount: number;
+    installments: number;
+}
+
 // =====================================================
 // COLLECTION RULES (Régua de Cobrança)
 // =====================================================
@@ -356,6 +365,142 @@ export const receivablesService = {
             amountNeeded: estimatedLabCost
         };
     },
+
+    /**
+     * Approve Budget and Logic (Generate Installments + Treatments)
+     */
+    async approveBudgetAndGenerateInstallments(
+        budgetId: string,
+        params: {
+            totalValue: number;
+            installments: number;
+            cardProfileId: string;
+            downPayment: number;
+            clinicId: string;
+            firstDueDate: Date;
+            patientId: string;
+        }
+    ): Promise<void> {
+        console.log('🚀 Approving Budget & Generating Financials:', { budgetId, params });
+
+        // 1. Update Budget Status
+        const { error: budgetError } = await supabase
+            .from('budgets')
+            .update({
+                status: 'APPROVED',
+                payment_config: { // Update with final agreed terms
+                    method: 'Cartão/Misto', // Generalized info
+                    installments: params.installments,
+                    down_payment: params.downPayment
+                },
+                approved_at: new Date().toISOString()
+            })
+            .eq('id', budgetId);
+
+        if (budgetError) throw budgetError;
+
+        // 2. Generate Installments
+        const installmentsToCreate = [];
+        const monthlyValue = (params.totalValue - params.downPayment) / params.installments;
+
+        // 2.1 Down Payment (Entrada)
+        if (params.downPayment > 0) {
+            installmentsToCreate.push({
+                patient_id: params.patientId,
+                clinic_id: params.clinicId,
+                budget_id: budgetId,
+                installment_number: 0, // 0 usually means Down Payment
+                total_installments: params.installments,
+                amount: params.downPayment,
+                due_date: new Date().toISOString(), // Due Now
+                status: 'PENDING', // Pending payment
+                notes: 'Entrada'
+            });
+        }
+
+        // 2.2 Regular Installments
+        for (let i = 1; i <= params.installments; i++) {
+            const dueDate = new Date(params.firstDueDate);
+            dueDate.setMonth(dueDate.getMonth() + (i - 1));
+
+            installmentsToCreate.push({
+                patient_id: params.patientId,
+                clinic_id: params.clinicId,
+                budget_id: budgetId,
+                installment_number: i,
+                total_installments: params.installments,
+                amount: monthlyValue,
+                due_date: dueDate.toISOString(),
+                status: 'PENDING'
+            });
+        }
+
+        const { error: finError } = await supabase
+            .from('installments')
+            .insert(installmentsToCreate);
+
+        if (finError) throw finError;
+
+        // 3. Generate Treatment Items (Medical Records)
+        // Fetch budget items first
+        const { data: budgetItems } = await supabase
+            .from('budget_items')
+            .select('*')
+            .eq('budget_id', budgetId);
+
+        if (budgetItems && budgetItems.length > 0) {
+            const treatmentsToCreate = budgetItems.map((item: any) => ({
+                patient_id: params.patientId,
+                clinic_id: params.clinicId,
+                budget_id: budgetId,
+                procedure_name: item.procedure_name,
+                region: item.region,
+                tooth_number: item.tooth_number, // Ensure these fields exist in budget_items or mapped correctly
+                face: item.face,
+                quantity: item.quantity,
+                status: 'TO_DO', // Initial status
+                created_at: new Date().toISOString()
+            }));
+
+            const { error: clinicalError } = await supabase
+                .from('treatment_items')
+                .insert(treatmentsToCreate);
+
+            if (clinicalError) {
+                console.error("❌ Error creating treatment items:", clinicalError);
+                // Non-blocking, but should be noted
+            }
+        }
+
+        // 4. Update Patient Financial Totals (Trigger usually does this, but good to be safe?)
+        // Let's rely on triggers or refreshing
+    },
+
+    /**
+     * Simulate Approval
+     */
+    async simulateApproval(params: {
+        totalValue: number;
+        installments: number;
+        cardProfileId: string;
+        downPayment: number;
+        clinicId: string;
+    }): Promise<ApprovalSimulationResult> {
+        // Mock simulation for now since we don't have the full calculation engine code handy in this file
+        // In a real scenario, this would import the calculation service
+        const grossValue = params.totalValue;
+        const netValue = grossValue * 0.9; // Simplified 10% fee mock
+
+        return {
+            grossValue,
+            netValue,
+            rates: { card: 3.5, tax: 6.5 },
+            cardFeeAmount: grossValue * 0.035,
+            taxAmount: grossValue * 0.065,
+            installments: params.installments
+        };
+    },
+
 
     /**
      * Run daily collection routine

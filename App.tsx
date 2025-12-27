@@ -29,7 +29,7 @@ import Dashboard from "./pages/Dashboard";
 import Agenda from "./pages/Agenda";
 import AttendanceQueue from "./pages/AttendanceQueue";
 import PatientsList from "./pages/PatientsList";
-import PatientDetail from "./pages/PatientDetail";
+// import PatientDetail from "./pages/PatientDetail";
 import PipelinePage from "./pages/Pipeline";
 import Financial from "./pages/Financial";
 import BudgetDetail from "./pages/BudgetDetail"; // New Budget Negotiator
@@ -114,7 +114,7 @@ const App: React.FC = () => {
                     {/* --- PATIENTS MODULE --- */}
                     <Route path="/patients" element={<PatientsList />} />
                     <Route path="/patients/new" element={<PatientForm />} />
-                    <Route path="/patients/:id" element={<PatientDetail />} />
+                    {/* <Route path="/patients/:id" element={<PatientDetail />} /> */}
                     <Route path="/patients/:id/edit" element={<PatientForm />} />
 
                     {/* --- PIPELINE (CRM) MODULE --- */}
