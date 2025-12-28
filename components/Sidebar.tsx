@@ -78,6 +78,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar }) => {
         }] : []),
         // OPERATIONAL SECTION
         { path: "/crm", label: "Comercial", icon: TrendingUp },
+        {
+            path: "/pipeline-ghl",
+            label: "Pipeline GHL",
+            icon: Megaphone,
+            highlight: true
+        },
         { path: "/patients", label: "Pacientes", icon: Users },
         { path: "/agenda", label: "Agenda", icon: Calendar },
         { path: "/financial", label: "Financeiro", icon: DollarSign },

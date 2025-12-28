@@ -198,7 +198,6 @@ const ProceduresSettings: React.FC = () => {
                         <FileText
                           size={14}
                           className="text-gray-400"
-                          title={procedure.description}
                         />
                       )}
                     </div>

@@ -238,12 +238,10 @@ const ProfessionalsSettings: React.FC = () => {
                       {professional.is_active ? (
                         <UserCheck
                           className="h-4 w-4 text-green-500"
-                          title="Ativo"
                         />
                       ) : (
                         <UserX
                           className="h-4 w-4 text-red-500"
-                          title="Inativo"
                         />
                       )}
                     </div>

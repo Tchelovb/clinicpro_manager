@@ -236,11 +236,10 @@ const ProfessionalsPage: React.FC = () => {
       {/* Toast de feedback */}
       {toast && (
         <div
-          className={`p-4 rounded-lg border ${
-            toast.type === "success"
+          className={`p-4 rounded-lg border ${toast.type === "success"
               ? "bg-green-50 border-green-200 text-green-700 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400"
               : "bg-red-50 border-red-200 text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400"
-          }`}
+            }`}
         >
           {toast.message}
           <button
@@ -349,12 +348,10 @@ const ProfessionalsPage: React.FC = () => {
                       {professional.is_active ? (
                         <UserCheck
                           className="h-4 w-4 text-green-500"
-                          title="Ativo"
                         />
                       ) : (
                         <UserX
                           className="h-4 w-4 text-red-500"
-                          title="Inativo"
                         />
                       )}
                     </div>
