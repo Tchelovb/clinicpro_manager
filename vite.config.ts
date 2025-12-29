@@ -35,6 +35,9 @@ export default defineConfig(({ mode }) => {
               type: 'image/svg+xml'
             }
           ]
+        },
+        workbox: {
+          maximumFileSizeToCacheInBytes: 3000000
         }
       })
     ],
