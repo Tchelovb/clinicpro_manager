@@ -2,17 +2,7 @@ import React from 'react';
 import { Badge } from '../ui/badge';
 import { cn } from '../../lib/utils';
 import { PipelineCard } from './PipelineCard';
-
-interface Lead {
-    id: string;
-    name: string;
-    phone: string;
-    value?: number;
-    desired_treatment?: string;
-    created_at: string;
-    updated_at: string;
-    stage_id: string;
-}
+import { Opportunity } from '../../types/crm';
 
 interface PipelineColumnProps {
     stage: {
@@ -21,23 +11,23 @@ interface PipelineColumnProps {
         color?: string;
         stage_order: number;
     };
-    leads: Lead[];
-    onLeadClick: (lead: Lead) => void;
-    onWhatsAppClick?: (phone: string) => void;
+    opportunities: Opportunity[];
+    onOpportunityClick: (opp: Opportunity) => void;
+    onDragStart?: (oppId: string) => void;
     onDragOver?: (e: React.DragEvent) => void;
     onDrop?: (stageId: string) => void;
 }
 
 export function PipelineColumn({
     stage,
-    leads,
-    onLeadClick,
-    onWhatsAppClick,
+    opportunities,
+    onOpportunityClick,
+    onDragStart,
     onDragOver,
     onDrop,
 }: PipelineColumnProps) {
     // Calculate total value in this column
-    const totalValue = leads.reduce((sum, lead) => sum + (lead.value || 0), 0);
+    const totalValue = (opportunities || []).reduce((sum, opp) => sum + (opp.monetary_value || 0), 0);
 
     // Format currency
     const formatCurrency = (value: number) => {
@@ -118,7 +108,7 @@ export function PipelineColumn({
                         variant="secondary"
                         className="bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs"
                     >
-                        {leads.length}
+                        {(opportunities || []).length}
                     </Badge>
                 </div>
 
@@ -137,13 +127,13 @@ export function PipelineColumn({
 
             {/* Cards Container - Scrollable */}
             <div className="flex-1 overflow-y-auto p-3 space-y-3 bg-slate-50/50 dark:bg-slate-900/50">
-                {leads.length > 0 ? (
-                    leads.map((lead) => (
+                {(opportunities || []).length > 0 ? (
+                    (opportunities || []).map((opp) => (
                         <PipelineCard
-                            key={lead.id}
-                            lead={lead}
-                            onClick={() => onLeadClick(lead)}
-                            onWhatsAppClick={onWhatsAppClick}
+                            key={opp.id}
+                            opportunity={opp}
+                            onClick={() => onOpportunityClick(opp)}
+                            onDragStart={onDragStart}
                         />
                     ))
                 ) : (
@@ -152,7 +142,7 @@ export function PipelineColumn({
                             <span className="text-2xl">📋</span>
                         </div>
                         <p className="text-xs text-slate-400 dark:text-slate-500 font-medium">
-                            Nenhum lead nesta fase
+                            Nenhuma oportunidade nesta fase
                         </p>
                     </div>
                 )}
@@ -160,3 +150,4 @@ export function PipelineColumn({
         </div>
     );
 }
+

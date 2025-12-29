@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Calendar, Clock, User, FileText, X, Save, Loader2 } from 'lucide-react';
+import { Calendar, Clock, User, FileText, X, Save, Loader2, Plus } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
+import { QuickAddDialog } from './shared/QuickAddDialog';
+import { useQuickAdd } from '../hooks/useQuickAdd';
+import { QUICK_ADD_CONFIGS } from '../types/quickAdd';
 
 interface Professional {
     id: string;
@@ -19,6 +22,7 @@ const AgendaForm: React.FC = () => {
     const isEditing = !!id;
     const [loading, setLoading] = useState(false);
     const [professionals, setProfessionals] = useState<Professional[]>([]);
+    const [appointmentTypes, setAppointmentTypes] = useState<any[]>([]);
 
     // Form State
     const [formData, setFormData] = useState({
@@ -32,8 +36,31 @@ const AgendaForm: React.FC = () => {
         status: 'PENDING' as 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW'
     });
 
+    // Quick Add Hook for Appointment Types
+    const quickAddType = useQuickAdd({
+        tableName: 'appointment_types',
+        clinicId: profile?.clinic_id || '',
+        successMessage: 'Tipo de agendamento criado com sucesso!',
+        onSuccess: (newType) => {
+            setFormData({ ...formData, type: newType.name });
+            fetchAppointmentTypes();
+        }
+    });
+
+    // Quick Add Hook for Professionals
+    const quickAddProfessional = useQuickAdd({
+        tableName: 'profiles',
+        clinicId: profile?.clinic_id || '',
+        successMessage: 'Profissional criado com sucesso!',
+        onSuccess: (newProf) => {
+            setFormData({ ...formData, professional_id: newProf.id });
+            loadProfessionals();
+        }
+    });
+
     useEffect(() => {
         loadProfessionals();
+        fetchAppointmentTypes();
         if (isEditing) {
             loadAppointment();
         }
@@ -80,6 +107,17 @@ const AgendaForm: React.FC = () => {
             console.error('Erro ao carregar agendamento:', error);
             toast.error('Erro ao carregar agendamento');
         }
+    };
+
+    const fetchAppointmentTypes = async () => {
+        if (!profile?.clinic_id) return;
+        const { data } = await supabase
+            .from('appointment_types')
+            .select('*')
+            .eq('clinic_id', profile.clinic_id)
+            .eq('is_active', true)
+            .order('name', { ascending: true });
+        if (data) setAppointmentTypes(data);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -182,17 +220,27 @@ const AgendaForm: React.FC = () => {
                     <label className="block text-sm font-bold text-slate-700 mb-2">
                         Profissional *
                     </label>
-                    <select
-                        required
-                        value={formData.professional_id}
-                        onChange={(e) => setFormData({ ...formData, professional_id: e.target.value })}
-                        className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500"
-                    >
-                        <option value="">Selecione um profissional</option>
-                        {professionals.map(prof => (
-                            <option key={prof.id} value={prof.id}>{prof.name}</option>
-                        ))}
-                    </select>
+                    <div className="flex gap-2">
+                        <select
+                            required
+                            value={formData.professional_id}
+                            onChange={(e) => setFormData({ ...formData, professional_id: e.target.value })}
+                            className="flex-1 px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500"
+                        >
+                            <option value="">Selecione um profissional</option>
+                            {professionals.map(prof => (
+                                <option key={prof.id} value={prof.id}>{prof.name}</option>
+                            ))}
+                        </select>
+                        <button
+                            type="button"
+                            onClick={() => quickAddProfessional.setIsOpen(true)}
+                            className="px-3 h-10 bg-violet-600 hover:bg-violet-700 text-white rounded-lg transition-colors flex items-center justify-center"
+                            title="Adicionar novo profissional"
+                        >
+                            <Plus size={16} />
+                        </button>
+                    </div>
                 </div>
 
                 {/* Date & Time */}
@@ -230,20 +278,26 @@ const AgendaForm: React.FC = () => {
                     <label className="block text-sm font-bold text-slate-700 mb-2">
                         Tipo de Atendimento *
                     </label>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        {(Object.keys(typeLabels) as Array<keyof typeof typeLabels>).map(type => (
-                            <button
-                                key={type}
-                                type="button"
-                                onClick={() => setFormData({ ...formData, type })}
-                                className={`px-4 py-2 rounded-lg border-2 transition-all ${formData.type === type
-                                        ? 'border-violet-500 bg-violet-50 text-violet-700 font-bold'
-                                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
-                                    }`}
-                            >
-                                {typeLabels[type]}
-                            </button>
-                        ))}
+                    <div className="flex gap-2">
+                        <select
+                            required
+                            value={formData.type}
+                            onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
+                            className="flex-1 px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500"
+                        >
+                            <option value="">Selecione...</option>
+                            {appointmentTypes.map(type => (
+                                <option key={type.id} value={type.name}>{type.name}</option>
+                            ))}
+                        </select>
+                        <button
+                            type="button"
+                            onClick={() => quickAddType.setIsOpen(true)}
+                            className="px-3 h-10 bg-violet-600 hover:bg-violet-700 text-white rounded-lg transition-colors flex items-center justify-center"
+                            title="Adicionar novo tipo"
+                        >
+                            <Plus size={16} />
+                        </button>
                     </div>
                 </div>
 
@@ -290,6 +344,22 @@ const AgendaForm: React.FC = () => {
                     </button>
                 </div>
             </form>
+
+            {/* Quick Add Dialog */}
+            <QuickAddDialog
+                open={quickAddType.isOpen}
+                onOpenChange={quickAddType.setIsOpen}
+                config={QUICK_ADD_CONFIGS.appointment_type}
+                onSave={quickAddType.createItem}
+                isLoading={quickAddType.isLoading}
+            />
+            <QuickAddDialog
+                open={quickAddProfessional.isOpen}
+                onOpenChange={quickAddProfessional.setIsOpen}
+                config={QUICK_ADD_CONFIGS.professional}
+                onSave={quickAddProfessional.createItem}
+                isLoading={quickAddProfessional.isLoading}
+            />
         </div>
     );
 };

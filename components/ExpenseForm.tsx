@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { DollarSign, Calendar, FileText, X, Save, AlertCircle, Loader2 } from 'lucide-react';
+import { DollarSign, Calendar, FileText, X, Save, AlertCircle, Loader2, Plus } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
+import { QuickAddDialog } from './shared/QuickAddDialog';
+import { useQuickAdd } from '../hooks/useQuickAdd';
+import { QUICK_ADD_CONFIGS } from '../types/quickAdd';
 
 const ExpenseForm: React.FC = () => {
     const navigate = useNavigate();
@@ -25,7 +28,34 @@ const ExpenseForm: React.FC = () => {
         notes: ''
     });
 
+    // Lists for dropdowns
+    const [suppliers, setSuppliers] = useState<any[]>([]);
+    const [expenseCategories, setExpenseCategories] = useState<any[]>([]);
+
+    // Quick Add Hooks
+    const quickAddSupplier = useQuickAdd({
+        tableName: 'suppliers',
+        clinicId: profile?.clinic_id || '',
+        successMessage: 'Fornecedor criado com sucesso!',
+        onSuccess: (newSupplier) => {
+            setFormData({ ...formData, provider: newSupplier.name });
+            fetchSuppliers();
+        }
+    });
+
+    const quickAddCategory = useQuickAdd({
+        tableName: 'expense_category',
+        clinicId: profile?.clinic_id || '',
+        successMessage: 'Categoria criada com sucesso!',
+        onSuccess: (newCategory) => {
+            setFormData({ ...formData, category: newCategory.name as any });
+            fetchExpenseCategories();
+        }
+    });
+
     useEffect(() => {
+        fetchSuppliers();
+        fetchExpenseCategories();
         if (isEditing) {
             loadExpense();
         }
@@ -55,6 +85,28 @@ const ExpenseForm: React.FC = () => {
             console.error('Erro ao carregar despesa:', error);
             toast.error('Erro ao carregar despesa');
         }
+    };
+
+    const fetchSuppliers = async () => {
+        if (!profile?.clinic_id) return;
+        const { data } = await supabase
+            .from('suppliers')
+            .select('*')
+            .eq('clinic_id', profile.clinic_id)
+            .eq('is_active', true)
+            .order('name', { ascending: true });
+        if (data) setSuppliers(data);
+    };
+
+    const fetchExpenseCategories = async () => {
+        if (!profile?.clinic_id) return;
+        const { data } = await supabase
+            .from('expense_category')
+            .select('*')
+            .eq('clinic_id', profile.clinic_id)
+            .eq('active', true)
+            .order('name', { ascending: true });
+        if (data) setExpenseCategories(data);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -156,28 +208,52 @@ const ExpenseForm: React.FC = () => {
                         <label className="block text-sm font-bold text-slate-700 mb-2">
                             Categoria *
                         </label>
-                        <select
-                            required
-                            value={formData.category}
-                            onChange={(e) => setFormData({ ...formData, category: e.target.value as any })}
-                            className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500"
-                        >
-                            {Object.entries(categoryLabels).map(([key, label]) => (
-                                <option key={key} value={key}>{label}</option>
-                            ))}
-                        </select>
+                        <div className="flex gap-2">
+                            <select
+                                required
+                                value={formData.category}
+                                onChange={(e) => setFormData({ ...formData, category: e.target.value as any })}
+                                className="flex-1 px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500"
+                            >
+                                <option value="">Selecione...</option>
+                                {expenseCategories.map(cat => (
+                                    <option key={cat.id} value={cat.name}>{cat.name}</option>
+                                ))}
+                            </select>
+                            <button
+                                type="button"
+                                onClick={() => quickAddCategory.setIsOpen(true)}
+                                className="px-3 h-10 bg-violet-600 hover:bg-violet-700 text-white rounded-lg transition-colors flex items-center justify-center"
+                                title="Adicionar nova categoria"
+                            >
+                                <Plus size={16} />
+                            </button>
+                        </div>
                     </div>
                     <div>
                         <label className="block text-sm font-bold text-slate-700 mb-2">
                             Fornecedor
                         </label>
-                        <input
-                            type="text"
-                            value={formData.provider}
-                            onChange={(e) => setFormData({ ...formData, provider: e.target.value })}
-                            className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500"
-                            placeholder="Nome do fornecedor"
-                        />
+                        <div className="flex gap-2">
+                            <select
+                                value={formData.provider}
+                                onChange={(e) => setFormData({ ...formData, provider: e.target.value })}
+                                className="flex-1 px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500"
+                            >
+                                <option value="">Nenhum</option>
+                                {suppliers.map(supplier => (
+                                    <option key={supplier.id} value={supplier.name}>{supplier.name}</option>
+                                ))}
+                            </select>
+                            <button
+                                type="button"
+                                onClick={() => quickAddSupplier.setIsOpen(true)}
+                                className="px-3 h-10 bg-violet-600 hover:bg-violet-700 text-white rounded-lg transition-colors flex items-center justify-center"
+                                title="Adicionar novo fornecedor"
+                            >
+                                <Plus size={16} />
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -239,12 +315,12 @@ const ExpenseForm: React.FC = () => {
                                 type="button"
                                 onClick={() => setFormData({ ...formData, status })}
                                 className={`px-4 py-2 rounded-lg border-2 transition-all ${formData.status === status
-                                        ? status === 'PAID'
-                                            ? 'border-green-500 bg-green-50 text-green-700 font-bold'
-                                            : status === 'OVERDUE'
-                                                ? 'border-rose-500 bg-rose-50 text-rose-700 font-bold'
-                                                : 'border-amber-500 bg-amber-50 text-amber-700 font-bold'
-                                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                                    ? status === 'PAID'
+                                        ? 'border-green-500 bg-green-50 text-green-700 font-bold'
+                                        : status === 'OVERDUE'
+                                            ? 'border-rose-500 bg-rose-50 text-rose-700 font-bold'
+                                            : 'border-amber-500 bg-amber-50 text-amber-700 font-bold'
+                                    : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
                                     }`}
                             >
                                 {status === 'PAID' ? 'Pago' : status === 'OVERDUE' ? 'Atrasado' : 'Pendente'}
@@ -306,6 +382,22 @@ const ExpenseForm: React.FC = () => {
                     </button>
                 </div>
             </form>
+
+            {/* Quick Add Dialogs */}
+            <QuickAddDialog
+                open={quickAddSupplier.isOpen}
+                onOpenChange={quickAddSupplier.setIsOpen}
+                config={QUICK_ADD_CONFIGS.supplier}
+                onSave={quickAddSupplier.createItem}
+                isLoading={quickAddSupplier.isLoading}
+            />
+            <QuickAddDialog
+                open={quickAddCategory.isOpen}
+                onOpenChange={quickAddCategory.setIsOpen}
+                config={QUICK_ADD_CONFIGS.expense_category}
+                onSave={quickAddCategory.createItem}
+                isLoading={quickAddCategory.isLoading}
+            />
         </div>
     );
 };

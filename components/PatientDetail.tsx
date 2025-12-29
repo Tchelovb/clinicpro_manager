@@ -16,6 +16,7 @@ import { OrthoTab } from "./ortho/OrthoTab";
 import toast from "react-hot-toast";
 import BudgetForm from "./BudgetForm";
 import PatientForm from "./PatientForm";
+import { useSheetStore } from "../stores/useSheetStore";
 
 // Patient Score Badge (VIP Status)
 const ScoreBadge = ({ score }: { score?: string }) => {
@@ -53,8 +54,6 @@ export const PatientDetailSheet: React.FC<PatientDetailProps> = ({
     initialData,
     onSuccess
 }) => {
-    console.log("%c ✅ ESTE É O ARQUIVO NOVO: PatientDetail.tsx", "background: green; color: white; font-size: 20px");
-
     const { id: paramId } = useParams<{ id: string }>();
     // PRIORITIZE PROP (Flash Fix): Immediate use of prop if available
     const initialId = patientId || paramId;
@@ -81,6 +80,20 @@ export const PatientDetailSheet: React.FC<PatientDetailProps> = ({
     const [patient, setPatient] = useState<any>(null);
     const [loading, setLoading] = useState(activeMode !== 'create');
     const [activeTab, setActiveTab] = useState('overview');
+
+    // Deep Linking: Read initialTab from store
+    const { initialTab } = useSheetStore();
+
+    // Deep Linking Effect: Switch tab when sheet opens with initialTab
+    useEffect(() => {
+        if (open && initialTab) {
+            console.log('🎯 Deep Linking: Opening tab:', initialTab);
+            setActiveTab(initialTab);
+        } else if (open && !initialTab) {
+            // Reset to default when opening without specific tab
+            setActiveTab('overview');
+        }
+    }, [open, initialTab]);
 
     // Scroll Diagnostic Ref
     const scrollContainerRef = React.useRef<HTMLDivElement>(null);

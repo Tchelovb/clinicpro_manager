@@ -1,28 +1,29 @@
 import React from 'react';
 import { Badge } from '../ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
-import { AlertCircle, MessageCircle } from 'lucide-react';
+import { AlertCircle, MessageCircle, User, UserCheck } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { Opportunity } from '../../types/crm';
 
 interface PipelineCardProps {
-    lead: {
-        id: string;
-        name: string;
-        phone: string;
-        value?: number;
-        desired_treatment?: string;
-        created_at: string;
-        updated_at: string;
-        stage_id: string;
-    };
+    opportunity: Opportunity;
     onClick: () => void;
-    onWhatsAppClick?: (phone: string) => void;
+    onDragStart?: (oppId: string) => void;
 }
 
-export function PipelineCard({ lead, onClick, onWhatsAppClick }: PipelineCardProps) {
+export function PipelineCard({ opportunity, onClick, onDragStart }: PipelineCardProps) {
+    // Detect type: Lead or Patient
+    const isPatient = !!opportunity.patient_id;
+    const isLead = !!opportunity.lead_id;
+
+    // Get name and phone from correct source
+    const name = opportunity.patients?.name || opportunity.leads?.name || 'Sem nome';
+    const phone = opportunity.patients?.phone || opportunity.leads?.phone || '';
+    const photoUrl = opportunity.patients?.profile_photo_url;
+
     // Calculate days in current stage
     const daysInStage = Math.floor(
-        (new Date().getTime() - new Date(lead.updated_at).getTime()) / (1000 * 60 * 60 * 24)
+        (new Date().getTime() - new Date(opportunity.updated_at).getTime()) / (1000 * 60 * 60 * 24)
     );
     const isStagnant = daysInStage > 3;
 
@@ -47,18 +48,24 @@ export function PipelineCard({ lead, onClick, onWhatsAppClick }: PipelineCardPro
 
     const handleWhatsAppClick = (e: React.MouseEvent) => {
         e.stopPropagation();
-        if (onWhatsAppClick && lead.phone) {
-            onWhatsAppClick(lead.phone);
-        } else if (lead.phone) {
-            // Open WhatsApp directly
-            const cleanPhone = lead.phone.replace(/\D/g, '');
+        if (phone) {
+            const cleanPhone = phone.replace(/\D/g, '');
             window.open(`https://wa.me/55${cleanPhone}`, '_blank');
+        }
+    };
+
+    const handleDragStart = (e: React.DragEvent) => {
+        e.dataTransfer.effectAllowed = 'move';
+        if (onDragStart) {
+            onDragStart(opportunity.id);
         }
     };
 
     return (
         <div
             onClick={onClick}
+            draggable={!!onDragStart}
+            onDragStart={handleDragStart}
             className={cn(
                 'bg-white dark:bg-slate-800 rounded-lg border shadow-sm hover:shadow-md transition-all cursor-pointer group',
                 isStagnant
@@ -69,22 +76,38 @@ export function PipelineCard({ lead, onClick, onWhatsAppClick }: PipelineCardPro
             {/* Header */}
             <div className="p-3 border-b border-slate-100 dark:border-slate-700">
                 <div className="flex items-start gap-2">
-                    <Avatar className="h-8 w-8 flex-shrink-0">
-                        <AvatarImage
-                            src={`https://ui-avatars.com/api/?name=${encodeURIComponent(
-                                lead.name
-                            )}&background=random`}
-                        />
-                        <AvatarFallback className="text-xs">
-                            {getInitials(lead.name)}
-                        </AvatarFallback>
-                    </Avatar>
+                    {/* Avatar with Type Indicator */}
+                    <div className="relative">
+                        <Avatar className="h-8 w-8 flex-shrink-0">
+                            {isPatient && photoUrl ? (
+                                <AvatarImage src={photoUrl} />
+                            ) : (
+                                <AvatarImage
+                                    src={`https://ui-avatars.com/api/?name=${encodeURIComponent(
+                                        name
+                                    )}&background=random`}
+                                />
+                            )}
+                            <AvatarFallback className="text-xs">
+                                {getInitials(name)}
+                            </AvatarFallback>
+                        </Avatar>
+                        {/* Type Badge */}
+                        <div className="absolute -bottom-1 -right-1 bg-white dark:bg-slate-800 rounded-full p-0.5">
+                            {isPatient ? (
+                                <UserCheck className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+                            ) : (
+                                <User className="h-3 w-3 text-slate-400 dark:text-slate-500" />
+                            )}
+                        </div>
+                    </div>
+
                     <div className="flex-1 min-w-0">
                         <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100 truncate">
-                            {lead.name}
+                            {name}
                         </h4>
                         <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                            {lead.phone}
+                            {phone}
                         </p>
                     </div>
                 </div>
@@ -95,22 +118,22 @@ export function PipelineCard({ lead, onClick, onWhatsAppClick }: PipelineCardPro
                 {/* Value Badge */}
                 <div className="flex items-center justify-between">
                     <Badge
-                        variant={lead.value && lead.value > 0 ? 'default' : 'secondary'}
+                        variant={opportunity.monetary_value && opportunity.monetary_value > 0 ? 'default' : 'secondary'}
                         className={cn(
                             'font-bold text-xs',
-                            lead.value && lead.value > 0
+                            opportunity.monetary_value && opportunity.monetary_value > 0
                                 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
                                 : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
                         )}
                     >
-                        {formatCurrency(lead.value)}
+                        {formatCurrency(opportunity.monetary_value)}
                     </Badge>
                 </div>
 
-                {/* Interest/Treatment */}
-                {lead.desired_treatment && (
+                {/* Title */}
+                {opportunity.title && (
                     <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2">
-                        {lead.desired_treatment}
+                        {opportunity.title}
                     </p>
                 )}
             </div>
@@ -133,14 +156,17 @@ export function PipelineCard({ lead, onClick, onWhatsAppClick }: PipelineCardPro
                 </div>
 
                 {/* WhatsApp Quick Action */}
-                <button
-                    onClick={handleWhatsAppClick}
-                    className="p-1.5 rounded-full hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-colors opacity-0 group-hover:opacity-100"
-                    title="Abrir WhatsApp"
-                >
-                    <MessageCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                </button>
+                {phone && (
+                    <button
+                        onClick={handleWhatsAppClick}
+                        className="p-1.5 rounded-full hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-colors opacity-0 group-hover:opacity-100"
+                        title="Abrir WhatsApp"
+                    >
+                        <MessageCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                    </button>
+                )}
             </div>
         </div>
     );
 }
+

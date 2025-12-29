@@ -18,10 +18,21 @@ import {
     BarChart3,
     Sun,
     Moon,
-    UserCheck
+    UserCheck,
+    UserPlus,
+    Target,
+    Search,
+    MoreHorizontal
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuTrigger,
+} from '../ui/dropdown-menu';
 
 // Navigation Configuration with Role-Based Access
 interface MenuItem {
@@ -32,14 +43,8 @@ interface MenuItem {
     color: string;
 }
 
-const MENU_ITEMS: MenuItem[] = [
-    {
-        path: '/chat-bos',
-        label: 'ChatBOS',
-        icon: Sparkles,
-        roles: ['MASTER', 'ADMIN', 'PROFESSIONAL'],
-        color: 'text-violet-600'
-    },
+// Main Navigation Items (Always Visible)
+const MAIN_NAV_ITEMS: MenuItem[] = [
     {
         path: '/dashboard',
         label: 'Dashboard',
@@ -55,11 +60,18 @@ const MENU_ITEMS: MenuItem[] = [
         color: 'text-violet-600'
     },
     {
-        path: '/attendance-queue',
-        label: 'Fila de Atendimento',
-        icon: UserCheck,
-        roles: ['MASTER', 'ADMIN', 'PROFESSIONAL', 'RECEPTIONIST'],
-        color: 'text-green-600'
+        path: '/pipeline',
+        label: 'Pipeline',
+        icon: Target,
+        roles: ['MASTER', 'ADMIN', 'CRC'],
+        color: 'text-violet-600'
+    },
+    {
+        path: '/leads',
+        label: 'Leads',
+        icon: UserPlus,
+        roles: ['MASTER', 'ADMIN', 'CRC'],
+        color: 'text-violet-600'
     },
     {
         path: '/patients',
@@ -69,16 +81,34 @@ const MENU_ITEMS: MenuItem[] = [
         color: 'text-violet-600'
     },
     {
-        path: '/pipeline',
-        label: 'Pipeline',
-        icon: Sparkles,
-        roles: ['MASTER', 'ADMIN', 'CRC'],
-        color: 'text-violet-600'
-    },
-    {
         path: '/financial',
         label: 'Financeiro',
         icon: DollarSign,
+        roles: ['MASTER', 'ADMIN'],
+        color: 'text-violet-600'
+    },
+];
+
+// Secondary Navigation Items ("More Options" Dropdown)
+const SECONDARY_NAV_ITEMS: MenuItem[] = [
+    {
+        path: '/chat-bos',
+        label: 'ChatBOS',
+        icon: Sparkles,
+        roles: ['MASTER', 'ADMIN', 'PROFESSIONAL'],
+        color: 'text-violet-600'
+    },
+    {
+        path: '/attendance-queue',
+        label: 'Fila de Atendimento',
+        icon: UserCheck,
+        roles: ['MASTER', 'ADMIN', 'PROFESSIONAL', 'RECEPTIONIST'],
+        color: 'text-green-600'
+    },
+    {
+        path: '/inventory',
+        label: 'Estoque',
+        icon: Package,
         roles: ['MASTER', 'ADMIN'],
         color: 'text-violet-600'
     },
@@ -87,13 +117,6 @@ const MENU_ITEMS: MenuItem[] = [
         label: 'Laboratório',
         icon: FlaskConical,
         roles: ['MASTER', 'ADMIN', 'PROFESSIONAL'],
-        color: 'text-violet-600'
-    },
-    {
-        path: '/inventory',
-        label: 'Estoque',
-        icon: Package,
-        roles: ['MASTER', 'ADMIN'],
         color: 'text-violet-600'
     },
     {
@@ -122,12 +145,11 @@ export const AppLayout: React.FC<{ children?: React.ReactNode }> = ({ children }
 
     // Filter menu items based on user role
     const userRole = profile?.role || 'GUEST';
-    const allowedMenuItems = MENU_ITEMS.filter(item =>
-        item.roles.includes(userRole)
-    );
+    const allowedMainItems = MAIN_NAV_ITEMS.filter(item => item.roles.includes(userRole));
+    const allowedSecondaryItems = SECONDARY_NAV_ITEMS.filter(item => item.roles.includes(userRole));
 
     // Bottom navigation items (mobile - top 4 most used)
-    const bottomNavItems = allowedMenuItems.slice(0, 4);
+    const bottomNavItems = allowedMainItems.slice(0, 4);
 
     const handleSignOut = async () => {
         await signOut();
@@ -174,9 +196,22 @@ export const AppLayout: React.FC<{ children?: React.ReactNode }> = ({ children }
                     )}
                 </div>
 
-                {/* Navigation Items */}
-                <nav className="flex-1 py-6 px-3 space-y-1 overflow-y-auto scrollbar-hide">
-                    {allowedMenuItems.map((item) => {
+                {/* Search Button - Minimalist Apple Style */}
+                <div className="px-3 mb-4">
+                    <button
+                        onClick={() => navigate('/')}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
+                    >
+                        <Search className="h-5 w-5 min-w-[20px]" />
+                        <span className={`text-sm transition-all duration-300 ${isSidebarExpanded ? 'opacity-100' : 'opacity-0 absolute pointer-events-none'}`}>
+                            Pesquisar
+                        </span>
+                    </button>
+                </div>
+
+                {/* Main Navigation Items */}
+                <nav className="px-3 space-y-1 overflow-hidden">
+                    {allowedMainItems.map((item) => {
                         const active = isActive(item.path);
                         const Icon = item.icon;
                         return (
@@ -186,8 +221,8 @@ export const AppLayout: React.FC<{ children?: React.ReactNode }> = ({ children }
                                 className={`
                                     w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 group relative
                                     ${active
-                                        ? 'bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-300 shadow-sm border border-violet-100 dark:border-transparent' // Active State
-                                        : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-200'} // Inactive State
+                                        ? 'bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-300 shadow-sm border border-violet-100 dark:border-transparent'
+                                        : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-200'}
                                 `}
                             >
                                 <Icon
@@ -210,6 +245,43 @@ export const AppLayout: React.FC<{ children?: React.ReactNode }> = ({ children }
                         );
                     })}
                 </nav>
+
+                {/* Spacer - pushes everything below to bottom */}
+                <div className="flex-grow" />
+
+                {/* More Options Dropdown */}
+                {allowedSecondaryItems.length > 0 && (
+                    <div className="px-3 mb-2">
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-200 transition-colors group">
+                                    <MoreHorizontal size={20} className="min-w-[20px]" />
+                                    <span className={`text-sm font-medium transition-all duration-300 ${isSidebarExpanded ? 'opacity-100' : 'opacity-0 absolute pointer-events-none'}`}>
+                                        Mais Opções
+                                    </span>
+                                </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent side="right" align="end" className="w-56">
+                                <DropdownMenuLabel className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                                    Gestão & Backoffice
+                                </DropdownMenuLabel>
+                                {allowedSecondaryItems.map((item) => {
+                                    const Icon = item.icon;
+                                    return (
+                                        <DropdownMenuItem
+                                            key={item.path}
+                                            onClick={() => navigate(item.path)}
+                                            className="cursor-pointer"
+                                        >
+                                            <Icon className="mr-2 h-4 w-4" />
+                                            <span>{item.label}</span>
+                                        </DropdownMenuItem>
+                                    );
+                                })}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
+                )}
 
                 {/* Theme Toggle & User Profile */}
                 <div className="p-4 border-t border-slate-100 dark:border-slate-800 shrink-0 space-y-2">
@@ -321,7 +393,7 @@ export const AppLayout: React.FC<{ children?: React.ReactNode }> = ({ children }
                         </div>
 
                         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-                            {allowedMenuItems.map((item) => {
+                            {[...allowedMainItems, ...allowedSecondaryItems].map((item) => {
                                 const active = isActive(item.path);
                                 const Icon = item.icon;
                                 return (

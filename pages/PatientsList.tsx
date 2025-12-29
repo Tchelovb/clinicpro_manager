@@ -27,6 +27,7 @@ import {
     DialogDescription,
     DialogFooter
 } from '../components/ui/dialog';
+import { PatientQuickActions } from '../components/patients/PatientQuickActions';
 
 // Definindo a interface Patient de forma robusta
 interface Patient {
@@ -373,14 +374,14 @@ const PatientsList: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* New Patient Button (Smart) */}
-                        <button
-                            onClick={handleNewPatientClick}
-                            className="flex items-center gap-2 px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 active:scale-[0.98] transition-all font-bold shadow-sm whitespace-nowrap"
-                        >
-                            <Plus size={18} />
-                            <span className="hidden sm:inline">Novo Paciente</span>
-                        </button>
+                        {/* Patient Quick Actions (Dual Button) */}
+                        <PatientQuickActions
+                            onOpenFullRegistration={handleNewPatientClick}
+                            onSuccess={() => {
+                                setSearchTerm('');
+                                fetchRecentPatients();
+                            }}
+                        />
 
                         {/* View Toggles */}
                         <div className="hidden md:flex items-center gap-2 border-l border-slate-200 dark:border-slate-700 pl-4 ml-2">

@@ -18,7 +18,10 @@ import {
     ArrowRightLeft,
     Calculator,
     Landmark,
-    Database
+    Database,
+    Calendar,
+    Heart,
+    GitBranch
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs'; // Shadcn Tabs
@@ -40,6 +43,14 @@ import ProceduresManager from '../components/settings/ProceduresManager';
 import { AIIntegrationsSettings } from '../src/components/settings/AIIntegrationsSettings';
 import FinancialRulesSettings from '../components/settings/financial-rules/FinancialRulesSettings';
 import { Team } from './settings/Team';
+import LeadSourcesManager from '../components/settings/LeadSourcesManager';
+import AppointmentTypesManager from '../components/settings/AppointmentTypesManager';
+import SecurityPINSettings from '../components/settings/SecurityPINSettings';
+import SuppliersManager from '../components/settings/SuppliersManager';
+import InsurancePlansSettings from '../components/settings/InsurancePlansSettings';
+import AuditLogsViewer from '../components/settings/AuditLogsViewer';
+import ClinicalTemplatesManager from '../components/settings/ClinicalTemplatesManager';
+import CRMPipelineManager from '../components/settings/CRMPipelineManager';
 
 const Settings: React.FC = () => {
     const navigate = useNavigate();
@@ -47,9 +58,12 @@ const Settings: React.FC = () => {
 
     // UI States
     const [activeTab, setActiveTab] = useState('foundation'); // Tracks main tab for sub-state resets
-    const [foundationView, setFoundationView] = useState<'menu' | 'clinic' | 'users' | 'professionals'>('menu');
+    const [foundationView, setFoundationView] = useState<'menu' | 'clinic' | 'users' | 'professionals' | 'security' | 'audit'>('menu');
     const [financialView, setFinancialView] = useState('rules');
     const [commercialView, setCommercialView] = useState('pricetables');
+    const [crmView, setCrmView] = useState('leadsources');
+    const [clinicalView, setClinicalView] = useState('appointmenttypes');
+    const [stockView, setStockView] = useState('suppliers');
     const [isWizardOpen, setIsWizardOpen] = useState(false);
 
     // Reset inner states when changing main tabs
@@ -112,6 +126,15 @@ const Settings: React.FC = () => {
                             </div>
                         </TabsTrigger>
                         <TabsTrigger
+                            value="crm"
+                            className="bg-transparent data-[state=active]:bg-transparent data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:shadow-none rounded-none px-2 py-4 text-slate-500 hover:text-slate-700 font-medium transition-all"
+                        >
+                            <div className="flex items-center gap-2">
+                                <Users size={18} />
+                                CRM
+                            </div>
+                        </TabsTrigger>
+                        <TabsTrigger
                             value="stock"
                             className="bg-transparent data-[state=active]:bg-transparent data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:shadow-none rounded-none px-2 py-4 text-slate-500 hover:text-slate-700 font-medium transition-all"
                         >
@@ -171,16 +194,13 @@ const Settings: React.FC = () => {
                                         onClick={() => setFoundationView('professionals')}
                                         color="green"
                                     />
-                                    <div className="opacity-50 pointer-events-none">
-                                        {/* Placeholder for future Security/Audit */}
-                                        <ViewCard
-                                            emoji="🛡️"
-                                            title="Segurança & Auditoria"
-                                            description="Logs de acesso e configurações de segurança (Em Breve)."
-                                            onClick={() => { }}
-                                            color="slate"
-                                        />
-                                    </div>
+                                    <ViewCard
+                                        emoji="🛡️"
+                                        title="Segurança & Auditoria"
+                                        description="PIN de segurança e configurações de acesso."
+                                        onClick={() => setFoundationView('security')}
+                                        color="red"
+                                    />
                                 </div>
                             )}
 
@@ -199,6 +219,8 @@ const Settings: React.FC = () => {
                                             {foundationView === 'clinic' && 'Dados da Clínica'}
                                             {foundationView === 'users' && 'Equipe e Acessos'}
                                             {foundationView === 'professionals' && 'Profissionais de Saúde'}
+                                            {foundationView === 'security' && 'Segurança & Auditoria'}
+                                            {foundationView === 'audit' && 'Logs de Auditoria'}
                                         </h2>
                                     </div>
 
@@ -206,6 +228,8 @@ const Settings: React.FC = () => {
                                         {foundationView === 'clinic' && <ClinicSettings />}
                                         {foundationView === 'users' && <Team />}
                                         {foundationView === 'professionals' && <ProfessionalsSettings />}
+                                        {foundationView === 'security' && <SecurityPINSettings />}
+                                        {foundationView === 'audit' && <AuditLogsViewer />}
                                     </div>
                                 </div>
                             )}
@@ -258,29 +282,40 @@ const Settings: React.FC = () => {
                             </div>
                         </TabsContent>
 
+                        {/* === ABA CRM === */}
+                        <TabsContent value="crm" className="m-0 h-full focus-visible:ring-0 outline-none">
+                            <div className="flex flex-col gap-6">
+                                <div className="flex gap-2 pb-2 border-b border-slate-200 dark:border-slate-800">
+                                    <PillTab active={crmView === 'leadsources'} onClick={() => setCrmView('leadsources')} icon={Users} label="Origens de Lead" />
+                                    <PillTab active={crmView === 'pipeline'} onClick={() => setCrmView('pipeline')} icon={GitBranch} label="Pipeline" />
+                                </div>
+                                <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 p-6 min-h-[500px]">
+                                    {crmView === 'leadsources' && <LeadSourcesManager />}
+                                    {crmView === 'pipeline' && <CRMPipelineManager />}
+                                </div>
+                            </div>
+                        </TabsContent>
+
                         {/* === ABA ESTOQUE === */}
                         <TabsContent value="stock" className="m-0 h-full focus-visible:ring-0 outline-none">
-                            <div className="flex flex-col items-center justify-center h-[50vh] text-center border-2 border-dashed border-slate-200 rounded-xl">
-                                <div className="bg-blue-50 p-4 rounded-full mb-4">
-                                    <Package size={48} className="text-blue-500" />
-                                </div>
-                                <h3 className="text-xl font-bold text-slate-800 mb-2">Módulo de Estoque</h3>
-                                <p className="text-slate-500 max-w-md">
-                                    Em breve você poderá gerenciar insumos, fornecedores e movimentações de estoque diretamente por aqui.
-                                </p>
+                            <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 p-6">
+                                <SuppliersManager />
                             </div>
                         </TabsContent>
 
                         {/* === ABA CLÍNICO === */}
                         <TabsContent value="clinical" className="m-0 h-full focus-visible:ring-0 outline-none">
-                            <div className="flex flex-col items-center justify-center h-[50vh] text-center border-2 border-dashed border-slate-200 rounded-xl">
-                                <div className="bg-green-50 p-4 rounded-full mb-4">
-                                    <ClipboardList size={48} className="text-green-500" />
+                            <div className="flex flex-col gap-6">
+                                <div className="flex gap-2 pb-2 border-b border-slate-200 dark:border-slate-800">
+                                    <PillTab active={clinicalView === 'appointmenttypes'} onClick={() => setClinicalView('appointmenttypes')} icon={Calendar} label="Tipos de Agendamento" />
+                                    <PillTab active={clinicalView === 'insurance'} onClick={() => setClinicalView('insurance')} icon={Heart} label="Convênios" />
+                                    <PillTab active={clinicalView === 'templates'} onClick={() => setClinicalView('templates')} icon={FileText} label="Templates Clínicos" />
                                 </div>
-                                <h3 className="text-xl font-bold text-slate-800 mb-2">Configurações Clínicas</h3>
-                                <p className="text-slate-500 max-w-md">
-                                    Gerencie templates de anamnese, modelos de documentos e consentimentos. (Em Desenvolvimento)
-                                </p>
+                                <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 p-6 min-h-[500px]">
+                                    {clinicalView === 'appointmenttypes' && <AppointmentTypesManager />}
+                                    {clinicalView === 'insurance' && <InsurancePlansSettings />}
+                                    {clinicalView === 'templates' && <ClinicalTemplatesManager />}
+                                </div>
                             </div>
                         </TabsContent>
 
@@ -331,8 +366,8 @@ const PillTab = ({ active, onClick, icon: Icon, label }: any) => (
     <button
         onClick={onClick}
         className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${active
-                ? 'bg-slate-900 text-white shadow-md transform scale-105'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400'
+            ? 'bg-slate-900 text-white shadow-md transform scale-105'
+            : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400'
             }`}
     >
         <Icon size={14} />

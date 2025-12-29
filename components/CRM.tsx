@@ -366,6 +366,8 @@ const CRM: React.FC = () => {
             {/* Lead Detail Sheet */}
             <LeadDetailSheet
                 leadId={selectedLeadId}
+                pipelineId={null}
+                initialStageId={null}
                 open={isDetailSheetOpen}
                 onOpenChange={setIsDetailSheetOpen}
             />

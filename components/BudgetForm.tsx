@@ -24,6 +24,9 @@ import { BudgetApprovalSheet } from './budgets/BudgetApprovalSheet';
 import profitAnalysisService from '../services/profitAnalysisService';
 import { fetchBudgetById } from '../services/budgetService';
 import SecurityPinModal from './SecurityPinModal';
+import { QuickAddDialog } from './shared/QuickAddDialog';
+import { useQuickAdd } from '../hooks/useQuickAdd';
+import { QUICK_ADD_CONFIGS } from '../types/quickAdd';
 
 
 // Inputs larger on mobile for touch
@@ -105,6 +108,19 @@ const BudgetForm: React.FC<BudgetFormProps> = ({
     // Security PIN State
     const [showPinModal, setShowPinModal] = useState(false);
     const [showApprovalSheet, setShowApprovalSheet] = useState(false);
+
+    // Quick Add Hook for Procedures
+    const quickAddProcedure = useQuickAdd({
+        tableName: 'procedures',
+        clinicId: profile?.clinic_id || '',
+        successMessage: 'Procedimento criado com sucesso!',
+        onSuccess: (newProc) => {
+            setSelectedProcedure(newProc.name);
+            setPrice(newProc.base_price || 0);
+            // Invalidar cache de procedures se estiver usando React Query
+            // queryClient.invalidateQueries(['procedures']);
+        }
+    });
 
     // Initial Load - Procedure
     useEffect(() => {
@@ -580,6 +596,15 @@ const BudgetForm: React.FC<BudgetFormProps> = ({
                 </div>
             )}
 
+            {/* Quick Add Dialog for Procedures */}
+            <QuickAddDialog
+                open={quickAddProcedure.isOpen}
+                onOpenChange={quickAddProcedure.setIsOpen}
+                config={QUICK_ADD_CONFIGS.procedure}
+                onSave={quickAddProcedure.createItem}
+                isLoading={quickAddProcedure.isLoading}
+            />
+
             <div className="flex-1">
                 {/* SINGLE COLUMN LAYOUT */}
                 <div className="max-w-5xl mx-auto p-4 md:p-8 space-y-8">
@@ -629,9 +654,23 @@ const BudgetForm: React.FC<BudgetFormProps> = ({
                         <div className="grid grid-cols-1 md:grid-cols-7 gap-4 items-end">
                             <div className="md:col-span-2">
                                 <label className={labelClass}>Procedimento</label>
-                                <select className={inputClass} value={selectedProcedure} onChange={e => setSelectedProcedure(e.target.value)}>
-                                    {procedures.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
-                                </select>
+                                <div className="flex gap-2">
+                                    <select
+                                        className={inputClass.replace('w-full', 'flex-1')}
+                                        value={selectedProcedure}
+                                        onChange={e => setSelectedProcedure(e.target.value)}
+                                    >
+                                        {procedures.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
+                                    </select>
+                                    <button
+                                        type="button"
+                                        onClick={() => quickAddProcedure.setIsOpen(true)}
+                                        className="px-3 h-12 md:h-10 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center justify-center"
+                                        title="Adicionar novo procedimento"
+                                    >
+                                        <Plus size={20} />
+                                    </button>
+                                </div>
                             </div>
                             <div>
                                 <label className={labelClass}>Dente</label>

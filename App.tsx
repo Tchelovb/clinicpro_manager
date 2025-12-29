@@ -26,9 +26,11 @@ import { DynamicRedirect } from "./components/DynamicRedirect";
 import Login from "./components/Login";
 import IntelligenceGateway from "./pages/IntelligenceGateway";
 import Dashboard from "./pages/Dashboard";
+import Home from "./pages/Home";
 import Agenda from "./pages/Agenda";
 import AttendanceQueue from "./pages/AttendanceQueue";
 import PatientsList from "./pages/PatientsList";
+import LeadsList from "./pages/LeadsList";
 // import PatientDetail from "./pages/PatientDetail";
 import PipelinePage from "./pages/Pipeline";
 import Financial from "./pages/Financial";
@@ -92,19 +94,21 @@ const App: React.FC = () => {
                   {/* PUBLIC ROUTES */}
                   <Route path="/login" element={<Login />} />
 
-                  {/* Root redirect */}
-                  <Route path="/" element={<Navigate to="/dashboard" replace />} />
-
                   {/* PROTECTED ROUTES (Wrapped in AppLayout) */}
-                  <Route element={
-                    <ProtectedRoute>
-                      <LayoutWrapper />
-                    </ProtectedRoute>
-                  }>
+                  <Route
+                    path="/"
+                    element={
+                      <ProtectedRoute>
+                        <AppLayout />
+                      </ProtectedRoute>
+                    }
+                  >
 
                     {/* --- CORE MODULES --- */}
-                    <Route path="/intelligence" element={<IntelligenceGateway />} />
-                    <Route path="/dashboard" element={<Dashboard />} />
+                    {/* Main Application Routes */}
+                    <Route index element={<Home />} />
+                    <Route path="intelligence" element={<IntelligenceGateway />} />
+                    <Route path="dashboard" element={<Dashboard />} />
 
                     {/* --- AGENDA MODULE --- */}
                     <Route path="/agenda" element={<Agenda />} />
@@ -120,6 +124,7 @@ const App: React.FC = () => {
 
                     {/* --- PIPELINE (CRM) MODULE --- */}
                     <Route path="/pipeline" element={<PipelinePage />} />
+                    <Route path="/leads" element={<LeadsList />} />
                     <Route path="/pipeline/leads/new" element={<LeadForm />} />
                     <Route path="/pipeline/leads/:id" element={<LeadDetail />} />
                     <Route path="/pipeline/leads/:id/edit" element={<LeadForm />} />

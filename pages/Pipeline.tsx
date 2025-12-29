@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { Plus } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, Settings2, Filter } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabase';
 import { Button } from '../components/ui/button';
 import {
     Select,
@@ -10,232 +10,132 @@ import {
     SelectTrigger,
     SelectValue,
 } from '../components/ui/select';
-import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
+import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { PipelineColumn } from '../components/crm/PipelineColumn';
 import { LeadDetailSheet } from '../components/crm/LeadDetailSheet';
+import PatientDetail from '../components/PatientDetail';
 import { toast } from 'react-hot-toast';
-
-interface Pipeline {
-    id: string;
-    name: string;
-    is_default: boolean;
-    clinic_id: string;
-}
-
-interface Stage {
-    id: string;
-    name: string;
-    color?: string;
-    stage_order: number;
-    pipeline_id: string;
-}
-
-interface Lead {
-    id: string;
-    name: string;
-    phone: string;
-    email?: string;
-    value?: number;
-    desired_treatment?: string;
-    created_at: string;
-    updated_at: string;
-    stage_id: string;
-    owner_id?: string;
-    clinic_id: string;
-}
-
-interface User {
-    id: string;
-    name: string;
-    photo_url?: string;
-}
+import { usePipelines } from '../hooks/crm/usePipelines';
+import { useStages } from '../hooks/crm/useStages';
+import { useOpportunities, useUpdateOpportunityStage } from '../hooks/crm/useOpportunities';
+import { Opportunity, OpportunityTypeFilter, OpportunityCategory, CATEGORY_LABELS } from '../types/crm';
 
 export default function Pipeline() {
     const { profile } = useAuth();
-    const [loading, setLoading] = useState(true);
-    const [pipelines, setPipelines] = useState<Pipeline[]>([]);
-    const [selectedPipeline, setSelectedPipeline] = useState<Pipeline | null>(null);
-    const [stages, setStages] = useState<Stage[]>([]);
-    const [leads, setLeads] = useState<Lead[]>([]);
-    const [users, setUsers] = useState<User[]>([]);
-    const [selectedUser, setSelectedUser] = useState<string>('all');
+    const navigate = useNavigate();
+
+    // State
+    const [selectedPipelineId, setSelectedPipelineId] = useState<string>('');
+    const [typeFilter, setTypeFilter] = useState<OpportunityTypeFilter>('ALL');
+    const [categoryFilter, setCategoryFilter] = useState<OpportunityCategory | 'ALL'>('ALL');
     const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
-    const [isDetailSheetOpen, setIsDetailSheetOpen] = useState(false);
-    const [draggedLeadId, setDraggedLeadId] = useState<string | null>(null);
+    const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
+    const [isLeadSheetOpen, setIsLeadSheetOpen] = useState(false);
+    const [isPatientSheetOpen, setIsPatientSheetOpen] = useState(false);
+    const [draggedOppId, setDraggedOppId] = useState<string | null>(null);
 
-    // Load initial data
+    // Hooks
+    const { data: pipelines, isLoading: pipelinesLoading } = usePipelines();
+    const { data: stages, isLoading: stagesLoading } = useStages(selectedPipelineId);
+    const { data: opportunities, isLoading: oppsLoading } = useOpportunities(selectedPipelineId, typeFilter);
+    const updateStageMutation = useUpdateOpportunityStage();
+
+    // Auto-select first pipeline
     useEffect(() => {
-        if (profile?.clinic_id) {
-            loadPipelines();
-            loadUsers();
+        if (pipelines && pipelines.length > 0 && !selectedPipelineId) {
+            const defaultPipeline = pipelines.find(p => p.is_default) || pipelines[0];
+            setSelectedPipelineId(defaultPipeline.id);
         }
-    }, [profile?.clinic_id]);
+    }, [pipelines, selectedPipelineId]);
 
-    // Load stages and leads when pipeline changes
-    useEffect(() => {
-        if (selectedPipeline) {
-            loadStages();
-            loadLeads();
-        }
-    }, [selectedPipeline, selectedUser]);
+    // Deduplicate stages by name (keep the one with highest stage_order)
+    const uniqueStages = useMemo(() => {
+        if (!stages) return [];
 
-
-    const loadPipelines = async () => {
-        try {
-            console.log('🔍 Loading pipelines for clinic:', profile?.clinic_id);
-            const { data, error } = await supabase
-                .from('crm_pipelines')
-                .select('*')
-                .eq('clinic_id', profile?.clinic_id)
-                .eq('active', true)
-                .order('is_default', { ascending: false });
-
-            if (error) {
-                console.error('❌ Error loading pipelines:', error);
-                throw error;
+        const stageMap = new Map();
+        stages.forEach(stage => {
+            const existing = stageMap.get(stage.name);
+            if (!existing || stage.stage_order > existing.stage_order) {
+                stageMap.set(stage.name, stage);
             }
+        });
 
-            console.log('✅ Pipelines loaded:', data);
-            setPipelines(data || []);
+        return Array.from(stageMap.values()).sort((a, b) => a.stage_order - b.stage_order);
+    }, [stages]);
 
-            // Select default pipeline or first one
-            const defaultPipeline = data?.find((p) => p.is_default) || data?.[0];
-            setSelectedPipeline(defaultPipeline || null);
+    // Unified Filter Logic (Type + Category)
+    const filteredOpportunities = useMemo(() => {
+        if (!opportunities) return [];
+        return opportunities.filter(op => {
+            // 1. Filter by Type (Lead/Patient)
+            const typeMatch =
+                typeFilter === 'ALL' ? true :
+                    typeFilter === 'LEAD' ? (!!op.lead_id && !op.patient_id) :
+                        typeFilter === 'PATIENT' ? !!op.patient_id : true;
 
-            if (!defaultPipeline) {
-                console.warn('⚠️ No pipelines found');
-                toast.error('Nenhum pipeline encontrado. Crie um pipeline primeiro.');
-                setLoading(false);
-            }
-        } catch (error) {
-            console.error('❌ Error loading pipelines:', error);
-            toast.error('Erro ao carregar pipelines');
-            setLoading(false);
+            // 2. Filter by Category (Context-Aware)
+            const categoryMatch = categoryFilter === 'ALL' ? true : op.category === categoryFilter;
+
+            return typeMatch && categoryMatch;
+        });
+    }, [opportunities, typeFilter, categoryFilter]);
+
+    /**
+     * CRITICAL: Smart Sheet Routing
+     * Opens the correct sheet based on opportunity type
+     */
+    const handleOpportunityClick = (opp: Opportunity) => {
+        if (opp.patient_id) {
+            // It's a Patient opportunity
+            setSelectedPatientId(opp.patient_id);
+            setIsPatientSheetOpen(true);
+        } else if (opp.lead_id) {
+            // It's a Lead opportunity
+            setSelectedLeadId(opp.lead_id);
+            setIsLeadSheetOpen(true);
+        } else {
+            toast.error('Oportunidade sem Lead ou Paciente vinculado');
         }
     };
 
-    const loadStages = async () => {
-        if (!selectedPipeline) {
-            setLoading(false);
-            return;
-        }
-
-        try {
-            const { data, error } = await supabase
-                .from('crm_stages')
-                .select('*')
-                .eq('pipeline_id', selectedPipeline.id)
-                .order('stage_order', { ascending: true });
-
-            if (error) throw error;
-            setStages(data || []);
-        } catch (error) {
-            console.error('Error loading stages:', error);
-            toast.error('Erro ao carregar etapas');
-        } finally {
-            setLoading(false);
-        }
+    /**
+     * Handle drag start
+     */
+    const handleDragStart = (oppId: string) => {
+        setDraggedOppId(oppId);
     };
 
-    const loadLeads = async () => {
-        if (!selectedPipeline) return;
-
-        try {
-            setLoading(true);
-            let query = supabase
-                .from('leads')
-                .select('*')
-                .eq('clinic_id', profile?.clinic_id)
-                .eq('pipeline_id', selectedPipeline.id);
-
-            // Filter by user if selected
-            if (selectedUser !== 'all') {
-                query = query.eq('owner_id', selectedUser);
-            }
-
-            const { data, error } = await query.order('updated_at', { ascending: false });
-
-            if (error) throw error;
-            setLeads(data || []);
-        } catch (error) {
-            console.error('Error loading leads:', error);
-            toast.error('Erro ao carregar leads');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const loadUsers = async () => {
-        try {
-            const { data, error } = await supabase
-                .from('users')
-                .select('id, name, photo_url')
-                .eq('clinic_id', profile?.clinic_id)
-                .eq('is_active', true);
-
-            if (error) throw error;
-            setUsers(data || []);
-        } catch (error) {
-            console.error('Error loading users:', error);
-        }
-    };
-
-    const handleLeadClick = (lead: Lead) => {
-        setSelectedLeadId(lead.id);
-        setIsDetailSheetOpen(true);
-    };
-
-    const handleDragStart = (leadId: string) => {
-        setDraggedLeadId(leadId);
-    };
-
-    const handleDragOver = (e: React.DragEvent) => {
-        e.preventDefault();
-    };
-
+    /**
+     * Handle drop on stage
+     */
     const handleDrop = async (stageId: string) => {
-        if (!draggedLeadId || draggedLeadId === stageId) {
-            setDraggedLeadId(null);
-            return;
-        }
+        if (!draggedOppId) return;
 
         try {
-            // Update lead stage in database
-            const { error } = await supabase
-                .from('leads')
-                .update({
-                    stage_id: stageId,
-                    updated_at: new Date().toISOString()
-                })
-                .eq('id', draggedLeadId);
+            await updateStageMutation.mutateAsync({
+                id: draggedOppId,
+                stage_id: stageId
+            });
 
-            if (error) throw error;
-
-            // TODO: Trigger GHL Workflow here (Trigger: Pipeline Stage Change)
-            // This should call automationService.checkAndTriggerAutomations()
-            // Example:
-            // await automationService.checkAndTriggerAutomations(
-            //     draggedLeadId,
-            //     'ENTER_STAGE',
-            //     { pipelineId: selectedPipeline?.id, stageId: stageId }
-            // );
-
-            console.log('🔄 Lead moved to new stage. Workflow trigger point.');
-
-            // Refresh leads
-            await loadLeads();
-            toast.success('Lead movido com sucesso!');
+            toast.success('Oportunidade movida com sucesso!');
         } catch (error) {
-            console.error('Error moving lead:', error);
-            toast.error('Erro ao mover lead');
-            // Revert on error
-            await loadLeads();
+            console.error('Error moving opportunity:', error);
+            toast.error('Erro ao mover oportunidade');
         } finally {
-            setDraggedLeadId(null);
+            setDraggedOppId(null);
         }
     };
 
-    if (loading && !selectedPipeline) {
+    /**
+     * Handle new opportunity
+     */
+    const handleNewOpportunity = () => {
+        setSelectedLeadId('new');
+        setIsLeadSheetOpen(true);
+    };
+
+    // Loading state
+    if (pipelinesLoading) {
         return (
             <div className="flex items-center justify-center h-full">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-violet-600" />
@@ -244,7 +144,7 @@ export default function Pipeline() {
     }
 
     // Empty state when no pipelines exist
-    if (!loading && pipelines.length === 0) {
+    if (!pipelinesLoading && (!pipelines || pipelines.length === 0)) {
         return (
             <div className="flex items-center justify-center h-full bg-slate-50 dark:bg-slate-950">
                 <div className="text-center p-8">
@@ -267,150 +167,136 @@ export default function Pipeline() {
         <div className="h-full flex flex-col overflow-hidden bg-slate-50 dark:bg-slate-950">
             {/* Header - Fixed */}
             <div className="flex-none bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    {/* Title & Pipeline Selector */}
-                    <div className="flex items-center gap-3">
-                        <div>
-                            <h1 className="text-xl font-bold text-slate-900 dark:text-white">
-                                Pipeline de Vendas
-                            </h1>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">
-                                {leads.length} leads ativos
-                            </p>
-                        </div>
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+                            Pipeline de Vendas
+                        </h1>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">
+                            {filteredOpportunities.length} oportunidades ativas
+                        </p>
                     </div>
 
-                    {/* Actions */}
-                    <div className="flex items-center gap-2">
-                        {/* Pipeline Selector */}
-                        <Select
-                            value={selectedPipeline?.id || ''}
-                            onValueChange={(value) => {
-                                const pipeline = pipelines.find((p) => p.id === value);
-                                setSelectedPipeline(pipeline || null);
-                            }}
-                        >
-                            <SelectTrigger className="w-[200px]">
-                                <SelectValue placeholder="Selecione o funil" />
+                    <div className="flex items-center gap-3">
+                        {/* Type Filter Tabs - Inline */}
+                        <Tabs value={typeFilter} onValueChange={(v) => setTypeFilter(v as OpportunityTypeFilter)}>
+                            <TabsList className="grid grid-cols-3">
+                                <TabsTrigger value="ALL" className="text-xs px-3">
+                                    Todos ({opportunities?.length || 0})
+                                </TabsTrigger>
+                                <TabsTrigger value="LEAD" className="text-xs px-3">
+                                    Leads ({opportunities?.filter(o => o.lead_id && !o.patient_id).length || 0})
+                                </TabsTrigger>
+                                <TabsTrigger value="PATIENT" className="text-xs px-3">
+                                    Pacientes ({opportunities?.filter(o => o.patient_id).length || 0})
+                                </TabsTrigger>
+                            </TabsList>
+                        </Tabs>
+
+                        {/* Category Filter (Context-Aware) */}
+                        <Select value={categoryFilter} onValueChange={(val) => setCategoryFilter(val as any)}>
+                            <SelectTrigger className="w-[180px] h-9">
+                                <div className="flex items-center gap-2">
+                                    <Filter className="w-3.5 h-3.5 text-slate-500" />
+                                    <SelectValue placeholder="Categoria" />
+                                </div>
                             </SelectTrigger>
                             <SelectContent>
-                                {pipelines.map((pipeline) => (
+                                <SelectItem value="ALL">Todas Categorias</SelectItem>
+                                {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
+                                    <SelectItem key={key} value={key}>
+                                        {key === 'NEW_LEAD' && '⚡ '}
+                                        {key === 'BUDGET' && '💰 '}
+                                        {key === 'RETENTION' && '🔄 '}
+                                        {key === 'RECOVERY' && '🚑 '}
+                                        {label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+
+                        {/* Pipeline Selector */}
+                        <Select
+                            value={selectedPipelineId}
+                            onValueChange={setSelectedPipelineId}
+                        >
+                            <SelectTrigger className="w-[200px]">
+                                <SelectValue placeholder="Selecione um funil" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {pipelines?.map((pipeline) => (
                                     <SelectItem key={pipeline.id} value={pipeline.id}>
                                         {pipeline.name}
                                         {pipeline.is_default && (
-                                            <span className="ml-2 text-xs text-slate-400">
-                                                (Padrão)
-                                            </span>
+                                            <span className="ml-2 text-xs text-slate-500">(Padrão)</span>
                                         )}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
 
-                        {/* User Filter */}
-                        <div className="hidden md:flex items-center gap-2">
-                            <button
-                                onClick={() => setSelectedUser('all')}
-                                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${selectedUser === 'all'
-                                    ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300'
-                                    : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
-                                    }`}
-                            >
-                                Todos
-                            </button>
-                            {users.map((user) => (
-                                <button
-                                    key={user.id}
-                                    onClick={() => setSelectedUser(user.id)}
-                                    className={`flex items-center gap-1 px-2 py-1 rounded-full transition-all ${selectedUser === user.id
-                                        ? 'ring-2 ring-violet-500 ring-offset-2'
-                                        : 'hover:ring-2 hover:ring-slate-300'
-                                        }`}
-                                    title={user.name}
-                                >
-                                    <Avatar className="h-6 w-6">
-                                        <AvatarImage src={user.photo_url} />
-                                        <AvatarFallback className="text-xs">
-                                            {user.name
-                                                .split(' ')
-                                                .map((n) => n[0])
-                                                .join('')
-                                                .toUpperCase()
-                                                .slice(0, 2)}
-                                        </AvatarFallback>
-                                    </Avatar>
-                                </button>
-                            ))}
-                        </div>
-
-                        {/* New Lead Button */}
+                        {/* Settings Button */}
                         <Button
-                            className="bg-violet-600 hover:bg-violet-700 text-white"
-                            onClick={() => {
-                                setSelectedLeadId(null);
-                                setIsDetailSheetOpen(true);
-                            }}
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => navigate('/settings')}
+                            title="Configurar Funis e Etapas"
                         >
-                            <Plus className="h-4 w-4 mr-1" />
-                            Novo Lead
+                            <Settings2 className="h-4 w-4" />
+                        </Button>
+
+                        {/* New Opportunity Button */}
+                        <Button onClick={handleNewOpportunity} size="sm">
+                            <Plus className="mr-2 h-4 w-4" />
+                            Nova Oportunidade
                         </Button>
                     </div>
                 </div>
             </div>
 
-            {/* Board - Scrollable */}
-            <div className="flex-1 overflow-hidden">
-                {/* Desktop: Horizontal scroll */}
-                <div className="hidden md:flex h-full overflow-x-auto overflow-y-hidden p-4 gap-4">
-                    {stages.map((stage) => {
-                        const stageLeads = leads.filter((lead) => lead.stage_id === stage.id);
-                        return (
-                            <div
-                                key={stage.id}
-                                onDragOver={handleDragOver}
-                                onDrop={() => handleDrop(stage.id)}
-                            >
+            {/* Kanban Board - Scrollable */}
+            <div className="flex-1 overflow-x-auto overflow-y-hidden">
+                {stagesLoading ? (
+                    <div className="flex items-center justify-center h-full">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-600" />
+                    </div>
+                ) : (
+                    <div className="h-full flex gap-4 p-4 min-w-max">
+                        {uniqueStages.map((stage) => {
+                            const stageOpportunities = filteredOpportunities.filter(
+                                opp => opp.stage_id === stage.id
+                            );
+
+                            return (
                                 <PipelineColumn
+                                    key={stage.id}
                                     stage={stage}
-                                    leads={stageLeads}
-                                    onLeadClick={handleLeadClick}
-                                    onDragOver={handleDragOver}
+                                    opportunities={stageOpportunities}
+                                    onOpportunityClick={handleOpportunityClick}
+                                    onDragStart={handleDragStart}
+                                    onDragOver={(e) => e.preventDefault()}
                                     onDrop={handleDrop}
                                 />
-                            </div>
-                        );
-                    })}
-                </div>
-
-                {/* Mobile: Vertical scroll (Accordion style) */}
-                <div className="md:hidden flex flex-col overflow-y-auto p-4 gap-4">
-                    {stages.map((stage) => {
-                        const stageLeads = leads.filter((lead) => lead.stage_id === stage.id);
-                        return (
-                            <PipelineColumn
-                                key={stage.id}
-                                stage={stage}
-                                leads={stageLeads}
-                                onLeadClick={handleLeadClick}
-                            />
-                        );
-                    })}
-                </div>
+                            );
+                        })}
+                    </div>
+                )}
             </div>
 
             {/* Lead Detail Sheet */}
             <LeadDetailSheet
                 leadId={selectedLeadId}
-                pipelineId={selectedPipeline?.id || null}
-                initialStageId={stages[0]?.id || null}
-                open={isDetailSheetOpen}
-                onOpenChange={(open) => {
-                    setIsDetailSheetOpen(open);
-                    if (!open) {
-                        setSelectedLeadId(null); // Reset selected lead
-                        loadLeads(); // Refresh leads when sheet closes
-                    }
-                }}
+                pipelineId={selectedPipelineId}
+                initialStageId={null}
+                open={isLeadSheetOpen}
+                onOpenChange={setIsLeadSheetOpen}
+            />
+
+            {/* Patient Detail Sheet */}
+            <PatientDetail
+                patientId={selectedPatientId}
+                open={isPatientSheetOpen}
+                onClose={() => setIsPatientSheetOpen(false)}
             />
         </div>
     );

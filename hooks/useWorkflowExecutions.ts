@@ -66,6 +66,8 @@ export function useWorkflowExecutions(leadId: string | null) {
     };
 
     const fetchAvailableWorkflows = async (clinicId: string) => {
+        if (!clinicId) return; // Prevent 400 Bad Request
+
         try {
             // Get all active workflows for this clinic
             const { data: workflows, error: workflowsError } = await supabase

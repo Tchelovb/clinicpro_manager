@@ -18,6 +18,7 @@ import {
 import toast from 'react-hot-toast';
 import { format, addDays, startOfWeek, endOfWeek, isSameDay, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { PatientQuickActions } from '../components/patients/PatientQuickActions';
 
 interface Appointment {
     id: string;
@@ -296,13 +297,28 @@ const Agenda: React.FC = () => {
                             Gestão de Agendamentos • {appointments.length} compromissos
                         </p>
                     </div>
-                    <button
-                        onClick={() => setNewAppointmentSheetOpen(true)}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm shadow-md w-full md:w-auto justify-center"
-                    >
-                        <Plus size={16} />
-                        Novo Agendamento
-                    </button>
+                    <div className="flex items-center gap-2">
+                        {/* Patient Quick Actions */}
+                        <PatientQuickActions
+                            onOpenFullRegistration={() => {
+                                // Abre sheet de paciente (você pode criar depois)
+                                toast.info('Sheet de paciente completo será implementado');
+                            }}
+                            onSuccess={() => {
+                                // Recarrega dados se necessário
+                                loadData();
+                            }}
+                        />
+
+                        {/* Novo Agendamento */}
+                        <button
+                            onClick={() => setNewAppointmentSheetOpen(true)}
+                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm shadow-md w-full md:w-auto justify-center"
+                        >
+                            <Plus size={16} />
+                            Novo Agendamento
+                        </button>
+                    </div>
                 </div>
 
                 {/* Navigation & Filters */}

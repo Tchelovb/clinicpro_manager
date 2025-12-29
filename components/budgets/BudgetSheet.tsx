@@ -19,7 +19,8 @@ import {
     DollarSign,
     Package,
     Clock,
-    Users
+    Users,
+    Loader2
 } from 'lucide-react';
 import { profitAnalysisService } from '../../services/profitAnalysisService';
 import { procedureRecipeService } from '../../services/procedureRecipeService';

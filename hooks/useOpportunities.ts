@@ -20,6 +20,7 @@ interface Opportunity {
     updated_at: string;
     expected_close_date: string | null;
     priority: 'HIGH' | 'MEDIUM' | 'LOW';
+    category?: 'NEW_LEAD' | 'BUDGET' | 'RETENTION' | 'RECOVERY' | 'GENERAL';
 }
 
 export function useOpportunities(leadId: string | null) {

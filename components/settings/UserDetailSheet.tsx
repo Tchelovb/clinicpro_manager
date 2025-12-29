@@ -150,7 +150,6 @@ const UserDetailSheet: React.FC<UserDetailSheetProps> = ({ open, onOpenChange, u
                     user_id: userId,
                     email: formData.email,
                     name: formData.name,
-                    name: formData.name,
                     role: formData.role,
                     clinic_id: clinicId,
                     photo_url: photoPreview // Send photo_url if changed
