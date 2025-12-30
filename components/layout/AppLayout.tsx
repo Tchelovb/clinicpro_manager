@@ -33,6 +33,7 @@ import {
     DropdownMenuLabel,
     DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
+import { Drawer, DrawerContent } from '../ui/drawer';
 
 // Navigation Configuration with Role-Based Access
 interface MenuItem {
@@ -379,16 +380,13 @@ export const AppLayout: React.FC<{ children?: React.ReactNode }> = ({ children }
                     </div>
                 </header>
 
-                {/* Mobile Overlay Menu */}
-                {isMobileMenuOpen && (
-                    <div className="fixed inset-0 z-50 bg-white dark:bg-slate-900 flex flex-col animate-in slide-in-from-right">
+                {/* Mobile Overlay Menu -> Native Drawer */}
+                <Drawer open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+                    <DrawerContent className="h-[85vh] rounded-t-[10px] outline-none">
                         <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800">
                             <h2 className="text-lg font-bold text-slate-800 dark:text-white">Menu</h2>
-                            <button
-                                onClick={() => setIsMobileMenuOpen(false)}
-                                className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
-                            >
-                                <X size={24} className="text-slate-700 dark:text-slate-300" />
+                            <button className="p-2" onClick={() => setIsMobileMenuOpen(false)}>
+                                <X size={20} className="text-slate-500" />
                             </button>
                         </div>
 
@@ -404,31 +402,31 @@ export const AppLayout: React.FC<{ children?: React.ReactNode }> = ({ children }
                                             setIsMobileMenuOpen(false);
                                         }}
                                         className={`
-                                            w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all
+                                            w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all
                                             ${active
                                                 ? 'bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300'
                                                 : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}
                                         `}
                                     >
                                         <Icon size={20} className={active ? 'text-violet-600' : 'text-slate-400'} />
-                                        <span className="font-medium text-sm">{item.label}</span>
+                                        <span className="font-medium text-base">{item.label}</span>
                                         {active && <ChevronRight size={16} className="ml-auto" />}
                                     </button>
                                 );
                             })}
                         </nav>
 
-                        <div className="p-4 border-t border-slate-200 dark:border-slate-800">
+                        <div className="p-4 border-t border-slate-200 dark:border-slate-800 pb-safe">
                             <button
                                 onClick={handleSignOut}
-                                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/10 transition-colors font-medium text-sm"
+                                className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-rose-600 dark:text-rose-400 font-medium text-sm"
                             >
                                 <LogOut size={20} />
-                                <span>Sair</span>
+                                <span>Sair do Sistema</span>
                             </button>
                         </div>
-                    </div>
-                )}
+                    </DrawerContent>
+                </Drawer>
 
                 {/* Bottom Navigation */}
                 <nav className="fixed bottom-0 left-0 right-0 h-16 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 z-40 flex justify-around items-center px-2 pb-safe">
@@ -467,7 +465,7 @@ export const AppLayout: React.FC<{ children?: React.ReactNode }> = ({ children }
                 bg-slate-50 dark:bg-slate-950
                 overflow-x-hidden
             `}>
-                <div className="flex-1 p-3 md:p-6 lg:p-8">
+                <div className="flex-1 p-4 md:p-6 lg:p-8">
                     {/* Page Content */}
                     <div className="animate-in fade-in duration-500">
                         {children || <Outlet />}

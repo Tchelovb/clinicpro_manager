@@ -6,8 +6,17 @@ import {
     SheetHeader,
     SheetTitle,
 } from '../ui/sheet';
+import {
+    Drawer,
+    DrawerContent,
+    DrawerDescription,
+    DrawerFooter,
+    DrawerHeader,
+    DrawerTitle,
+} from '../ui/drawer';
 import { Button } from '../ui/button';
 import { Loader2, Save, X } from 'lucide-react';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 export type SheetSize = 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '4xl' | 'full';
 
@@ -41,23 +50,7 @@ const sizeClasses: Record<SheetSize, string> = {
 /**
  * BaseSheet - Componente base para todos os Sheets do sistema
  * 
- * @example
- * ```tsx
- * <BaseSheet
- *   open={open}
- *   onOpenChange={setOpen}
- *   title="Novo Paciente"
- *   description="Cadastre um novo paciente no sistema"
- *   size="xl"
- *   onSave={handleSave}
- *   saving={saving}
- * >
- *   <div className="space-y-6">
- *     <Input label="Nome" />
- *     <Input label="CPF" />
- *   </div>
- * </BaseSheet>
- * ```
+ * Agora com suporte automático para Drawer em Mobile (iPhone Standard)
  */
 export const BaseSheet: React.FC<BaseSheetProps> = ({
     open,
@@ -75,6 +68,8 @@ export const BaseSheet: React.FC<BaseSheetProps> = ({
     cancelLabel = 'Cancelar',
     saveDisabled = false
 }) => {
+    const isMobile = useMediaQuery("(max-width: 640px)");
+
     const handleCancel = () => {
         if (onCancel) {
             onCancel();
@@ -89,9 +84,71 @@ export const BaseSheet: React.FC<BaseSheetProps> = ({
         }
     };
 
+    const FooterContent = () => {
+        if (footer) return <div className="mt-6 pt-6 border-t">{footer}</div>;
+
+        if (showDefaultFooter && (onSave || onCancel)) {
+            return (
+                <div className={`mt-6 pt-6 border-t flex items-center ${isMobile ? 'flex-col-reverse gap-3' : 'justify-end gap-3'}`}>
+                    <Button
+                        variant="outline"
+                        onClick={handleCancel}
+                        disabled={saving}
+                        className={isMobile ? 'w-full' : ''}
+                    >
+                        {cancelLabel}
+                    </Button>
+                    {onSave && (
+                        <Button
+                            onClick={handleSave}
+                            disabled={saving || saveDisabled}
+                            className={isMobile ? 'w-full' : ''}
+                        >
+                            {saving ? (
+                                <>
+                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    Salvando...
+                                </>
+                            ) : (
+                                <>
+                                    <Save className="w-4 h-4 mr-2" />
+                                    {saveLabel}
+                                </>
+                            )}
+                        </Button>
+                    )}
+                </div>
+            );
+        }
+        return null;
+    };
+
+    if (isMobile) {
+        return (
+            <Drawer open={open} onOpenChange={onOpenChange}>
+                <DrawerContent className="h-[95vh] flex flex-col rounded-t-[10px]">
+                    <DrawerHeader className="text-left">
+                        <DrawerTitle>{title}</DrawerTitle>
+                        {description && (
+                            <DrawerDescription>{description}</DrawerDescription>
+                        )}
+                    </DrawerHeader>
+
+                    <div className="px-4 flex-1 overflow-y-auto">
+                        {children}
+                    </div>
+
+                    <div className="p-4 pb-[max(20px,env(safe-area-inset-bottom))]">
+                        <FooterContent />
+                    </div>
+                </DrawerContent>
+            </Drawer>
+        );
+    }
+
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
-            <SheetContent className={`${sizeClasses[size]} overflow-y-auto`}>
+            <SheetContent className={`${sizeClasses[size]} overflow-y-auto w-full`}>
                 {/* Header */}
                 <SheetHeader>
                     <SheetTitle className="text-2xl">{title}</SheetTitle>
@@ -106,39 +163,7 @@ export const BaseSheet: React.FC<BaseSheetProps> = ({
                 </div>
 
                 {/* Footer */}
-                {footer ? (
-                    <div className="mt-6 pt-6 border-t">
-                        {footer}
-                    </div>
-                ) : showDefaultFooter && (onSave || onCancel) ? (
-                    <div className="flex items-center justify-end gap-3 mt-6 pt-6 border-t">
-                        <Button
-                            variant="outline"
-                            onClick={handleCancel}
-                            disabled={saving}
-                        >
-                            {cancelLabel}
-                        </Button>
-                        {onSave && (
-                            <Button
-                                onClick={handleSave}
-                                disabled={saving || saveDisabled}
-                            >
-                                {saving ? (
-                                    <>
-                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                        Salvando...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Save className="w-4 h-4 mr-2" />
-                                        {saveLabel}
-                                    </>
-                                )}
-                            </Button>
-                        )}
-                    </div>
-                ) : null}
+                <FooterContent />
             </SheetContent>
         </Sheet>
     );

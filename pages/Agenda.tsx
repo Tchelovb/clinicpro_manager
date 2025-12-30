@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { useMediaQuery } from '../hooks/useMediaQuery';
+import { useUI } from '../contexts/UIContext';
 import {
     Calendar as CalendarIcon, ChevronLeft, ChevronRight, Plus, Filter,
     Clock, User, Phone, CheckCircle, XCircle, AlertCircle, Loader2,
@@ -49,14 +50,13 @@ const STATUS_CONFIG = {
 const Agenda: React.FC = () => {
     const { profile } = useAuth();
     const navigate = useNavigate();
+    const { openDetail, closeDetail, isMobile: isMobileUI } = useUI();
     const [currentDate, setCurrentDate] = useState(new Date());
     const [viewMode, setViewMode] = useState<'week' | 'day'>('week');
     const isMobile = useMediaQuery('(max-width: 768px)');
     const [appointments, setAppointments] = useState<Appointment[]>([]);
     const [professionals, setProfessionals] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
-    const [sheetOpen, setSheetOpen] = useState(false);
     const [newAppointmentSheetOpen, setNewAppointmentSheetOpen] = useState(false);
     const [filterProfessional, setFilterProfessional] = useState<string>('ALL');
 
@@ -185,8 +185,6 @@ const Agenda: React.FC = () => {
             if (newStatus === 'ARRIVED') {
                 const appointment = appointments.find(a => a.id === appointmentId);
                 if (appointment) {
-                    // This would trigger the "projection" to AttendanceQueue
-                    // For now, just update local state
                     toast.success(`${appointment.patient_name} entrou na fila de atendimento!`, {
                         icon: '🎯',
                         duration: 3000
@@ -198,17 +196,116 @@ const Agenda: React.FC = () => {
                 apt.id === appointmentId ? { ...apt, status: newStatus } : apt
             ));
 
-            // Update selected appointment if it's the one being changed
-            if (selectedAppointment?.id === appointmentId) {
-                setSelectedAppointment({ ...selectedAppointment, status: newStatus });
-            }
-
             toast.success('Status atualizado!');
-            setSheetOpen(false); // Close sheet after update
+            closeDetail(); // Close detail after update
+            loadData(); // Reload to get fresh data
         } catch (error: any) {
             console.error('Error updating status:', error);
             toast.error(error?.message || 'Erro ao atualizar status');
         }
+    };
+
+    // ==========================================
+    // APPOINTMENT DETAIL VIEW COMPONENT
+    // ==========================================
+    const AppointmentDetailView: React.FC<{ appointment: Appointment }> = ({ appointment }) => {
+        return (
+            <div className="p-6">
+                {/* Header */}
+                <div className="mb-6">
+                    <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+                        Detalhes do Agendamento
+                    </h2>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                        Gerencie o status e informações do compromisso
+                    </p>
+                </div>
+
+                <div className="space-y-6">
+                    {/* Patient Info */}
+                    <div>
+                        <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2">Paciente</p>
+                        <p className="text-lg font-bold text-slate-900 dark:text-white">{appointment.patient_name}</p>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 flex items-center gap-2 mt-1">
+                            <Phone size={14} />
+                            {appointment.patient_phone}
+                        </p>
+                    </div>
+
+                    {/* Appointment Info */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Data/Hora</p>
+                            <p className="text-sm font-medium text-slate-900 dark:text-white">
+                                {format(parseISO(appointment.date), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                            </p>
+                        </div>
+                        <div>
+                            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Duração</p>
+                            <p className="text-sm font-medium text-slate-900 dark:text-white">
+                                {appointment.duration} minutos
+                            </p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Profissional</p>
+                        <p className="text-sm font-medium text-slate-900 dark:text-white">{appointment.doctor_name}</p>
+                    </div>
+
+                    {/* Status Change */}
+                    <div>
+                        <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2">Alterar Status</p>
+                        <div className="grid grid-cols-2 gap-2">
+                            {Object.entries(STATUS_CONFIG).map(([status, config]) => {
+                                const Icon = config.icon;
+                                return (
+                                    <button
+                                        key={status}
+                                        onClick={() => handleStatusChange(appointment.id, status as Appointment['status'])}
+                                        className={`p-3 rounded-lg border-2 text-left transition-all hover:shadow-md ${appointment.status === status
+                                            ? config.color + ' border-current'
+                                            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
+                                            }`}
+                                    >
+                                        <Icon size={16} className="mb-1" />
+                                        <p className="text-xs font-bold">{config.label}</p>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Notes */}
+                    {appointment.notes && (
+                        <div>
+                            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Observações</p>
+                            <p className="text-sm text-slate-700 dark:text-slate-300">{appointment.notes}</p>
+                        </div>
+                    )}
+
+                    {/* Actions */}
+                    <div className="flex gap-2 pt-4 border-t border-slate-200 dark:border-slate-800">
+                        <button className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 font-medium text-sm">
+                            <Edit2 size={16} />
+                            Editar
+                        </button>
+                        <button className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium text-sm">
+                            <Trash2 size={16} />
+                            Cancelar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    // Handle appointment click - Opens detail view via UIContext
+    const handleAppointmentClick = (appointment: Appointment) => {
+        openDetail(
+            <AppointmentDetailView appointment={appointment} />,
+            { size: 'default' } // 540px on desktop, 95vh drawer on mobile
+        );
     };
 
     const handleCreateAppointment = async () => {
@@ -302,7 +399,7 @@ const Agenda: React.FC = () => {
                         <PatientQuickActions
                             onOpenFullRegistration={() => {
                                 // Abre sheet de paciente (você pode criar depois)
-                                toast.info('Sheet de paciente completo será implementado');
+                                toast('Sheet de paciente completo será implementado', { icon: 'ℹ️' });
                             }}
                             onSuccess={() => {
                                 // Recarrega dados se necessário
@@ -310,10 +407,10 @@ const Agenda: React.FC = () => {
                             }}
                         />
 
-                        {/* Novo Agendamento */}
+                        {/* Novo Agendamento (Desktop) */}
                         <button
                             onClick={() => setNewAppointmentSheetOpen(true)}
-                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm shadow-md w-full md:w-auto justify-center"
+                            className="hidden md:flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm shadow-md"
                         >
                             <Plus size={16} />
                             Novo Agendamento
@@ -390,73 +487,156 @@ const Agenda: React.FC = () => {
             {/* ============================================ */}
             <div className="flex-1 overflow-y-auto scroll-smooth p-3 md:p-4">
                 {viewMode === 'week' ? (
-                    <div className="grid grid-cols-7 gap-2">
-                        {getWeekDays().map((day, idx) => {
-                            const dayAppts = getAppointmentsForDay(day);
-                            const isToday = isSameDay(day, new Date());
+                    <>
+                        {/* Desktop: Grid de 7 colunas */}
+                        <div className="hidden md:grid md:grid-cols-7 gap-2">
+                            {getWeekDays().map((day, idx) => {
+                                const dayAppts = getAppointmentsForDay(day);
+                                const isToday = isSameDay(day, new Date());
 
-                            return (
-                                <div
-                                    key={idx}
-                                    className={`bg-white dark:bg-slate-900 rounded-xl border ${isToday
-                                        ? 'border-blue-400 dark:border-blue-600 shadow-md'
-                                        : 'border-slate-200 dark:border-slate-800'
-                                        } overflow-hidden transition-colors`}
-                                >
-                                    {/* Day Header */}
-                                    <div className={`p-3 border-b ${isToday
-                                        ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
-                                        : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700'
-                                        }`}>
-                                        <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">
-                                            {format(day, 'EEE', { locale: ptBR })}
-                                        </p>
-                                        <p className={`text-2xl font-black ${isToday ? 'text-blue-600 dark:text-blue-400' : 'text-slate-900 dark:text-white'
+                                return (
+                                    <div
+                                        key={idx}
+                                        className={`bg-white dark:bg-slate-900 rounded-xl border ${isToday
+                                            ? 'border-blue-400 dark:border-blue-600 shadow-md'
+                                            : 'border-slate-200 dark:border-slate-800'
+                                            } overflow-hidden transition-colors`}
+                                    >
+                                        {/* Day Header */}
+                                        <div className={`p-3 border-b ${isToday
+                                            ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
+                                            : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700'
                                             }`}>
-                                            {format(day, 'dd')}
-                                        </p>
-                                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                                            {dayAppts.length} agend.
-                                        </p>
-                                    </div>
+                                            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">
+                                                {format(day, 'EEE', { locale: ptBR })}
+                                            </p>
+                                            <p className={`text-2xl font-black ${isToday ? 'text-blue-600 dark:text-blue-400' : 'text-slate-900 dark:text-white'
+                                                }`}>
+                                                {format(day, 'dd')}
+                                            </p>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400">
+                                                {dayAppts.length} agend.
+                                            </p>
+                                        </div>
 
-                                    {/* Appointments List */}
-                                    <div className="p-2 space-y-2 max-h-[600px] overflow-y-auto">
-                                        {dayAppts.map(apt => {
-                                            const StatusIcon = STATUS_CONFIG[apt.status].icon;
-                                            return (
-                                                <div
-                                                    key={apt.id}
-                                                    onClick={() => { setSelectedAppointment(apt); setSheetOpen(true); }}
-                                                    className={`p-2 rounded-lg border-l-4 cursor-pointer hover:shadow-md transition-all ${STATUS_CONFIG[apt.status].color
-                                                        }`}
-                                                    style={{ borderLeftColor: apt.doctor_color }}
-                                                >
-                                                    <div className="flex items-center justify-between mb-1">
-                                                        <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                                                            {format(parseISO(apt.date), 'HH:mm')}
-                                                        </span>
-                                                        <StatusIcon size={12} />
+                                        {/* Appointments List */}
+                                        <div className="p-2 space-y-2 max-h-[600px] overflow-y-auto">
+                                            {dayAppts.map(apt => {
+                                                const StatusIcon = STATUS_CONFIG[apt.status].icon;
+                                                return (
+                                                    <div
+                                                        key={apt.id}
+                                                        onClick={() => handleAppointmentClick(apt)}
+                                                        className={`p-2 rounded-lg border-l-4 cursor-pointer hover:shadow-md transition-all ${STATUS_CONFIG[apt.status].color
+                                                            }`}
+                                                        style={{ borderLeftColor: apt.doctor_color }}
+                                                    >
+                                                        <div className="flex items-center justify-between mb-1">
+                                                            <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                                                                {format(parseISO(apt.date), 'HH:mm')}
+                                                            </span>
+                                                            <StatusIcon size={12} />
+                                                        </div>
+                                                        <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                                                            {apt.patient_name}
+                                                        </p>
+                                                        <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                                                            {apt.doctor_name}
+                                                        </p>
                                                     </div>
-                                                    <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
-                                                        {apt.patient_name}
+                                                );
+                                            })}
+                                            {dayAppts.length === 0 && (
+                                                <p className="text-center text-xs text-slate-400 dark:text-slate-600 py-4">
+                                                    Sem agendamentos
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        {/* Mobile: Lista vertical de cards */}
+                        <div className="md:hidden space-y-3">
+                            {getWeekDays().map((day, idx) => {
+                                const dayAppts = getAppointmentsForDay(day);
+                                const isToday = isSameDay(day, new Date());
+
+                                return (
+                                    <div
+                                        key={idx}
+                                        className={`bg-white dark:bg-slate-900 rounded-xl border ${isToday
+                                            ? 'border-blue-400 dark:border-blue-600 shadow-md'
+                                            : 'border-slate-200 dark:border-slate-800'
+                                            } overflow-hidden transition-colors`}
+                                    >
+                                        {/* Header do dia */}
+                                        <div className={`p-4 border-b ${isToday
+                                            ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
+                                            : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700'
+                                            }`}>
+                                            <div className="flex items-center justify-between">
+                                                <div>
+                                                    <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">
+                                                        {format(day, 'EEEE', { locale: ptBR })}
                                                     </p>
-                                                    <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                                                        {apt.doctor_name}
+                                                    <p className={`text-3xl font-black ${isToday ? 'text-blue-600 dark:text-blue-400' : 'text-slate-900 dark:text-white'
+                                                        }`}>
+                                                        {format(day, 'dd')}
+                                                    </p>
+                                                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                                        {format(day, 'MMM yyyy', { locale: ptBR })}
                                                     </p>
                                                 </div>
-                                            );
-                                        })}
-                                        {dayAppts.length === 0 && (
-                                            <p className="text-center text-xs text-slate-400 dark:text-slate-600 py-4">
-                                                Sem agendamentos
-                                            </p>
-                                        )}
+                                                <div className="text-right">
+                                                    <span className="text-2xl font-bold text-slate-900 dark:text-white">
+                                                        {dayAppts.length}
+                                                    </span>
+                                                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                                                        {dayAppts.length === 1 ? 'agendamento' : 'agendamentos'}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Lista de agendamentos */}
+                                        <div className="p-3 space-y-2">
+                                            {dayAppts.map(apt => {
+                                                const StatusIcon = STATUS_CONFIG[apt.status].icon;
+                                                return (
+                                                    <div
+                                                        key={apt.id}
+                                                        onClick={() => handleAppointmentClick(apt)}
+                                                        className={`p-4 rounded-lg border-l-4 cursor-pointer active:scale-[0.98] transition-all ${STATUS_CONFIG[apt.status].color}`}
+                                                        style={{ borderLeftColor: apt.doctor_color }}
+                                                    >
+                                                        <div className="flex items-center justify-between mb-2">
+                                                            <span className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                                                                {format(parseISO(apt.date), 'HH:mm')}
+                                                            </span>
+                                                            <StatusIcon size={16} />
+                                                        </div>
+                                                        <p className="text-base font-bold text-slate-900 dark:text-white mb-1">
+                                                            {apt.patient_name}
+                                                        </p>
+                                                        <p className="text-sm text-slate-600 dark:text-slate-400">
+                                                            {apt.doctor_name} • {apt.duration} min
+                                                        </p>
+                                                    </div>
+                                                );
+                                            })}
+                                            {dayAppts.length === 0 && (
+                                                <p className="text-center text-sm text-slate-400 dark:text-slate-600 py-8">
+                                                    Sem agendamentos
+                                                </p>
+                                            )}
+                                        </div>
                                     </div>
-                                </div>
-                            );
-                        })}
-                    </div>
+                                );
+                            })}
+                        </div>
+                    </>
                 ) : (
                     // DAY VIEW - Timeline
                     <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4">
@@ -467,8 +647,8 @@ const Agenda: React.FC = () => {
                                 );
 
                                 return (
-                                    <div key={time} className="flex gap-4 border-b border-slate-100 dark:border-slate-800 py-2">
-                                        <div className="w-16 text-sm font-bold text-slate-500 dark:text-slate-400">
+                                    <div key={time} className="flex gap-4 border-b border-slate-100 dark:border-slate-800 py-2 min-h-[60px]">
+                                        <div className="w-16 text-sm font-bold text-slate-500 dark:text-slate-400 pt-2">
                                             {time}
                                         </div>
                                         <div className="flex-1 space-y-2">
@@ -477,7 +657,7 @@ const Agenda: React.FC = () => {
                                                 return (
                                                     <div
                                                         key={apt.id}
-                                                        onClick={() => { setSelectedAppointment(apt); setSheetOpen(true); }}
+                                                        onClick={() => handleAppointmentClick(apt)}
                                                         className={`p-3 rounded-lg border-l-4 cursor-pointer hover:shadow-md transition-all ${STATUS_CONFIG[apt.status].color
                                                             }`}
                                                         style={{ borderLeftColor: apt.doctor_color }}
@@ -505,101 +685,23 @@ const Agenda: React.FC = () => {
                 )}
             </div>
 
-            {/* ============================================ */}
-            {/* APPOINTMENT DETAIL SHEET */}
-            {/* ============================================ */}
-            <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-                <SheetContent className="w-full sm:max-w-lg overflow-auto">
-                    <SheetHeader>
-                        <SheetTitle>Detalhes do Agendamento</SheetTitle>
-                    </SheetHeader>
-                    {selectedAppointment && (
-                        <div className="mt-6 space-y-6">
-                            {/* Patient Info */}
-                            <div>
-                                <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2">Paciente</p>
-                                <p className="text-lg font-bold text-slate-900 dark:text-white">{selectedAppointment.patient_name}</p>
-                                <p className="text-sm text-slate-600 dark:text-slate-400 flex items-center gap-2 mt-1">
-                                    <Phone size={14} />
-                                    {selectedAppointment.patient_phone}
-                                </p>
-                            </div>
 
-                            {/* Appointment Info */}
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Data/Hora</p>
-                                    <p className="text-sm font-medium text-slate-900 dark:text-white">
-                                        {format(parseISO(selectedAppointment.date), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                                    </p>
-                                </div>
-                                <div>
-                                    <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Duração</p>
-                                    <p className="text-sm font-medium text-slate-900 dark:text-white">
-                                        {selectedAppointment.duration} minutos
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div>
-                                <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Profissional</p>
-                                <p className="text-sm font-medium text-slate-900 dark:text-white">{selectedAppointment.doctor_name}</p>
-                            </div>
-
-                            {/* Status Change */}
-                            <div>
-                                <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2">Alterar Status</p>
-                                <div className="grid grid-cols-2 gap-2">
-                                    {Object.entries(STATUS_CONFIG).map(([status, config]) => {
-                                        const Icon = config.icon;
-                                        return (
-                                            <button
-                                                key={status}
-                                                onClick={() => handleStatusChange(selectedAppointment.id, status as Appointment['status'])}
-                                                className={`p-3 rounded-lg border-2 text-left transition-all hover:shadow-md ${selectedAppointment.status === status
-                                                    ? config.color + ' border-current'
-                                                    : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
-                                                    }`}
-                                            >
-                                                <Icon size={16} className="mb-1" />
-                                                <p className="text-xs font-bold">{config.label}</p>
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-
-                            {/* Notes */}
-                            {selectedAppointment.notes && (
-                                <div>
-                                    <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Observações</p>
-                                    <p className="text-sm text-slate-700 dark:text-slate-300">{selectedAppointment.notes}</p>
-                                </div>
-                            )}
-
-                            {/* Actions */}
-                            <div className="flex gap-2 pt-4 border-t border-slate-200 dark:border-slate-800">
-                                <button className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 font-medium text-sm">
-                                    <Edit2 size={16} />
-                                    Editar
-                                </button>
-                                <button className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium text-sm">
-                                    <Trash2 size={16} />
-                                    Cancelar
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                </SheetContent>
-            </Sheet>
 
             {/* ============================================ */}
             {/* NEW APPOINTMENT SHEET */}
             {/* ============================================ */}
+            {/* ============================================ */}
+            {/* NEW APPOINTMENT SHEET */}
+            {/* ============================================ */}
             <Sheet open={newAppointmentSheetOpen} onOpenChange={setNewAppointmentSheetOpen}>
-                <SheetContent className="w-full sm:max-w-lg overflow-auto">
+                <SheetContent
+                    className="w-full sm:max-w-lg overflow-auto h-[95vh] sm:h-full transition-all"
+                    side={isMobile ? "bottom" : "right"}
+                >
                     <SheetHeader>
-                        <SheetTitle>Novo Agendamento</SheetTitle>
+                        <SheetTitle className="text-xl font-bold text-slate-900 dark:text-white">
+                            Novo Agendamento
+                        </SheetTitle>
                     </SheetHeader>
                     <div className="mt-6 space-y-4">
                         {/* Patient Name with Autocomplete */}
@@ -743,6 +845,16 @@ const Agenda: React.FC = () => {
                     </div>
                 </SheetContent>
             </Sheet>
+            {/* Mobile Fixed Action Button (FAB) */}
+            <button
+                onClick={() => setNewAppointmentSheetOpen(true)}
+                className="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-blue-600 text-white rounded-full 
+                          shadow-xl shadow-blue-600/30 flex items-center justify-center 
+                          hover:scale-105 active:scale-95 transition-all z-50"
+                aria-label="Novo Agendamento"
+            >
+                <Plus size={28} />
+            </button>
         </div>
     );
 };

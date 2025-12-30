@@ -1,5 +1,6 @@
 import React from 'react';
 import { Badge } from '../ui/badge';
+import { Plus } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { PipelineCard } from './PipelineCard';
 import { Opportunity } from '../../types/crm';
@@ -16,6 +17,7 @@ interface PipelineColumnProps {
     onDragStart?: (oppId: string) => void;
     onDragOver?: (e: React.DragEvent) => void;
     onDrop?: (stageId: string) => void;
+    onAddOpportunity?: () => void;
 }
 
 export function PipelineColumn({
@@ -25,6 +27,7 @@ export function PipelineColumn({
     onDragStart,
     onDragOver,
     onDrop,
+    onAddOpportunity
 }: PipelineColumnProps) {
     // Calculate total value in this column
     const totalValue = (opportunities || []).reduce((sum, opp) => sum + (opp.monetary_value || 0), 0);
@@ -85,8 +88,8 @@ export function PipelineColumn({
         <div
             className={cn(
                 'flex flex-col rounded-xl border-2 overflow-hidden',
-                'w-full md:w-80 flex-shrink-0',
-                'h-auto md:h-full',
+                'w-[85vw] md:w-80 flex-shrink-0 snap-center',
+                'h-full',
                 getBorderColor()
             )}
             onDragOver={onDragOver}
@@ -104,12 +107,25 @@ export function PipelineColumn({
                     <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">
                         {stage.name}
                     </h3>
-                    <Badge
-                        variant="secondary"
-                        className="bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs"
-                    >
-                        {(opportunities || []).length}
-                    </Badge>
+                    <div className="flex items-center gap-1">
+                        <Badge
+                            variant="secondary"
+                            className="bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs"
+                        >
+                            {(opportunities || []).length}
+                        </Badge>
+                        {onAddOpportunity && (
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onAddOpportunity();
+                                }}
+                                className="p-1 hover:bg-slate-200/50 dark:hover:bg-slate-600/50 rounded-full transition-colors"
+                            >
+                                <Plus size={14} className="text-slate-500 dark:text-slate-400" />
+                            </button>
+                        )}
+                    </div>
                 </div>
 
                 {/* KPIs */}

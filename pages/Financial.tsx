@@ -1,12 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useNavigate } from 'react-router-dom';
 import {
     ArrowUpCircle, ArrowDownCircle, DollarSign, Download, Filter,
     Wallet, FileText, TrendingUp, AlertTriangle, Lock, Unlock,
-    Plus, Calendar, CreditCard, CheckCircle, Clock, Search, X, Calculator
+    Plus, Calendar, CreditCard, CheckCircle, Clock, Search, X, Calculator,
+    ArrowUpFromLine, ArrowDownFromLine
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
+import { Drawer, DrawerContent } from "../components/ui/drawer";
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "../components/ui/table";
+import { ExpenseSheet } from '../components/financial/ExpenseSheet';
 import CashClosingWizard from '../components/CashClosingWizard';
 import SangriaSuprimentoModal from '../components/SangriaSuprimentoModal';
 import { SummaryCard } from '../components/ui/SummaryCard';
@@ -22,6 +33,24 @@ const Financial: React.FC = () => {
 
     const [showClosingWizard, setShowClosingWizard] = useState(false);
     const [showSangriaModal, setShowSangriaModal] = useState<{ open: boolean; type: 'sangria' | 'suprimento' }>({ open: false, type: 'suprimento' });
+    const [showExpenseSheet, setShowExpenseSheet] = useState(false);
+    const [isActionSheetOpen, setIsActionSheetOpen] = useState(false);
+
+    // Derived from Context
+    const { expenses: allExpenses, addExpense } = useData();
+
+    // Compute unique categories and suppliers from existing expenses + defaults
+    const categories = useMemo(() => {
+        const unique = new Set(['Aluguel', 'Energia', 'Água', 'Internet', 'Salários', 'Materiais', 'Manutenção', 'Impostos', 'Marketing']);
+        allExpenses.forEach(e => { if (e.category) unique.add(e.category) });
+        return Array.from(unique).map(c => ({ id: c, name: c }));
+    }, [allExpenses]);
+
+    const suppliers = useMemo(() => {
+        const unique = new Set(['Dental Cremer', 'Surya Dental', 'Laboratório A', 'Laboratório B']);
+        allExpenses.forEach(e => { if (e.provider) unique.add(e.provider) });
+        return Array.from(unique).map(s => ({ id: s, name: s }));
+    }, [allExpenses]);
 
     // Filter States
     const [receivableFilters, setReceivableFilters] = useState({
@@ -109,10 +138,10 @@ const Financial: React.FC = () => {
                     <div className="flex items-center gap-3">
                         <button
                             onClick={() => navigate('/financial/closing')}
-                            className="flex items-center gap-2 px-3 md:px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium shadow-sm transition-colors text-sm"
+                            className="hidden md:flex items-center gap-2 px-3 md:px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium shadow-sm transition-colors text-sm"
                         >
                             <Calculator size={18} />
-                            <span className="hidden md:inline">Fechamento</span>
+                            <span>Fechamento</span>
                         </button>
                     </div>
                 </div>
@@ -151,8 +180,10 @@ const Financial: React.FC = () => {
                     {/* VISÃO GERAL */}
                     <TabsContent value="overview" className="p-3 md:p-6 space-y-6 m-0">
                         {/* Summary Cards (Enterprise) */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {/* Summary Cards (Enterprise) - Mobile Carousel */}
+                        <div className="flex overflow-x-auto pb-4 snap-x snap-mandatory gap-4 -mx-4 px-4 scroll-pl-4 md:grid md:grid-cols-2 lg:grid-cols-4 md:overflow-visible md:pb-0 md:px-0 scrollbar-hide">
                             <SummaryCard
+                                className="min-w-[90vw] sm:min-w-[300px] snap-start"
                                 title="Entradas Hoje"
                                 value={`R$ ${(todayIncome / 1000).toFixed(1)}k`}
                                 icon={ArrowUpCircle}
@@ -160,6 +191,7 @@ const Financial: React.FC = () => {
                                 subtitle={`${todayRecords.filter(r => r.type === 'income').length} transações`}
                             />
                             <SummaryCard
+                                className="min-w-[90vw] sm:min-w-[300px] snap-start"
                                 title="Saídas Hoje"
                                 value={`R$ ${(todayExpense / 1000).toFixed(1)}k`}
                                 icon={ArrowDownCircle}
@@ -167,6 +199,7 @@ const Financial: React.FC = () => {
                                 subtitle={`${todayRecords.filter(r => r.type === 'expense').length} transações`}
                             />
                             <SummaryCard
+                                className="min-w-[90vw] sm:min-w-[300px] snap-start"
                                 title="Resultado Operacional"
                                 value={`R$ ${(result / 1000).toFixed(1)}k`}
                                 icon={TrendingUp}
@@ -174,6 +207,7 @@ const Financial: React.FC = () => {
                                 subtitle={result >= 0 ? 'Positivo' : 'Negativo'}
                             />
                             <SummaryCard
+                                className="min-w-[90vw] sm:min-w-[300px] snap-start"
                                 title="Ticket Médio"
                                 value="R$ 450"
                                 icon={DollarSign}
@@ -259,41 +293,184 @@ const Financial: React.FC = () => {
                     </TabsContent>
 
                     {/* MOVIMENTAÇÕES - Placeholder por enquanto */}
-                    <TabsContent value="transactions" className="p-3 md:p-6 m-0">
-                        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-12 text-center">
-                            <Wallet size={48} className="text-slate-400 mx-auto mb-4" />
-                            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">
-                                Movimentações
-                            </h3>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">
-                                Conteúdo em migração...
-                            </p>
+                    {/* MOVIMENTAÇÕES (All Transactions) */}
+                    <TabsContent value="transactions" className="p-3 md:p-6 m-0 space-y-4">
+                        <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+                            {/* Desktop Table */}
+                            <div className="hidden md:block">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Data</TableHead>
+                                            <TableHead>Descrição</TableHead>
+                                            <TableHead>Categoria</TableHead>
+                                            <TableHead className="text-right">Valor</TableHead>
+                                            <TableHead>Status</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {globalFinancials.length > 0 ? globalFinancials.map((t) => (
+                                            <TableRow key={t.id}>
+                                                <TableCell>{t.date}</TableCell>
+                                                <TableCell>{t.description}</TableCell>
+                                                <TableCell>{t.category}</TableCell>
+                                                <TableCell className={`text-right font-medium ${t.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
+                                                    {t.type === 'income' ? '+' : '-'} {t.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                                </TableCell>
+                                                <TableCell><StatusBadge status={t.status} /></TableCell>
+                                            </TableRow>
+                                        )) : (
+                                            <TableRow>
+                                                <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">
+                                                    Nenhuma movimentação encontrada.
+                                                </TableCell>
+                                            </TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </div>
+
+                            {/* Mobile Cards (Vertical List) */}
+                            <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800">
+                                {globalFinancials.length > 0 ? globalFinancials.map((t) => (
+                                    <div key={t.id} className="p-4 flex justify-between items-center">
+                                        <div className="flex flex-col gap-1">
+                                            <span className="font-medium text-slate-900 dark:text-white line-clamp-1">{t.description}</span>
+                                            <span className="text-xs text-slate-500">{t.date} • {t.category}</span>
+                                        </div>
+                                        <div className="flex flex-col items-end gap-1 shrink-0 ml-4">
+                                            <span className={`font-bold ${t.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
+                                                {t.type === 'income' ? '+' : '-'} {t.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                            </span>
+                                            <StatusBadge status={t.status} />
+                                        </div>
+                                    </div>
+                                )) : (
+                                    <div className="p-8 text-center text-slate-500">Nenhuma movimentação.</div>
+                                )}
+                            </div>
                         </div>
                     </TabsContent>
 
                     {/* A RECEBER - Placeholder */}
-                    <TabsContent value="receivables" className="p-3 md:p-6 m-0">
-                        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-12 text-center">
-                            <ArrowUpCircle size={48} className="text-slate-400 mx-auto mb-4" />
-                            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">
-                                Contas a Receber
-                            </h3>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">
-                                Conteúdo em migração...
-                            </p>
+                    {/* A RECEBER */}
+                    <TabsContent value="receivables" className="p-3 md:p-6 m-0 space-y-4">
+                        <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+                            {/* Desktop Table */}
+                            <div className="hidden md:block">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Vencimento</TableHead>
+                                            <TableHead>Paciente</TableHead>
+                                            <TableHead>Descrição</TableHead>
+                                            <TableHead className="text-right">Valor</TableHead>
+                                            <TableHead>Status</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {allReceivables.length > 0 ? allReceivables.map((r, idx) => (
+                                            <TableRow key={`${r.id}-${idx}`}>
+                                                <TableCell>{r.dueDate}</TableCell>
+                                                <TableCell>{r.patientName}</TableCell>
+                                                <TableCell>{r.description || 'Parcela'}</TableCell>
+                                                <TableCell className="text-right font-medium text-slate-900 dark:text-white">
+                                                    {r.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                                </TableCell>
+                                                <TableCell><StatusBadge status={r.status} /></TableCell>
+                                            </TableRow>
+                                        )) : (
+                                            <TableRow>
+                                                <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">
+                                                    Nenhuma conta a receber.
+                                                </TableCell>
+                                            </TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </div>
+
+                            {/* Mobile Cards */}
+                            <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800">
+                                {allReceivables.length > 0 ? allReceivables.map((r, idx) => (
+                                    <div key={`${r.id}-${idx}`} className="p-4 flex justify-between items-center">
+                                        <div className="flex flex-col gap-1">
+                                            <span className="font-medium text-slate-900 dark:text-white line-clamp-1">{r.patientName}</span>
+                                            <span className="text-xs text-slate-500">Vence: {r.dueDate}</span>
+                                            <span className="text-xs text-slate-400">{r.description}</span>
+                                        </div>
+                                        <div className="flex flex-col items-end gap-1 shrink-0 ml-4">
+                                            <span className="font-bold text-slate-900 dark:text-white">
+                                                {r.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                            </span>
+                                            <StatusBadge status={r.status} />
+                                        </div>
+                                    </div>
+                                )) : (
+                                    <div className="p-8 text-center text-slate-500">Nenhuma conta a receber.</div>
+                                )}
+                            </div>
                         </div>
                     </TabsContent>
 
                     {/* A PAGAR - Placeholder */}
-                    <TabsContent value="payables" className="p-3 md:p-6 m-0">
-                        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-12 text-center">
-                            <ArrowDownCircle size={48} className="text-slate-400 mx-auto mb-4" />
-                            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">
-                                Contas a Pagar
-                            </h3>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">
-                                Conteúdo em migração...
-                            </p>
+                    {/* A PAGAR */}
+                    <TabsContent value="payables" className="p-3 md:p-6 m-0 space-y-4">
+                        <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+                            {/* Desktop Table */}
+                            <div className="hidden md:block">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Vencimento</TableHead>
+                                            <TableHead>Descriçao</TableHead>
+                                            <TableHead>Categoria</TableHead>
+                                            <TableHead className="text-right">Valor</TableHead>
+                                            <TableHead>Status</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {expenses.length > 0 ? expenses.map((e) => (
+                                            <TableRow key={e.id}>
+                                                <TableCell>{e.dueDate}</TableCell>
+                                                <TableCell>{e.description}</TableCell>
+                                                <TableCell>{e.category}</TableCell>
+                                                <TableCell className="text-right font-medium text-slate-900 dark:text-white">
+                                                    {e.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                                </TableCell>
+                                                <TableCell><StatusBadge status={e.status} /></TableCell>
+                                            </TableRow>
+                                        )) : (
+                                            <TableRow>
+                                                <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">
+                                                    Nenhuma despesa ou conta a pagar.
+                                                </TableCell>
+                                            </TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </div>
+
+                            {/* Mobile Cards */}
+                            <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800">
+                                {expenses.length > 0 ? expenses.map((e) => (
+                                    <div key={e.id} className="p-4 flex justify-between items-center">
+                                        <div className="flex flex-col gap-1">
+                                            <span className="font-medium text-slate-900 dark:text-white line-clamp-1">{e.description}</span>
+                                            <span className="text-xs text-slate-500">Vence: {e.dueDate}</span>
+                                            <span className="text-xs text-slate-400">{e.category}</span>
+                                        </div>
+                                        <div className="flex flex-col items-end gap-1 shrink-0 ml-4">
+                                            <span className="font-bold text-slate-900 dark:text-white">
+                                                {e.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                            </span>
+                                            <StatusBadge status={e.status} />
+                                        </div>
+                                    </div>
+                                )) : (
+                                    <div className="p-8 text-center text-slate-500">Nenhuma despesa cadastrada.</div>
+                                )}
+                            </div>
                         </div>
                     </TabsContent>
 
@@ -318,6 +495,100 @@ const Financial: React.FC = () => {
                     type={showSangriaModal.type}
                 />
             )}
+
+            {/* Expense Sheet (Drawer on Mobile via BaseSheet) */}
+            <ExpenseSheet
+                open={showExpenseSheet}
+                onOpenChange={setShowExpenseSheet}
+                expense={null}
+                categories={categories}
+                suppliers={suppliers}
+                onSave={async (data) => {
+                    await addExpense({
+                        description: data.description,
+                        amount: data.amount,
+                        category: data.category_id, // category_id holds the name string
+                        provider: data.supplier_id, // supplier_id holds the name string
+                        dueDate: data.due_date.toISOString(),
+                        status: data.status,
+                        notes: data.notes
+                    });
+                    setShowExpenseSheet(false);
+                }}
+            />
+
+            {/* Mobile Action Sheet FAB */}
+            <button
+                onClick={() => setIsActionSheetOpen(true)}
+                className="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-emerald-600 text-white rounded-full 
+                          shadow-xl shadow-emerald-600/30 flex items-center justify-center 
+                          hover:scale-105 active:scale-95 transition-all z-50 animate-in zoom-in"
+            >
+                <Plus size={28} />
+            </button>
+
+            {/* Action Sheet Drawer */}
+            <Drawer open={isActionSheetOpen} onOpenChange={setIsActionSheetOpen}>
+                <DrawerContent className="pb-[max(20px,env(safe-area-inset-bottom))] rounded-t-[10px]">
+                    <DrawerHeader>
+                        <DrawerTitle className="text-center text-sm font-bold text-slate-500 uppercase tracking-wider">
+                            Ações Financeiras
+                        </DrawerTitle>
+                    </DrawerHeader>
+                    <div className="p-4 pt-0">
+                        <div className="space-y-3">
+                            <button
+                                onClick={() => {
+                                    setShowExpenseSheet(true);
+                                    setIsActionSheetOpen(false);
+                                }}
+                                className="w-full bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center gap-4 active:bg-slate-50 dark:active:bg-slate-700"
+                            >
+                                <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400">
+                                    <ArrowDownFromLine size={20} />
+                                </div>
+                                <div className="text-left">
+                                    <p className="font-bold text-slate-900 dark:text-white">NOVA DESPESA</p>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400">Pagar conta ou fornecedor</p>
+                                </div>
+                            </button>
+
+                            <button
+                                onClick={() => {
+                                    // Placeholder for Revenue
+                                    toast('Receita em Breve!', { icon: '💰' });
+                                    setIsActionSheetOpen(false);
+                                }}
+                                className="w-full bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center gap-4 active:bg-slate-50 dark:active:bg-slate-700"
+                            >
+                                <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 dark:text-green-400">
+                                    <ArrowUpFromLine size={20} />
+                                </div>
+                                <div className="text-left">
+                                    <p className="font-bold text-slate-900 dark:text-white">NOVA RECEITA</p>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400">Lançar ganho avulso</p>
+                                </div>
+                            </button>
+
+                            <button
+                                onClick={() => {
+                                    navigate('/financial/closing');
+                                    setIsActionSheetOpen(false);
+                                }}
+                                className="w-full bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center gap-4 active:bg-slate-50 dark:active:bg-slate-700"
+                            >
+                                <div className="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-purple-600 dark:text-purple-400">
+                                    <Calculator size={20} />
+                                </div>
+                                <div className="text-left">
+                                    <p className="font-bold text-slate-900 dark:text-white">FECHAMENTO</p>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400">Conferir e fechar caixa</p>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+                </DrawerContent>
+            </Drawer>
         </div>
     );
 };

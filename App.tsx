@@ -18,6 +18,7 @@ import { queryClient } from "./lib/queryClient";
 import AppLayout from "./components/layout/AppLayout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { DynamicRedirect } from "./components/DynamicRedirect";
+import { UIProvider } from "./contexts/UIContext";
 
 
 // ============================================
@@ -99,7 +100,9 @@ const App: React.FC = () => {
                     path="/"
                     element={
                       <ProtectedRoute>
-                        <AppLayout />
+                        <UIProvider>
+                          <AppLayout />
+                        </UIProvider>
                       </ProtectedRoute>
                     }
                   >

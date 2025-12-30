@@ -259,28 +259,28 @@ const FinancialDRE: React.FC = () => {
                     <table className="w-full">
                         <thead className="bg-slate-50 dark:bg-slate-900">
                             <tr>
-                                <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">Descrição</th>
-                                <th className="px-6 py-3 text-right text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">Valor</th>
-                                <th className="px-6 py-3 text-right text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">% Receita</th>
+                                <th className="px-3 md:px-6 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">Descrição</th>
+                                <th className="px-3 md:px-6 py-3 text-right text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">Valor</th>
+                                <th className="px-3 md:px-6 py-3 text-right text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">% Receita</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
                             {/* Receita Bruta */}
                             <tr className="bg-green-50/50 dark:bg-green-900/10">
-                                <td className="px-6 py-4 font-bold text-slate-900 dark:text-white">(+) Receita Bruta</td>
-                                <td className="px-6 py-4 text-right font-bold text-green-600 dark:text-green-400">
+                                <td className="px-3 md:px-6 py-4 font-bold text-slate-900 dark:text-white">(+) Receita Bruta</td>
+                                <td className="px-3 md:px-6 py-4 text-right font-bold text-green-600 dark:text-green-400">
                                     {formatCurrency(dreData.receitaBruta)}
                                 </td>
-                                <td className="px-6 py-4 text-right text-sm text-slate-600 dark:text-slate-400">100,0%</td>
+                                <td className="px-3 md:px-6 py-4 text-right text-sm text-slate-600 dark:text-slate-400">100,0%</td>
                             </tr>
 
                             {/* Despesas Variáveis */}
                             <tr>
-                                <td className="px-6 py-4 font-semibold text-slate-700 dark:text-slate-300">(-) Despesas Variáveis</td>
-                                <td className="px-6 py-4 text-right font-semibold text-rose-600 dark:text-rose-400">
+                                <td className="px-3 md:px-6 py-4 font-semibold text-slate-700 dark:text-slate-300">(-) Despesas Variáveis</td>
+                                <td className="px-3 md:px-6 py-4 text-right font-semibold text-rose-600 dark:text-rose-400">
                                     {formatCurrency(dreData.despesasVariaveis)}
                                 </td>
-                                <td className="px-6 py-4 text-right text-sm text-slate-600 dark:text-slate-400">
+                                <td className="px-3 md:px-6 py-4 text-right text-sm text-slate-600 dark:text-slate-400">
                                     {dreData.receitaBruta > 0 ? ((dreData.despesasVariaveis / dreData.receitaBruta) * 100).toFixed(1) : 0}%
                                 </td>
                             </tr>
@@ -288,11 +288,11 @@ const FinancialDRE: React.FC = () => {
                             {/* Detalhes Despesas Variáveis */}
                             {dreData.detalheDespesasVariaveis.map((item, idx) => (
                                 <tr key={`var-${idx}`} className="bg-slate-50/50 dark:bg-slate-900/50">
-                                    <td className="px-6 py-2 pl-12 text-sm text-slate-600 dark:text-slate-400">• {item.categoria}</td>
-                                    <td className="px-6 py-2 text-right text-sm text-slate-600 dark:text-slate-400">
+                                    <td className="px-3 md:px-6 py-2 pl-6 md:pl-12 text-sm text-slate-600 dark:text-slate-400">• {item.categoria}</td>
+                                    <td className="px-3 md:px-6 py-2 text-right text-sm text-slate-600 dark:text-slate-400">
                                         {formatCurrency(item.valor)}
                                     </td>
-                                    <td className="px-6 py-2 text-right text-sm text-slate-500 dark:text-slate-500">
+                                    <td className="px-3 md:px-6 py-2 text-right text-sm text-slate-500 dark:text-slate-500">
                                         {item.percentual.toFixed(1)}%
                                     </td>
                                 </tr>
@@ -300,22 +300,22 @@ const FinancialDRE: React.FC = () => {
 
                             {/* Margem de Contribuição */}
                             <tr className="bg-blue-50/50 dark:bg-blue-900/10 border-t-2 border-blue-200 dark:border-blue-800">
-                                <td className="px-6 py-4 font-bold text-slate-900 dark:text-white">(=) Margem de Contribuição</td>
-                                <td className="px-6 py-4 text-right font-bold text-blue-600 dark:text-blue-400">
+                                <td className="px-3 md:px-6 py-4 font-bold text-slate-900 dark:text-white">(=) Margem de Contribuição</td>
+                                <td className="px-3 md:px-6 py-4 text-right font-bold text-blue-600 dark:text-blue-400">
                                     {formatCurrency(dreData.margemContribuicao)}
                                 </td>
-                                <td className="px-6 py-4 text-right text-sm font-semibold text-slate-600 dark:text-slate-400">
+                                <td className="px-3 md:px-6 py-4 text-right text-sm font-semibold text-slate-600 dark:text-slate-400">
                                     {dreData.receitaBruta > 0 ? ((dreData.margemContribuicao / dreData.receitaBruta) * 100).toFixed(1) : 0}%
                                 </td>
                             </tr>
 
                             {/* Despesas Fixas */}
                             <tr>
-                                <td className="px-6 py-4 font-semibold text-slate-700 dark:text-slate-300">(-) Despesas Fixas</td>
-                                <td className="px-6 py-4 text-right font-semibold text-rose-600 dark:text-rose-400">
+                                <td className="px-3 md:px-6 py-4 font-semibold text-slate-700 dark:text-slate-300">(-) Despesas Fixas</td>
+                                <td className="px-3 md:px-6 py-4 text-right font-semibold text-rose-600 dark:text-rose-400">
                                     {formatCurrency(dreData.despesasFixas)}
                                 </td>
-                                <td className="px-6 py-4 text-right text-sm text-slate-600 dark:text-slate-400">
+                                <td className="px-3 md:px-6 py-4 text-right text-sm text-slate-600 dark:text-slate-400">
                                     {dreData.receitaBruta > 0 ? ((dreData.despesasFixas / dreData.receitaBruta) * 100).toFixed(1) : 0}%
                                 </td>
                             </tr>
@@ -323,11 +323,11 @@ const FinancialDRE: React.FC = () => {
                             {/* Detalhes Despesas Fixas */}
                             {dreData.detalheDespesasFixas.map((item, idx) => (
                                 <tr key={`fix-${idx}`} className="bg-slate-50/50 dark:bg-slate-900/50">
-                                    <td className="px-6 py-2 pl-12 text-sm text-slate-600 dark:text-slate-400">• {item.categoria}</td>
-                                    <td className="px-6 py-2 text-right text-sm text-slate-600 dark:text-slate-400">
+                                    <td className="px-3 md:px-6 py-2 pl-6 md:pl-12 text-sm text-slate-600 dark:text-slate-400">• {item.categoria}</td>
+                                    <td className="px-3 md:px-6 py-2 text-right text-sm text-slate-600 dark:text-slate-400">
                                         {formatCurrency(item.valor)}
                                     </td>
-                                    <td className="px-6 py-2 text-right text-sm text-slate-500 dark:text-slate-500">
+                                    <td className="px-3 md:px-6 py-2 text-right text-sm text-slate-500 dark:text-slate-500">
                                         {item.percentual.toFixed(1)}%
                                     </td>
                                 </tr>
@@ -338,13 +338,13 @@ const FinancialDRE: React.FC = () => {
                                 ? 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800'
                                 : 'bg-rose-50 dark:bg-rose-900/10 border-rose-200 dark:border-rose-800'
                                 }`}>
-                                <td className={`px-6 py-4 font-bold ${isProfit ? 'text-green-900 dark:text-green-100' : 'text-rose-900 dark:text-rose-100'}`}>
+                                <td className={`px-3 md:px-6 py-4 font-bold ${isProfit ? 'text-green-900 dark:text-green-100' : 'text-rose-900 dark:text-rose-100'}`}>
                                     (=) {isProfit ? 'Lucro Líquido' : 'Prejuízo'}
                                 </td>
-                                <td className={`px-6 py-4 text-right font-bold text-xl ${isProfit ? 'text-green-600 dark:text-green-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                                <td className={`px-3 md:px-6 py-4 text-right font-bold text-xl ${isProfit ? 'text-green-600 dark:text-green-400' : 'text-rose-600 dark:text-rose-400'}`}>
                                     {formatCurrency(dreData.lucroLiquido)}
                                 </td>
-                                <td className={`px-6 py-4 text-right font-bold ${isProfit ? 'text-green-600 dark:text-green-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                                <td className={`px-3 md:px-6 py-4 text-right font-bold ${isProfit ? 'text-green-600 dark:text-green-400' : 'text-rose-600 dark:text-rose-400'}`}>
                                     {margemLucro.toFixed(1)}%
                                 </td>
                             </tr>

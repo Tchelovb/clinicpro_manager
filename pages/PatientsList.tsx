@@ -375,13 +375,16 @@ const PatientsList: React.FC = () => {
                         </div>
 
                         {/* Patient Quick Actions (Dual Button) */}
-                        <PatientQuickActions
-                            onOpenFullRegistration={handleNewPatientClick}
-                            onSuccess={() => {
-                                setSearchTerm('');
-                                fetchRecentPatients();
-                            }}
-                        />
+                        {/* Patient Quick Actions (Dual Button) - Desktop Only */}
+                        <div className="hidden md:block">
+                            <PatientQuickActions
+                                onOpenFullRegistration={handleNewPatientClick}
+                                onSuccess={() => {
+                                    setSearchTerm('');
+                                    fetchRecentPatients();
+                                }}
+                            />
+                        </div>
 
                         {/* View Toggles */}
                         <div className="hidden md:flex items-center gap-2 border-l border-slate-200 dark:border-slate-700 pl-4 ml-2">
@@ -502,6 +505,16 @@ const PatientsList: React.FC = () => {
                     );
                 })()}
             </div>
+            {/* Mobile FAB for New Patient */}
+            <button
+                onClick={handleNewPatientClick}
+                className="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-violet-600 text-white rounded-full 
+                          shadow-xl shadow-violet-600/30 flex items-center justify-center 
+                          hover:scale-105 active:scale-95 transition-all z-50"
+                aria-label="Novo Paciente"
+            >
+                <Plus size={28} />
+            </button>
         </div >
     );
 };

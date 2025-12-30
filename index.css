@@ -91,6 +91,24 @@
   }
 }
 
+/* --- MOBILE STANDARDIZATION (393px) --- */
+@layer utilities {
+  .mobile-container {
+    @apply w-full max-w-[393px] mx-auto;
+  }
+  
+  .safe-padding {
+    @apply px-4; /* 16px Safe Area */
+  }
+}
+
+/* Force 16px font size on inputs to prevent iOS zoom */
+@media screen and (max-width: 640px) {
+  input, select, textarea, button {
+    font-size: 16px !important;
+  }
+}
+
 /* Custom Scrollbar for Smart Check-in */
 .custom-scrollbar::-webkit-scrollbar {
   width: 8px;

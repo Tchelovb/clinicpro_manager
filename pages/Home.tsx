@@ -45,7 +45,7 @@ export default function Home() {
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
-            <div className="w-full max-w-2xl px-6 py-12 text-center space-y-8">
+            <div className="w-full max-w-2xl px-4 md:px-6 py-12 text-center space-y-8">
                 {/* Logo / Clinic Name */}
                 <div className="space-y-2 animate-in fade-in duration-500">
                     <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-violet-600 to-purple-600 dark:from-violet-500 dark:to-purple-500 rounded-2xl shadow-lg mb-4">
@@ -76,7 +76,7 @@ export default function Home() {
                 {/* Quick Actions */}
                 <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 delay-500">
                     <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-4">Ações Rápidas</p>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                         {quickActions.map((action, index) => (
                             <Button
                                 key={index}

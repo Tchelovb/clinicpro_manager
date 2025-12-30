@@ -252,10 +252,42 @@ const PatientForm: React.FC<PatientFormProps> = ({
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <div className="text-center">
-          <Loader2 className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
-          <p className="text-gray-600 dark:text-gray-400">Carregando dados do paciente...</p>
+      <div className="max-w-6xl mx-auto pb-24 animate-in fade-in duration-500">
+        {/* Skeleton Header */}
+        <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 py-4 border-b border-gray-200 dark:border-slate-800 sticky top-0 bg-gray-50 dark:bg-slate-900 z-20">
+          <div className="flex items-center gap-4 w-full">
+            <div className="w-10 h-10 rounded-lg bg-gray-200 dark:bg-slate-800 animate-pulse shrink-0" />
+            <div className="space-y-2 flex-1">
+              <div className="h-8 w-48 bg-gray-200 dark:bg-slate-800 rounded animate-pulse" />
+              <div className="h-4 w-64 bg-gray-200 dark:bg-slate-800 rounded animate-pulse" />
+            </div>
+          </div>
+        </div>
+
+        {/* Skeleton Form Sections */}
+        <div className="space-y-6">
+          {[1, 2, 3].map((section) => (
+            <div key={section} className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-6 shadow-sm">
+              <div className="flex items-center gap-2 mb-6 border-b border-gray-200 dark:border-slate-700 pb-2">
+                <div className="w-5 h-5 rounded bg-gray-200 dark:bg-slate-800 animate-pulse" />
+                <div className="h-5 w-40 bg-gray-200 dark:bg-slate-800 rounded animate-pulse" />
+              </div>
+              <div className="grid grid-cols-12 gap-4">
+                {/* Mimic inputs grid */}
+                <div className="col-span-12 h-11 bg-gray-100 dark:bg-slate-700/50 rounded animate-pulse" />
+                <div className="col-span-12 md:col-span-6 h-11 bg-gray-100 dark:bg-slate-700/50 rounded animate-pulse" />
+                <div className="col-span-12 md:col-span-6 h-11 bg-gray-100 dark:bg-slate-700/50 rounded animate-pulse" />
+                <div className="col-span-12 md:col-span-4 h-11 bg-gray-100 dark:bg-slate-700/50 rounded animate-pulse" />
+                <div className="col-span-12 md:col-span-8 h-11 bg-gray-100 dark:bg-slate-700/50 rounded animate-pulse" />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Loading Text Hint - Optional but elegant */}
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white/80 dark:bg-slate-800/80 backdrop-blur px-4 py-2 rounded-full border border-slate-200 dark:border-slate-700 shadow-lg flex items-center gap-2">
+          <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" />
+          <span className="text-xs font-medium text-slate-600 dark:text-slate-300">Carregando prontuário...</span>
         </div>
       </div>
     );
@@ -696,7 +728,7 @@ const PatientForm: React.FC<PatientFormProps> = ({
 
       {/* Sticky Footer com Botão de Salvar (apenas mobile e se não for readonly) */}
       {!initialReadonly && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-800 p-4 shadow-lg z-30 md:hidden">
+        <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-800 p-4 pb-[max(16px,env(safe-area-inset-bottom))] shadow-lg z-30 md:hidden">
           <button
             onClick={handleSubmit}
             className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold shadow-md transition-all active:scale-95"

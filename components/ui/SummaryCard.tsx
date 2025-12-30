@@ -7,6 +7,7 @@ interface SummaryCardProps {
     icon: LucideIcon;
     color: 'emerald' | 'rose' | 'blue' | 'amber' | 'violet';
     subtitle?: string;
+    className?: string;
 }
 
 export const SummaryCard: React.FC<SummaryCardProps> = ({
@@ -14,7 +15,8 @@ export const SummaryCard: React.FC<SummaryCardProps> = ({
     value,
     icon: Icon,
     color,
-    subtitle
+    subtitle,
+    className
 }) => {
     const colorConfigs = {
         emerald: {
@@ -57,7 +59,7 @@ export const SummaryCard: React.FC<SummaryCardProps> = ({
     const config = colorConfigs[color];
 
     return (
-        <div className={`${config.bg} border ${config.border} rounded-lg p-5 shadow-sm`}>
+        <div className={`${config.bg} border ${config.border} rounded-lg p-5 shadow-sm ${className || ''}`}>
             <div className="flex items-center justify-between mb-3">
                 <div className={`w-12 h-12 ${config.iconBg} rounded-lg flex items-center justify-center`}>
                     <Icon className={config.iconColor} size={24} strokeWidth={2} />

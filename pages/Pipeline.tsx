@@ -30,6 +30,7 @@ export default function Pipeline() {
     const [categoryFilter, setCategoryFilter] = useState<OpportunityCategory | 'ALL'>('ALL');
     const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
     const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
+    const [initialStageId, setInitialStageId] = useState<string | null>(null);
     const [isLeadSheetOpen, setIsLeadSheetOpen] = useState(false);
     const [isPatientSheetOpen, setIsPatientSheetOpen] = useState(false);
     const [draggedOppId, setDraggedOppId] = useState<string | null>(null);
@@ -129,8 +130,12 @@ export default function Pipeline() {
     /**
      * Handle new opportunity
      */
-    const handleNewOpportunity = () => {
+    /**
+     * Handle new opportunity
+     */
+    const handleNewOpportunity = (stageId?: string) => {
         setSelectedLeadId('new');
+        setInitialStageId(stageId || null);
         setIsLeadSheetOpen(true);
     };
 
@@ -167,7 +172,7 @@ export default function Pipeline() {
         <div className="h-full flex flex-col overflow-hidden bg-slate-50 dark:bg-slate-950">
             {/* Header - Fixed */}
             <div className="flex-none bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                     <div>
                         <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
                             Pipeline de Vendas
@@ -177,7 +182,7 @@ export default function Pipeline() {
                         </p>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-3">
                         {/* Type Filter Tabs - Inline */}
                         <Tabs value={typeFilter} onValueChange={(v) => setTypeFilter(v as OpportunityTypeFilter)}>
                             <TabsList className="grid grid-cols-3">
@@ -245,8 +250,8 @@ export default function Pipeline() {
                             <Settings2 className="h-4 w-4" />
                         </Button>
 
-                        {/* New Opportunity Button */}
-                        <Button onClick={handleNewOpportunity} size="sm">
+                        {/* New Opportunity Button (Desktop) */}
+                        <Button onClick={() => handleNewOpportunity()} size="sm" className="hidden md:flex">
                             <Plus className="mr-2 h-4 w-4" />
                             Nova Oportunidade
                         </Button>
@@ -255,7 +260,7 @@ export default function Pipeline() {
             </div>
 
             {/* Kanban Board - Scrollable */}
-            <div className="flex-1 overflow-x-auto overflow-y-hidden">
+            <div className="flex-1 overflow-x-auto overflow-y-hidden snap-x snap-mandatory">
                 {stagesLoading ? (
                     <div className="flex items-center justify-center h-full">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-600" />
@@ -276,6 +281,7 @@ export default function Pipeline() {
                                     onDragStart={handleDragStart}
                                     onDragOver={(e) => e.preventDefault()}
                                     onDrop={handleDrop}
+                                    onAddOpportunity={() => handleNewOpportunity(stage.id)}
                                 />
                             );
                         })}
@@ -287,7 +293,7 @@ export default function Pipeline() {
             <LeadDetailSheet
                 leadId={selectedLeadId}
                 pipelineId={selectedPipelineId}
-                initialStageId={null}
+                initialStageId={initialStageId}
                 open={isLeadSheetOpen}
                 onOpenChange={setIsLeadSheetOpen}
             />

@@ -54,11 +54,11 @@ const CashClosingWizard: React.FC<CashClosingWizardProps> = ({ onClose, register
     };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-0 md:p-4">
+            <div className="bg-white dark:bg-slate-900 md:rounded-xl shadow-2xl w-full h-[100dvh] md:h-auto md:max-w-2xl overflow-hidden flex flex-col pt-[safe-area-inset-top]">
 
                 {/* Header */}
-                <div className="bg-gradient-to-r from-gray-800 to-gray-900 p-6 flex justify-between items-center text-white">
+                <div className="bg-gradient-to-r from-gray-800 to-gray-900 p-6 flex justify-between items-center text-white flex-shrink-0">
                     <div>
                         <h2 className="text-xl font-bold flex items-center gap-2">
                             <Check className="text-green-400" /> Fechamento de Caixa
@@ -71,7 +71,7 @@ const CashClosingWizard: React.FC<CashClosingWizardProps> = ({ onClose, register
                 </div>
 
                 {/* Steps Indicator */}
-                <div className="flex border-b border-gray-100">
+                <div className="flex border-b border-gray-100 dark:border-slate-800 flex-shrink-0">
                     <div className={`flex-1 p-4 text-center text-sm font-medium ${step === 'CARDS' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-400'}`}>
                         1. Conferência Cartões/Pix
                     </div>
@@ -84,7 +84,7 @@ const CashClosingWizard: React.FC<CashClosingWizardProps> = ({ onClose, register
                 </div>
 
                 {/* Content */}
-                <div className="p-8 min-h-[300px]">
+                <div className="p-4 md:p-8 flex-1 overflow-y-auto">
 
                     {step === 'CARDS' && (
                         <div className="space-y-6">
@@ -206,7 +206,7 @@ const CashClosingWizard: React.FC<CashClosingWizardProps> = ({ onClose, register
                 </div>
 
                 {/* Footer */}
-                <div className="bg-gray-50 px-8 py-5 flex justify-between items-center border-t border-gray-200">
+                <div className="bg-gray-50 dark:bg-slate-800 px-8 py-5 flex justify-between items-center border-t border-gray-200 dark:border-slate-700 flex-shrink-0 pb-[max(20px,env(safe-area-inset-bottom))]">
                     {step !== 'CARDS' ? (
                         <button onClick={handleBack} className="text-gray-600 hover:text-gray-900 font-medium flex items-center gap-1">
                             <ChevronLeft size={18} /> Voltar

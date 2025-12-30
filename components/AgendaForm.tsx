@@ -31,7 +31,7 @@ const AgendaForm: React.FC = () => {
         professional_id: '',
         date: '',
         time: '',
-        type: 'EVALUATION' as 'EVALUATION' | 'PROCEDURE' | 'FOLLOW_UP' | 'EMERGENCY',
+        type: 'EVALUATION' as string,
         notes: '',
         status: 'PENDING' as 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW'
     });

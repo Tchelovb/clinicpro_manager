@@ -707,7 +707,7 @@ const BudgetForm: React.FC<BudgetFormProps> = ({
                                     </div>
                                 )}
                             </div>
-                            <div className="overflow-x-auto">
+                            <div className="overflow-x-auto hidden md:block">
                                 <table className="w-full">
                                     <thead>
                                         <tr className="border-b border-slate-800 text-left">
@@ -757,6 +757,47 @@ const BudgetForm: React.FC<BudgetFormProps> = ({
                                         </tr>
                                     </tfoot>
                                 </table>
+                            </div>
+
+                            {/* MOBILE CARD LIST VIEW */}
+                            <div className="md:hidden space-y-3">
+                                {items.map((item, index) => (
+                                    <div key={item.id || index} className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-4 relative">
+                                        <div className="flex justify-between items-start mb-2 pr-8">
+                                            <div>
+                                                <h4 className="text-white font-bold text-base mb-1">{item.procedure}</h4>
+                                                {(item.tooth_number || item.face || item.region) && (
+                                                    <div className="flex flex-wrap gap-2 text-xs text-slate-400">
+                                                        {item.region && <span>{item.region}</span>}
+                                                        {(item.tooth_number || item.face) && <span>|</span>}
+                                                        {item.tooth_number && <span>Dente: {item.tooth_number}</span>}
+                                                        {item.face && <span>Face: {item.face}</span>}
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <button
+                                                onClick={() => handleRemoveItem(item.id)}
+                                                className="absolute top-3 right-3 p-2 text-slate-400 hover:text-red-400 bg-slate-800 rounded-lg shadow-sm"
+                                            >
+                                                <Trash2 size={20} />
+                                            </button>
+                                        </div>
+                                        <div className="flex items-end justify-between border-t border-slate-700/50 pt-3 mt-2">
+                                            <div className="text-sm text-slate-400">
+                                                {item.quantity} x R$ {item.unitValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                            </div>
+                                            <div className="text-lg font-bold text-blue-400">
+                                                R$ {item.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                                <div className="flex justify-between items-center pt-4 border-t border-slate-800 mt-4">
+                                    <span className="text-slate-400 font-medium">Total</span>
+                                    <span className="text-xl font-bold text-white">
+                                        R$ {subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                    </span>
+                                </div>
                             </div>
                         </div>
                     )}
@@ -1025,7 +1066,7 @@ const BudgetForm: React.FC<BudgetFormProps> = ({
             />
             {/* INLINE FOOTER ACTION BAR */}
             {isInline && (
-                <div className="sticky bottom-0 w-full bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 p-4 flex gap-3 justify-end shadow-[0_-5px_20px_rgba(0,0,0,0.1)] z-20">
+                <div className="sticky bottom-0 w-full bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 p-4 pb-[max(20px,env(safe-area-inset-bottom))] flex gap-3 justify-end shadow-[0_-5px_20px_rgba(0,0,0,0.1)] z-20">
                     <button
                         onClick={onCancel}
                         className="px-5 py-2.5 rounded-xl font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
