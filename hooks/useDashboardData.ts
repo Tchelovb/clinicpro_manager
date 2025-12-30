@@ -29,7 +29,7 @@ export interface DashboardLead {
   leadTasks: any[];
 }
 
-export const useDashboardData = () => {
+export const useDashboardData = ({ enabled = true }: { enabled?: boolean } = {}) => {
   const { profile } = useAuth();
   const clinicId = profile?.clinic_id;
 
@@ -116,7 +116,7 @@ export const useDashboardData = () => {
         notes: apt.notes,
       }));
     },
-    enabled: !!clinicId,
+    enabled: enabled && !!clinicId,
     staleTime: 5 * 60 * 1000, // 5 minutos
     retry: 2,
   });
@@ -143,7 +143,7 @@ export const useDashboardData = () => {
       if (error) throw error;
       return data || [];
     },
-    enabled: !!clinicId,
+    enabled: enabled && !!clinicId,
     staleTime: 5 * 60 * 1000,
     retry: 2,
   });
@@ -169,7 +169,7 @@ export const useDashboardData = () => {
       if (error) throw error;
       return data || [];
     },
-    enabled: !!clinicId,
+    enabled: enabled && !!clinicId,
     staleTime: 5 * 60 * 1000,
     retry: 2,
   });
@@ -191,7 +191,7 @@ export const useDashboardData = () => {
       if (error) throw error;
       return count || 0;
     },
-    enabled: !!clinicId,
+    enabled: enabled && !!clinicId,
     staleTime: 5 * 60 * 1000,
   });
 

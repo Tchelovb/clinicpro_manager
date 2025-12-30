@@ -24,7 +24,9 @@ interface User {
 }
 
 export function Team() {
-    const { clinicId } = useAuth();
+    const { user } = useAuth(); // 🛠️ FIX: Get user instead of non-existent clinicId
+    const clinicId = user?.clinic_id; // Extract clinic_id from user object
+
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
@@ -41,6 +43,8 @@ export function Team() {
     }, [clinicId]);
 
     const fetchUsers = async () => {
+        if (!clinicId) return;
+
         try {
             setLoading(true);
             const { data, error } = await supabase

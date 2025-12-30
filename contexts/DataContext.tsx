@@ -3,6 +3,7 @@
   useContext,
   useState,
   useEffect,
+  useRef,
   ReactNode,
 } from "react";
 import {
@@ -44,6 +45,7 @@ import {
   ClinicFinancialSettings,
 } from "../types";
 import { supabase } from "../lib/supabase";
+import { withRetry } from "../lib/supabaseWithRetry";
 import { useAuth } from "./AuthContext";
 import { useFinancial } from "./FinancialContext";
 
@@ -169,6 +171,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
     return (localStorage.getItem("theme") as "light" | "dark") || "light";
   });
 
+  // 🛡️ Ref para rastrear último clinic_id e prevenir re-fetches desnecessários
+  const lastClinicIdRef = useRef<string | null>(null);
+
   const [patients, setPatients] = useState<Patient[]>(MOCK_PATIENTS);
   const [appointments, setAppointments] =
     useState<Appointment[]>(MOCK_APPOINTMENTS);
@@ -227,94 +232,116 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
 
   // Fetch real patients from Supabase when user is logged in
   useEffect(() => {
-    if (profile) {
+    // ✅ Apenas busca se clinic_id mudou (previne re-fetches desnecessários)
+    if (profile?.clinic_id && profile.clinic_id !== lastClinicIdRef.current) {
+      lastClinicIdRef.current = profile.clinic_id;
+      console.log("📊 [DATA] Buscando dados para clinic_id:", profile.clinic_id);
+
       const fetchPatients = async () => {
-        // Fetch patients
-        const { data: patientsData, error: patientsError } = await supabase
-          .from("patients")
-          .select("*")
-          .eq("clinic_id", profile.clinic_id)
-          .order("name");
+        // Fetch patients com retry
+        const { data: patientsData, error: patientsError } = await withRetry(
+          () => supabase
+            .from("patients")
+            .select("*")
+            .eq("clinic_id", profile.clinic_id)
+            .order("name", { ascending: true }),
+          { onRetry: (attempt) => console.log(`🔄 [RETRY] Pacientes - tentativa ${attempt}`) }
+        );
 
         if (patientsError) {
           console.error("Error fetching patients:", patientsError);
           return;
         }
 
+        // ⏱️ WAVE 2 & 3: Dados Secundários (Waterfall)
 
-        // Fetch Price Tables & Items
-        const { data: ptData, error: ptError } = await supabase
-          .from("price_tables")
-          .select("*, items:price_table_items(*)")
-          .eq("clinic_id", profile.clinic_id)
-          .eq("active", true);
+        // 🌊 ONDA 2: Procedures & Professionals (400ms delay)
+        setTimeout(async () => {
+          console.log("🌊 [DATA] Iniciando Onda 2: Procedures & Professionals");
 
-        if (ptError) console.error("Error fetching price tables:", ptError);
-        else if (ptData) {
-          setPriceTables(ptData.map(pt => ({
-            id: pt.id,
-            name: pt.name,
-            type: pt.type as any,
-            external_code: pt.external_code,
-            active: pt.active,
-            items: pt.items.map((i: any) => ({
-              procedureId: i.procedure_id,
-              price: i.price
-            }))
-          })));
-        }
+          // Fetch Procedures
+          const { data: proceduresData, error: proceduresError } = await withRetry(
+            () => supabase
+              .from("procedure")
+              .select("*")
+              .eq("clinic_id", profile.clinic_id)
+              .order("name")
+          );
 
-        // Fetch Procedures
-        const { data: proceduresData, error: proceduresError } = await supabase
-          .from("procedure")
-          .select("*")
-          .eq("clinic_id", profile.clinic_id)
-          .order("name");
+          if (proceduresError) console.error("Error fetching procedures:", proceduresError);
+          else if (proceduresData) {
+            setProcedures(proceduresData.map((proc: any) => ({
+              id: proc.id,
+              name: proc.name,
+              category: proc.category,
+              price: proc.base_price,
+              duration: proc.duration_min || proc.duration || 30
+            })));
+          }
 
-        if (proceduresError) console.error("Error fetching procedures:", proceduresError);
-        else if (proceduresData) {
-          setProcedures(proceduresData.map((proc: any) => ({
-            id: proc.id,
-            name: proc.name,
-            category: proc.category,
-            price: proc.base_price,
-            duration: proc.duration_min || proc.duration || 30
-          })));
-        }
+          // Fetch Professionals
+          const { data: professionalsData, error: professionalsError } = await withRetry(
+            () => supabase
+              .from("professionals")
+              .select(`
+                id,
+                name,
+                specialty,
+                color,
+                users!inner (
+                  id,
+                  active,
+                  clinic_id
+                )
+              `)
+              .eq("users.clinic_id", profile.clinic_id)
+              .eq("users.active", true)
+              .order("name")
+          );
 
-        // Fetch Professionals (from professionals table, joined with users)
-        const { data: professionalsData, error: professionalsError } = await supabase
-          .from("professionals")
-          .select(`
-            id,
-            name,
-            specialty,
-            color,
-            users!inner (
-              id,
-              active,
-              clinic_id
-            )
-          `)
-          .eq("users.clinic_id", profile.clinic_id)
-          .eq("users.active", true)
-          .order("name");
+          if (professionalsError) console.error("Error fetching professionals:", professionalsError);
+          else if (professionalsData) {
+            setProfessionals(professionalsData.map((prof: any) => {
+              const user = Array.isArray(prof.users) ? prof.users[0] : prof.users;
+              return {
+                id: user?.id || prof.id,
+                name: prof.name,
+                role: prof.specialty || 'Dentista',
+                color: prof.color || 'blue',
+                active: true,
+                email: ''
+              };
+            }));
+          }
+        }, 400);
 
-        if (professionalsError) console.error("Error fetching professionals:", professionalsError);
-        else if (professionalsData) {
-          setProfessionals(professionalsData.map((prof: any) => {
-            // users is an array when using !inner join, get the first element
-            const user = Array.isArray(prof.users) ? prof.users[0] : prof.users;
-            return {
-              id: user?.id || prof.id, // Use user ID for budget.doctor_id
-              name: prof.name, // Professional name from professionals table
-              role: prof.specialty || 'Dentista',
-              color: prof.color || 'blue',
-              active: true,
-              email: ''
-            };
-          }));
-        }
+        // 🌊 ONDA 3: Price Tables (800ms delay)
+        setTimeout(async () => {
+          console.log("🌊 [DATA] Iniciando Onda 3: Price Tables");
+
+          const { data: ptData, error: ptError } = await withRetry(
+            () => supabase
+              .from("price_tables")
+              .select("*, items:price_table_items(*)")
+              .eq("clinic_id", profile.clinic_id)
+              .eq("active", true)
+          );
+
+          if (ptError) console.error("Error fetching price tables:", ptError);
+          else if (ptData) {
+            setPriceTables(ptData.map(pt => ({
+              id: pt.id,
+              name: pt.name,
+              type: pt.type as any,
+              external_code: pt.external_code,
+              active: pt.active,
+              items: pt.items.map((i: any) => ({
+                procedureId: i.procedure_id,
+                price: i.price
+              }))
+            })));
+          }
+        }, 800);
 
 
 
@@ -504,9 +531,108 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         }
       };
 
-      fetchPatients();
-    } else {
-      // Fallback to mock data if no clinic_id
+      // 🌊 ONDA 1: Dados Críticos (Imediato)
+      // Função Mestre de Inicialização (Waterfall)
+      // 🛡️ Variável Global Anti-Saturação (Singleton)
+      let isInitializing = false;
+      let retryCount = 0;
+
+      // ... inside initializeSystem ...
+      const initializeSystem = async () => {
+        if (!profile?.clinic_id) {
+          console.error("⛔ [DATA] Acesso Negado: Clinic ID não identificado (Zero Guest Protocol). Abortando carga.");
+          return;
+        }
+
+        if (isInitializing) {
+          console.log("🛡️ [DATA] Inicialização já em andamento. Ignorando chamada duplicada.");
+          return;
+        }
+        isInitializing = true;
+
+        // 🌊 SINGLETON DE CONEXÃO: Batch Loading com Backoff
+        const fetchBatch = async (attempt = 1) => {
+          try {
+            console.log(`🌊 [DATA] Iniciando BATCH LOADING (Tentativa ${attempt})...`);
+
+            // ONDA 1: Pacientes (Vital)
+            console.log("🌊 [DATA] Wave 1: Pacientes (CRÍTICO)");
+            const { data: patientsData, error: patientsError } = await withRetry(
+              () => supabase
+                .from("patients")
+                .select("*")
+                .eq("clinic_id", profile.clinic_id)
+                .order("name", { ascending: true })
+                .limit(50)
+            ) as any;
+
+            if (patientsError) throw new Error("Falha na Onda 1 (Pacientes): " + patientsError.message);
+            setPatients(patientsData || []);
+            console.log("✅ [DATA] Wave 1 concluída com sucesso.");
+
+            // 🕒 PAUSA CIRÚRGICA (1s)
+            await new Promise(r => setTimeout(r, 1000));
+
+            // ONDA 2: Procedimentos & Profissionais
+            console.log("🌊 [DATA] Wave 2: Procedimentos e Profissionais");
+
+            // Promise.all aqui é seguro pois são apenas 2 requests leves após a pausa
+            const [procRes, profRes] = await Promise.all([
+              withRetry(() => supabase.from("procedure").select("*").eq("clinic_id", profile.clinic_id).order("name")),
+              withRetry(() => supabase.from("professionals").select("id, name, specialty, color, users!inner(id, active, clinic_id)").eq("users.clinic_id", profile.clinic_id).eq("users.active", true))
+            ]);
+
+            if (procRes.data) setProcedures(procRes.data.map((proc: any) => ({
+              id: proc.id, name: proc.name, category: proc.category, price: proc.base_price, duration: proc.duration_min || proc.duration || 30
+            })));
+
+            if (profRes.data) setProfessionals(profRes.data.map((prof: any) => ({
+              id: prof.users[0]?.id || prof.id, name: prof.name, role: prof.specialty || 'Dentista', color: prof.color || 'blue', active: true, email: ''
+            })));
+            console.log("✅ [DATA] Wave 2 concluída com sucesso.");
+
+            // 🕒 PAUSA CIRÚRGICA (1s)
+            await new Promise(r => setTimeout(r, 1000));
+
+            // ONDA 3: Financeiro / Preços
+            console.log("🌊 [DATA] Wave 3: Tabelas de Preço");
+            const { data: ptData } = await withRetry(() =>
+              supabase.from("price_tables")
+                .select("*, items:price_table_items(*)")
+                .eq("clinic_id", profile.clinic_id)
+                .eq("active", true)
+            );
+            if (ptData) setPriceTables(ptData.map(pt => ({
+              id: pt.id, name: pt.name, type: pt.type as any, external_code: pt.external_code, active: pt.active, items: pt.items.map((i: any) => ({ procedureId: i.procedure_id, price: i.price }))
+            })));
+            console.log("✅ [DATA] Wave 3 concluída. Sistema ONLINE.");
+
+          } catch (err: any) {
+            console.error(`🔥 [DATA] Falha no Batch (Tentativa ${attempt}):`, err.message);
+            isInitializing = false; // Libera trava em caso de erro para permitir retry
+
+            // BACKOFF EXPONENCIAL: 1s, 2s, 4s, 8s...
+            const delay = Math.pow(2, attempt) * 1000;
+            console.log(`🔄 [DATA] Agendando nova tentativa em ${delay}ms...`);
+
+            setTimeout(() => {
+              isInitializing = true; // Retrava
+              fetchBatch(attempt + 1);
+            }, delay);
+          } finally {
+            // Só libera a trava se tudo der certo no final do fluxo ou se falhar (já tratado acima)
+            if (attempt > 4) isInitializing = false; // Desiste após 4 tentativas
+          }
+        };
+
+        fetchBatch();
+      };
+
+      initializeSystem();
+
+    } else if (!profile?.clinic_id) {
+      // Fallback to mock data apenas se não temos clinic_id
+      lastClinicIdRef.current = null;
       setPatients(MOCK_PATIENTS);
     }
   }, [profile?.clinic_id]);

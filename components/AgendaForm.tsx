@@ -1,367 +1,202 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { Calendar, Clock, User, FileText, X, Save, Loader2, Plus } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabase';
-import toast from 'react-hot-toast';
-import { QuickAddDialog } from './shared/QuickAddDialog';
-import { useQuickAdd } from '../hooks/useQuickAdd';
-import { QUICK_ADD_CONFIGS } from '../types/quickAdd';
+import React, { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { useData } from "../contexts/DataContext";
+import { useAuth } from "../contexts/AuthContext";
+import { supabase } from "../lib/supabase";
+import { Appointment } from "../types";
+import toast from "react-hot-toast";
+import {
+  ArrowLeft,
+  Save,
+  User,
+  Calendar,
+  Clock,
+  CheckCircle,
+} from "lucide-react";
 
-interface Professional {
-    id: string;
-    name: string;
-    active: boolean;
-}
+export const AgendaForm: React.FC = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { professionals, patients, refreshData } = useData();
+  const { profile } = useAuth();
+  const [loading, setLoading] = useState(false);
 
-const AgendaForm: React.FC = () => {
-    const navigate = useNavigate();
-    const { id } = useParams();
-    const { profile } = useAuth();
+  // Captura a data selecionada na agenda através da URL (Ex: ?date=2025-12-30)
+  const queryParams = new URLSearchParams(location.search);
+  const selectedDate =
+    queryParams.get("date") || new Date().toISOString().split("T")[0];
 
-    const isEditing = !!id;
-    const [loading, setLoading] = useState(false);
-    const [professionals, setProfessionals] = useState<Professional[]>([]);
-    const [appointmentTypes, setAppointmentTypes] = useState<any[]>([]);
+  const [formData, setFormData] = useState<Partial<Appointment>>({
+    date: selectedDate,
+    time: "09:00",
+    type: "EVALUATION" as any,
+    status: "PENDING" as any,
+    doctor_id: profile?.id || professionals[0]?.id || "",
+    patientName: "",
+  });
 
-    // Form State
-    const [formData, setFormData] = useState({
-        patient_id: '',
-        patient_name: '',
-        professional_id: '',
-        date: '',
-        time: '',
-        type: 'EVALUATION' as string,
-        notes: '',
-        status: 'PENDING' as 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW'
-    });
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-    // Quick Add Hook for Appointment Types
-    const quickAddType = useQuickAdd({
-        tableName: 'appointment_types',
-        clinicId: profile?.clinic_id || '',
-        successMessage: 'Tipo de agendamento criado com sucesso!',
-        onSuccess: (newType) => {
-            setFormData({ ...formData, type: newType.name });
-            fetchAppointmentTypes();
-        }
-    });
+    if (!formData.patientName || !profile?.clinic_id) {
+      toast.error("Por favor, selecione um paciente.");
+      return;
+    }
 
-    // Quick Add Hook for Professionals
-    const quickAddProfessional = useQuickAdd({
-        tableName: 'profiles',
-        clinicId: profile?.clinic_id || '',
-        successMessage: 'Profissional criado com sucesso!',
-        onSuccess: (newProf) => {
-            setFormData({ ...formData, professional_id: newProf.id });
-            loadProfessionals();
-        }
-    });
+    setLoading(true);
+    try {
+      // Busca o ID do paciente pelo nome selecionado
+      const patient = patients.find(
+        (p) => p.name.toLowerCase() === formData.patientName?.toLowerCase()
+      );
 
-    useEffect(() => {
-        loadProfessionals();
-        fetchAppointmentTypes();
-        if (isEditing) {
-            loadAppointment();
-        }
-    }, [id]);
+      const newApt = {
+        clinic_id: profile.clinic_id,
+        patient_id: patient?.id || null,
+        doctor_id: formData.doctor_id || profile.id,
+        date: `${formData.date}T${formData.time}:00Z`,
+        duration: 60,
+        type: formData.type,
+        status: "Pendente",
+        notes: `Agendado via Painel Dr. Marcelo`,
+      };
 
-    const loadProfessionals = async () => {
-        try {
-            const { data, error } = await supabase
-                .from('professionals')
-                .select('id, name, is_active')
-                .eq('clinic_id', profile?.clinic_id)
-                .eq('is_active', true)
-                .order('name');
+      const { error } = await supabase.from("appointments").insert([newApt]);
 
-            if (error) throw error;
-            setProfessionals(data.map(p => ({ id: p.id, name: p.name, active: p.is_active })));
-        } catch (error) {
-            console.error('Erro ao carregar profissionais:', error);
-            toast.error('Erro ao carregar profissionais');
-        }
-    };
+      if (error) throw error;
 
-    const loadAppointment = async () => {
-        try {
-            const { data, error } = await supabase
-                .from('appointments')
-                .select('*')
-                .eq('id', id)
-                .single();
+      toast.success("Agendamento realizado com sucesso!");
+      await refreshData(); // Atualiza o Dashboard e a Grade
+      navigate("/agenda");
+    } catch (err: any) {
+      console.error("Erro ao salvar:", err);
+      toast.error("Erro ao salvar agendamento.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-            if (error) throw error;
+  return (
+    <div className="max-w-2xl mx-auto p-4 md:pt-8 animate-in fade-in slide-in-from-bottom-4 duration-300">
+      <div className="flex items-center gap-4 mb-6">
+        <button
+          onClick={() => navigate("/agenda")}
+          className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full text-gray-500 transition-colors"
+        >
+          <ArrowLeft size={20} />
+        </button>
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-white">
+          Novo Agendamento
+        </h1>
+      </div>
 
-            setFormData({
-                patient_id: data.patient_id,
-                patient_name: '', // TODO: Load patient name
-                professional_id: data.professional_id,
-                date: data.date,
-                time: data.time,
-                type: data.type,
-                notes: data.notes || '',
-                status: data.status
-            });
-        } catch (error) {
-            console.error('Erro ao carregar agendamento:', error);
-            toast.error('Erro ao carregar agendamento');
-        }
-    };
-
-    const fetchAppointmentTypes = async () => {
-        if (!profile?.clinic_id) return;
-        const { data } = await supabase
-            .from('appointment_types')
-            .select('*')
-            .eq('clinic_id', profile.clinic_id)
-            .eq('is_active', true)
-            .order('name', { ascending: true });
-        if (data) setAppointmentTypes(data);
-    };
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setLoading(true);
-
-        try {
-            const appointmentData = {
-                clinic_id: profile?.clinic_id,
-                patient_id: formData.patient_id || null, // TODO: Link to actual patient
-                professional_id: formData.professional_id,
-                date: formData.date,
-                time: formData.time,
-                type: formData.type,
-                status: formData.status,
-                notes: formData.notes || null,
-                created_by: profile?.id,
-                updated_at: new Date().toISOString()
-            };
-
-            if (isEditing) {
-                const { error } = await supabase
-                    .from('appointments')
-                    .update(appointmentData)
-                    .eq('id', id);
-
-                if (error) throw error;
-                toast.success('Agendamento atualizado com sucesso!');
-            } else {
-                const { error } = await supabase
-                    .from('appointments')
-                    .insert([{
-                        ...appointmentData,
-                        created_at: new Date().toISOString()
-                    }]);
-
-                if (error) throw error;
-                toast.success('Agendamento criado com sucesso!');
+      <form
+        onSubmit={handleSubmit}
+        className="bg-white dark:bg-slate-800 p-6 md:p-8 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 space-y-6"
+      >
+        {/* Paciente */}
+        <div>
+          <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide">
+            Nome do Paciente
+          </label>
+          <input
+            className="w-full bg-white dark:bg-slate-900 text-gray-900 dark:text-white border border-gray-200 dark:border-slate-600 rounded-lg p-3 outline-none focus:ring-2 focus:ring-primary-500"
+            required
+            list="patients-list"
+            value={formData.patientName}
+            onChange={(e) =>
+              setFormData({ ...formData, patientName: e.target.value })
             }
-
-            navigate('/agenda');
-        } catch (error: any) {
-            console.error('Erro ao salvar agendamento:', error);
-            toast.error(error.message || 'Erro ao salvar agendamento');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const typeLabels = {
-        EVALUATION: 'Avaliação',
-        PROCEDURE: 'Procedimento',
-        FOLLOW_UP: 'Retorno',
-        EMERGENCY: 'Urgência'
-    };
-
-    return (
-        <div className="max-w-2xl mx-auto space-y-6">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold text-slate-800 tracking-tight flex items-center gap-3">
-                        <Calendar className="text-violet-600" size={32} />
-                        {isEditing ? 'Editar Agendamento' : 'Novo Agendamento'}
-                    </h1>
-                    <p className="text-slate-500 mt-2">Preencha os dados do agendamento</p>
-                </div>
-                <button
-                    onClick={() => navigate('/agenda')}
-                    className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-                >
-                    <X size={24} className="text-slate-400" />
-                </button>
-            </div>
-
-            {/* Form */}
-            <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-6">
-
-                {/* Patient Name (Temporary - TODO: Replace with patient selector) */}
-                <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">
-                        <User size={16} className="inline mr-2" />
-                        Nome do Paciente *
-                    </label>
-                    <input
-                        type="text"
-                        required
-                        value={formData.patient_name}
-                        onChange={(e) => setFormData({ ...formData, patient_name: e.target.value })}
-                        className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500"
-                        placeholder="Digite o nome do paciente"
-                    />
-                    <p className="text-xs text-slate-500 mt-1">
-                        💡 Em breve: seletor de pacientes cadastrados
-                    </p>
-                </div>
-
-                {/* Professional */}
-                <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">
-                        Profissional *
-                    </label>
-                    <div className="flex gap-2">
-                        <select
-                            required
-                            value={formData.professional_id}
-                            onChange={(e) => setFormData({ ...formData, professional_id: e.target.value })}
-                            className="flex-1 px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500"
-                        >
-                            <option value="">Selecione um profissional</option>
-                            {professionals.map(prof => (
-                                <option key={prof.id} value={prof.id}>{prof.name}</option>
-                            ))}
-                        </select>
-                        <button
-                            type="button"
-                            onClick={() => quickAddProfessional.setIsOpen(true)}
-                            className="px-3 h-10 bg-violet-600 hover:bg-violet-700 text-white rounded-lg transition-colors flex items-center justify-center"
-                            title="Adicionar novo profissional"
-                        >
-                            <Plus size={16} />
-                        </button>
-                    </div>
-                </div>
-
-                {/* Date & Time */}
-                <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-2">
-                            <Calendar size={16} className="inline mr-2" />
-                            Data *
-                        </label>
-                        <input
-                            type="date"
-                            required
-                            value={formData.date}
-                            onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                            className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500"
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-2">
-                            <Clock size={16} className="inline mr-2" />
-                            Horário *
-                        </label>
-                        <input
-                            type="time"
-                            required
-                            value={formData.time}
-                            onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-                            className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500"
-                        />
-                    </div>
-                </div>
-
-                {/* Type */}
-                <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">
-                        Tipo de Atendimento *
-                    </label>
-                    <div className="flex gap-2">
-                        <select
-                            required
-                            value={formData.type}
-                            onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
-                            className="flex-1 px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500"
-                        >
-                            <option value="">Selecione...</option>
-                            {appointmentTypes.map(type => (
-                                <option key={type.id} value={type.name}>{type.name}</option>
-                            ))}
-                        </select>
-                        <button
-                            type="button"
-                            onClick={() => quickAddType.setIsOpen(true)}
-                            className="px-3 h-10 bg-violet-600 hover:bg-violet-700 text-white rounded-lg transition-colors flex items-center justify-center"
-                            title="Adicionar novo tipo"
-                        >
-                            <Plus size={16} />
-                        </button>
-                    </div>
-                </div>
-
-                {/* Notes */}
-                <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">
-                        <FileText size={16} className="inline mr-2" />
-                        Observações
-                    </label>
-                    <textarea
-                        value={formData.notes}
-                        onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                        className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 min-h-[100px]"
-                        placeholder="Observações adicionais (opcional)"
-                    />
-                </div>
-
-                {/* Actions */}
-                <div className="flex gap-3 pt-4 border-t border-slate-100">
-                    <button
-                        type="button"
-                        onClick={() => navigate('/agenda')}
-                        disabled={loading}
-                        className="flex-1 px-4 py-2 border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 transition-colors font-medium disabled:opacity-50"
-                    >
-                        Cancelar
-                    </button>
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="flex-1 px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors font-medium shadow-sm flex items-center justify-center gap-2 disabled:opacity-50"
-                    >
-                        {loading ? (
-                            <>
-                                <Loader2 size={18} className="animate-spin" />
-                                Salvando...
-                            </>
-                        ) : (
-                            <>
-                                <Save size={18} />
-                                {isEditing ? 'Salvar Alterações' : 'Criar Agendamento'}
-                            </>
-                        )}
-                    </button>
-                </div>
-            </form>
-
-            {/* Quick Add Dialog */}
-            <QuickAddDialog
-                open={quickAddType.isOpen}
-                onOpenChange={quickAddType.setIsOpen}
-                config={QUICK_ADD_CONFIGS.appointment_type}
-                onSave={quickAddType.createItem}
-                isLoading={quickAddType.isLoading}
-            />
-            <QuickAddDialog
-                open={quickAddProfessional.isOpen}
-                onOpenChange={quickAddProfessional.setIsOpen}
-                config={QUICK_ADD_CONFIGS.professional}
-                onSave={quickAddProfessional.createItem}
-                isLoading={quickAddProfessional.isLoading}
-            />
+            placeholder="Digite ou selecione o paciente..."
+          />
+          <datalist id="patients-list">
+            {patients.map((p) => (
+              <option key={p.id} value={p.name} />
+            ))}
+          </datalist>
         </div>
-    );
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Data */}
+          <div>
+            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">
+              Data
+            </label>
+            <input
+              type="date"
+              className="w-full border border-gray-200 rounded-lg p-3 dark:bg-slate-900 dark:text-white"
+              value={formData.date}
+              onChange={(e) =>
+                setFormData({ ...formData, date: e.target.value })
+              }
+            />
+          </div>
+          {/* Horário */}
+          <div>
+            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">
+              Horário
+            </label>
+            <input
+              type="time"
+              className="w-full border border-gray-200 rounded-lg p-3 dark:bg-slate-900 dark:text-white"
+              value={formData.time}
+              onChange={(e) =>
+                setFormData({ ...formData, time: e.target.value })
+              }
+            />
+          </div>
+        </div>
+
+        {/* Tipo de Consulta - 4 Pilares */}
+        <div>
+          <label className="block text-xs font-bold text-gray-500 uppercase mb-2">
+            Tipo de Procedimento
+          </label>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            {[
+              { value: "EVALUATION", label: "Avaliação" },
+              { value: "TREATMENT", label: "Procedimento" },
+              { value: "RETURN", label: "Retorno" },
+              { value: "URGENCY", label: "Urgência" },
+            ].map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() =>
+                  setFormData({ ...formData, type: option.value as any })
+                }
+                className={`py-3 text-xs font-bold rounded-lg border transition-all ${
+                  formData.type === option.value
+                    ? "bg-primary-600 border-primary-600 text-white shadow-md"
+                    : "bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-600 text-gray-500 hover:bg-gray-50"
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Botão de Ação */}
+        <div className="pt-4">
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-primary-600 hover:bg-primary-700 text-white py-4 rounded-xl font-bold shadow-lg flex justify-center items-center gap-2 transition-transform active:scale-95 disabled:opacity-50"
+          >
+            {loading ? (
+              "Salvando..."
+            ) : (
+              <>
+                <Save size={20} /> Confirmar Agendamento
+              </>
+            )}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
 };
 
+// Export default para evitar erro de importação no App.tsx
 export default AgendaForm;

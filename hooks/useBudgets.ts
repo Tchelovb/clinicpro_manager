@@ -111,6 +111,11 @@ export const useBudgetOperations = () => {
                 discount: data.discount || 0
             };
 
+            // Remove internal fields that might cause "no field total_costs" errors
+            delete (budgetPayload as any).total_costs;
+            delete (budgetPayload as any).totalCosts;
+            delete (budgetPayload as any).items; // Items are inserted separately
+
             // Add optional fields only if they exist
             // doctor_id MUST be a valid ID from the users table (NOT professionals table)
             console.log('🔍 Checking doctor_id (User ID required)...', {
@@ -271,6 +276,11 @@ export const useBudgetOperations = () => {
                 category_id: data.categoryId || null,  // Add Category
                 updated_at: new Date().toISOString()
             };
+
+            // Sanitization
+            delete (updatePayload as any).total_costs;
+            delete (updatePayload as any).totalCosts;
+            delete (updatePayload as any).items;
 
             const { error: budgetError } = await supabase
                 .from('budgets')

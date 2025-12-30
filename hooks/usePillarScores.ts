@@ -42,9 +42,10 @@ export const usePillarScores = (clinicId: string) => {
                     setPillarData(formatted);
                 }
             } catch (err: any) {
-                console.error('Error fetching pillar scores:', err);
-                setError(err.message);
-                // Fallback or empty state could be handled here
+                // Silently fail for diagnostics or log warning
+                console.warn('⚠️ [RADAR] Falha ao calcular scores (RPC):', err.message);
+                // Não setar erro para não quebrar a UI, apenas deixar sem dados
+                // setError(err.message); 
             } finally {
                 setLoading(false);
             }

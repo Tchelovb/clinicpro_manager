@@ -158,7 +158,7 @@ export const useBudgetCalculator = (
 
     const { simulateInstallment, simulateWithAnticipation } = useFinancialCalculator();
 
-    // Calcular automaticamente quando valores mudarem
+    // Calcular automaticamente quando valores mudarem (com debounce)
     useEffect(() => {
         const calculate = async () => {
             if (totalValue <= 0) return;
@@ -187,7 +187,8 @@ export const useBudgetCalculator = (
             setLoading(false);
         };
 
-        calculate();
+        const timeoutId = setTimeout(calculate, 600); // 600ms debounce
+        return () => clearTimeout(timeoutId);
     }, [totalValue, downPayment, installments, paymentMethod]);
 
     // Valores calculados

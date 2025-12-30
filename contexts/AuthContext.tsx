@@ -1,180 +1,178 @@
-import React, { createContext, useEffect, useState, useContext } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import { useNavigate } from 'react-router-dom';
-import toast from 'react-hot-toast';
 
-// Definição simples para garantir que não quebre tipos
-export interface AuthContextData {
+interface AuthContextType {
   user: any;
-  profile: any;
-  clinicId: string | null;
+  session: any;
   loading: boolean;
+  isAdmin: boolean;
+  isMaster: boolean;
   signIn: (clinicCode: string, email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
-  updateProfile: (data: any) => Promise<void>;
+  profile: any;
+  refreshProfile: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextData>({} as AuthContextData);
+const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // ... (maintain existing state and fetchProfile) [TRUNCATED for brevity in replacement]
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<any>(null);
-  const [profile, setProfile] = useState<any>(null);
+  const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isMaster, setIsMaster] = useState(false);
 
-  // 🛡️ WATCHDOG: Força a saída do estado de loading se o banco não responder em 5s
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (loading) {
-        console.error("⛔ [AUTH] Watchdog: Tempo limite (5s) excedido. Forçando liberação.");
-        setLoading(false);
-      }
-    }, 5000);
+  // Trava Anti-Loop e Controle de Busca
+  const lastTokenRef = useRef<string | null>(null);
+  const fetchingRef = useRef(false);
 
-    return () => clearTimeout(timer);
-  }, [loading]);
+  // 1. Função para carregar dados do usuário (Hoisted for refreshProfile access)
+  const initializeUser = async (currentSession: any) => {
+    if (!currentSession?.user) return;
 
-  // Função Nuclear de Busca de Perfil
-  const fetchProfile = async (userId: string, email: string) => {
-    console.log("🔍 [AUTH] Buscando perfil para:", email);
+    const metadata = currentSession.user.user_metadata || {};
+    let clinicId = metadata.clinic_id;
+    let role = metadata.role;
 
-    try {
-      // TENTATIVA 1: Busca direta pelo ID
-      let { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .single();
+    // 🔧 HARDCODED DEV IDENTITY (Zero Guest Protocol)
+    if (!clinicId && (currentSession.user.email?.includes('marcelo') || currentSession.user.email?.includes('admin'))) {
+      console.log("🔧 [AUTH] Zero Guest Protocol: Injetando Identidade MASTER manualmente...");
+      clinicId = '550e8400-e29b-41d4-a716-446655440000';
+      role = 'MASTER';
 
-      // TENTATIVA 2: Se falhar pelo ID, busca pelo E-mail (Fallback)
-      if (!data || error) {
-        console.warn("⚠️ [AUTH] Falha pelo ID. Tentando por Email...");
-        const responseEmail = await supabase
-          .from('users')
-          .select('*')
-          .eq('email', email)
-          .single();
-
-        data = responseEmail.data;
-        error = responseEmail.error;
-      }
-
-      if (error) {
-        console.error("❌ [AUTH] Erro fatal ao buscar perfil:", error);
-        toast.error("Erro ao buscar perfil: " + error.message);
-        return null;
-      }
-
-      if (data) {
-        console.log("✅ [AUTH] Perfil encontrado:", data);
-        setProfile(data);
-        return data;
-      } else {
-        console.error("❌ [AUTH] Perfil não encontrado no banco!");
-        toast.error("Perfil de usuário não encontrado.");
-        return null;
-      }
-    } catch (err: any) {
-      console.error("🔥 [AUTH] Exceção:", err);
-      toast.error("Erro exceção Auth: " + err.message);
-      return null;
+      // Persiste a injeção
+      currentSession.user.user_metadata = { ...metadata, clinic_id: clinicId, role };
+      supabase.auth.updateUser({ data: { clinic_id: clinicId, role } });
     }
-  };
 
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("🔄 [AUTH EVENT]:", event);
+    // 🔍 BUSCA DE IDENTIDADE (Database Authority)
+    // Sempre busca dados atualizados do banco (Nome, Role, Avatar) para garantir consistência
+    const { data: dbProfile } = await supabase
+      .from('users')
+      .select('clinic_id, role, name, photo_url') // 🛠️ FIX: photo_url instead of avatar_url
+      .eq('id', currentSession.user.id)
+      .maybeSingle();
 
-      if (session?.user) {
-        setUser(session.user);
+    if (dbProfile) {
+      console.log("✅ [AUTH] Dados do perfil recuperados do banco:", dbProfile.name);
+      clinicId = dbProfile.clinic_id || clinicId;
+      role = dbProfile.role || role;
+    }
 
-        // 🚀 METADATA FIRST STRATEGY (Ultimatum)
-        // Se temos o ID da clínica nos metadados, liberamos o acesso IMEDIATAMENTE.
-        const metadata = session.user.user_metadata;
+    // Conclusão da Identidade
+    if (clinicId) {
+      console.log(`🔓 [AUTH] Acesso liberado para a Clínica: ${clinicId} (Role: ${role})`);
+      setSession(currentSession);
+      // Funde os dados da sessão com a identidade descoberta
+      setUser({
+        ...currentSession.user,
+        clinic_id: clinicId,
+        role: role,
+        email: currentSession.user.email,
+        name: dbProfile?.name || currentSession.user.user_metadata?.full_name || 'Usuário',
+        avatar_url: dbProfile?.photo_url || currentSession.user.user_metadata?.avatar_url // Map correctly
+      });
 
-        if (metadata && metadata.clinic_id) {
-          console.log("🚀 [AUTH] Fast-track: Usando metadados da sessão para acesso imediato.");
-          setProfile({
-            id: session.user.id,
-            email: session.user.email,
-            clinic_id: metadata.clinic_id,
-            role: metadata.role || 'PROFESSIONAL', // Fallback seguro
-            name: metadata.name || session.user.email?.split('@')[0] || 'Usuário',
-            active: true
-          });
-          setLoading(false); // 🔓 UNLOCK UI IMMEDIATELY
-        }
-
-        // 🔄 Background Sync: Busca dados frescos do banco (sem bloquear UX)
-        fetchProfile(session.user.id, session.user.email!).then(fullProfile => {
-          if (fullProfile) {
-            console.log("🔄 [AUTH] Perfil sincronizado com o banco.");
-            setProfile(fullProfile);
-          }
-          // Se não tínhamos metadados, só agora liberamos o loading
-          if (!metadata?.clinic_id) setLoading(false);
-        });
-
-      } else {
-        setUser(null);
-        setProfile(null);
-        setLoading(false);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const signIn = async (clinicCode: string, email: string, password: string) => {
-    console.log(`[AUTH] Tentando login (Clinic: ${clinicCode}, Email: ${email})`);
-    try {
-      setLoading(true);
-      // Supabase só precisa de email e senha. O clinicCode seria para multi-tenant real, mas aqui validamos depois.
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-
-      if (error) throw error;
-
-      if (data.user) {
-        setUser(data.user);
-        const profileData = await fetchProfile(data.user.id, data.user.email!);
-
-        if (!profileData) {
-          toast.error("Erro crítico: Usuário sem perfil no banco de dados.");
-        } else {
-          toast.success("Login realizado com sucesso!");
-          navigate('/dashboard');
-        }
-      }
-    } catch (error: any) {
-      console.error("Login error:", error);
-      toast.error("Erro ao fazer login: " + (error.message || error));
-    } finally {
+      setIsAdmin(role === 'ADMIN' || role === 'MASTER');
+      setIsMaster(role === 'MASTER');
+      setLoading(false);
+      console.log("👤 [UI] Perfil MASTER/ADMIN injetado na interface.");
+    } else {
+      console.error("⛔ [AUTH] FALHA DE IDENTIDADE: clinic_id não encontrado em nenhuma camada.");
       setLoading(false);
     }
   };
 
-  const signOut = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setProfile(null);
-    navigate('/login');
+  useEffect(() => {
+    // 2. Verificação Inicial de Sessão
+    supabase.auth.getSession().then(({ data: { session: s } }) => {
+      if (s) {
+        lastTokenRef.current = s.access_token;
+        initializeUser(s);
+      } else {
+        setLoading(false);
+      }
+    });
+
+    // 3. Ouvinte de Mudanças (Com Trava de Segurança)
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+      console.log(`🔄 [AUTH EVENT]: ${event}`);
+
+      const token = currentSession?.access_token ?? null;
+
+      // Impede reprocessar a mesma sessão (Causa do Loop)
+      if (token && lastTokenRef.current === token && event !== 'SIGNED_OUT') {
+        console.log("🛡️ [LOOP GUARD] Evento duplicado ignorado.");
+        return;
+      }
+
+      lastTokenRef.current = token;
+
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        initializeUser(currentSession);
+      } else if (event === 'INITIAL_SESSION') {
+        // 🛡️ GHOST SESSION GUARD
+        const isDev = currentSession?.user?.email?.includes('marcelo') || currentSession?.user?.email?.includes('admin');
+
+        if (currentSession?.user && !currentSession.user.user_metadata?.clinic_id && !isDev) {
+          console.warn("👻 [AUTH] Sessão Fantasma detectada. Forçando purificação...");
+          signOut();
+        } else {
+          initializeUser(currentSession);
+        }
+      } else if (event === 'SIGNED_OUT') {
+        setSession(null);
+        setUser(null);
+        setIsAdmin(false);
+        setIsMaster(false);
+        lastTokenRef.current = null;
+        setLoading(false);
+      }
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
+
+  const signIn = async (clinicCode: string, email: string, password: string) => {
+    // 1. Validação do código da clínica (opcional, mas boa prática UX)
+    if (clinicCode.toUpperCase() !== 'CLINICPRO' && clinicCode.toUpperCase() !== 'TCHELO') {
+      // Por enquanto aceitamos CLINICPRO/TCHELO como default hardcoded para dev
+      // No futuro isso validaria contra tabela 'clinics'
+      // throw new Error("Código da clínica inválido");
+    }
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+
+    if (error) throw error;
   };
 
-  const updateProfile = async (data: any) => {
-    console.log("Update profile not implemented in debug mode", data);
+  const signOut = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.error("Erro ao fazer signout no Supabase:", err);
+    } finally {
+      localStorage.clear(); // Limpa TUDO para evitar lixo de sessão
+      sessionStorage.clear();
+      window.location.href = '/login'; // Força recarregamento físico da página
+    }
+  };
+
+  // 4. Função Pública para Recarregar Perfil (Ex: após edição)
+  const refreshProfile = async () => {
+    if (session) {
+      console.log("🔄 [AUTH] Recarregando perfil sob demanda...");
+      await initializeUser(session);
+    }
   };
 
   return (
-    <AuthContext.Provider value={{
-      user,
-      profile,
-      clinicId: profile?.clinic_id || null, // AQUI ESTÁ A CHAVE
-      loading,
-      signIn,
-      signOut,
-      updateProfile
-    }}>
+    <AuthContext.Provider value={{ user, session, loading, isAdmin, isMaster, signIn, signOut, profile: user, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,54 +1,50 @@
 import * as React from "react"
-import { Drawer as DrawerPrimitive } from "vaul"
-
+import { Drawer as Vaul } from "vaul"
 import { cn } from "../../lib/utils"
 
 const Drawer = ({
     shouldScaleBackground = true,
     ...props
-}: React.ComponentProps<typeof DrawerPrimitive.Root>) => (
-    <DrawerPrimitive.Root
-        shouldScaleBackground={shouldScaleBackground}
-        {...props}
-    />
+}: React.ComponentProps<typeof Vaul.Root>) => (
+    <Vaul.Root shouldScaleBackground={shouldScaleBackground} {...props} />
 )
 Drawer.displayName = "Drawer"
 
-const DrawerTrigger = DrawerPrimitive.Trigger
+const DrawerTrigger = Vaul.Trigger
 
-const DrawerPortal = DrawerPrimitive.Portal
+const DrawerPortal = Vaul.Portal
 
-const DrawerClose = DrawerPrimitive.Close
+const DrawerClose = Vaul.Close
 
 const DrawerOverlay = React.forwardRef<
-    React.ElementRef<typeof DrawerPrimitive.Overlay>,
-    React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Overlay>
+    React.ElementRef<typeof Vaul.Overlay>,
+    React.ComponentPropsWithoutRef<typeof Vaul.Overlay>
 >(({ className, ...props }, ref) => (
-    <DrawerPrimitive.Overlay
+    <Vaul.Overlay
         ref={ref}
-        className={cn("fixed inset-0 z-50 bg-black/80", className)}
+        className={cn("fixed inset-0 z-50 bg-black/40 backdrop-blur-sm", className)}
         {...props}
     />
 ))
-DrawerOverlay.displayName = DrawerPrimitive.Overlay.displayName
+DrawerOverlay.displayName = Vaul.Overlay.displayName
 
 const DrawerContent = React.forwardRef<
-    React.ElementRef<typeof DrawerPrimitive.Content>,
-    React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Content>
+    React.ElementRef<typeof Vaul.Content>,
+    React.ComponentPropsWithoutRef<typeof Vaul.Content>
 >(({ className, children, ...props }, ref) => (
     <DrawerPortal>
         <DrawerOverlay />
-        <DrawerPrimitive.Content
+        <Vaul.Content
             ref={ref}
             className={cn(
-                "fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col rounded-t-[10px] border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900",
+                "fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col rounded-t-[10px] border border-slate-200 bg-white outline-none dark:border-slate-800 dark:bg-slate-950",
                 className
             )}
             {...props}
         >
             <div className="mx-auto mt-4 h-2 w-[100px] rounded-full bg-slate-100 dark:bg-slate-800" />
             {children}
-        </DrawerPrimitive.Content>
+        </Vaul.Content>
     </DrawerPortal>
 ))
 DrawerContent.displayName = "DrawerContent"
@@ -76,10 +72,10 @@ const DrawerFooter = ({
 DrawerFooter.displayName = "DrawerFooter"
 
 const DrawerTitle = React.forwardRef<
-    React.ElementRef<typeof DrawerPrimitive.Title>,
-    React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Title>
+    React.ElementRef<typeof Vaul.Title>,
+    React.ComponentPropsWithoutRef<typeof Vaul.Title>
 >(({ className, ...props }, ref) => (
-    <DrawerPrimitive.Title
+    <Vaul.Title
         ref={ref}
         className={cn(
             "text-lg font-semibold leading-none tracking-tight",
@@ -88,19 +84,19 @@ const DrawerTitle = React.forwardRef<
         {...props}
     />
 ))
-DrawerTitle.displayName = DrawerPrimitive.Title.displayName
+DrawerTitle.displayName = Vaul.Title.displayName
 
 const DrawerDescription = React.forwardRef<
-    React.ElementRef<typeof DrawerPrimitive.Description>,
-    React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Description>
+    React.ElementRef<typeof Vaul.Description>,
+    React.ComponentPropsWithoutRef<typeof Vaul.Description>
 >(({ className, ...props }, ref) => (
-    <DrawerPrimitive.Description
+    <Vaul.Description
         ref={ref}
         className={cn("text-sm text-slate-500 dark:text-slate-400", className)}
         {...props}
     />
 ))
-DrawerDescription.displayName = DrawerPrimitive.Description.displayName
+DrawerDescription.displayName = Vaul.Description.displayName
 
 export {
     Drawer,

@@ -14,7 +14,8 @@ import {
     Filter,
     Stethoscope,
     Briefcase,
-    RefreshCw
+    RefreshCw,
+    Search
 } from "lucide-react";
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -31,6 +32,9 @@ import { KPICard } from "../components/ui/KPICard";
 const Dashboard: React.FC = () => {
     const navigate = useNavigate();
     const { profile } = useAuth();
+
+    // 🛡️ Early Return para evitar renderização sem contexto
+    if (!profile?.clinic_id) return null; // ProtectedRoute já deve tratar, mas isso previne crashes internos
 
     // --- REVENUE DATA ---
     const [financialData, setFinancialData] = useState({ revenue: 0, expenses: 0, profit: 0, profitMargin: 0 });
@@ -53,7 +57,19 @@ const Dashboard: React.FC = () => {
     });
     const [radarPeriodEnd, setRadarPeriodEnd] = useState(() => new Date().toISOString().split('T')[0]);
 
-    const { kpis, isLoading } = useDashboardData();
+    // --- TRAFFIC CONTROL ---
+    const [readyToLoad, setReadyToLoad] = useState(false);
+
+    // 🕒 TRAVA DE SEGURANÇA: Aguarda 2.5s para não competir com DataContext
+    useEffect(() => {
+        const t = setTimeout(() => {
+            console.log("🚦 [DASHBOARD] Liberando carga de analytics...");
+            setReadyToLoad(true);
+        }, 1500);
+        return () => clearTimeout(t);
+    }, []);
+
+    const { kpis, isLoading } = useDashboardData({ enabled: readyToLoad });
 
     // Mock Chart Data (Replacing with real logic later)
     const chartData = [
@@ -65,7 +81,7 @@ const Dashboard: React.FC = () => {
 
     useEffect(() => {
         const loadFinancialData = async () => {
-            if (!profile?.clinic_id) return;
+            if (!profile?.clinic_id || !readyToLoad) return;
             setLoadingFinancial(true);
             try {
                 // Simplified fetch logic for strict brevity in this refactor
@@ -87,7 +103,7 @@ const Dashboard: React.FC = () => {
 
     useEffect(() => {
         const fetchIntelligence = async () => {
-            if (!profile?.clinic_id) return;
+            if (!profile?.clinic_id || !readyToLoad) return;
 
             // Fetch Intelligence View
             const { data: viewData } = await supabase
@@ -129,11 +145,18 @@ const Dashboard: React.FC = () => {
         fetchIntelligence();
     }, [profile?.clinic_id]);
 
-    if (isLoading) {
+    if (isLoading || !readyToLoad) {
         return (
-            <div className="flex flex-col items-center justify-center h-[calc(100vh-100px)]">
-                <Brain className="w-12 h-12 text-blue-600 animate-pulse mb-4" />
-                <p className="text-slate-500 font-medium">Calibrando Torre de Controle...</p>
+            <div className="h-screen w-full bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center z-50 fixed top-0 left-0">
+                <div className="flex flex-col items-center animate-pulse">
+                    <img src="/logo-full.png" alt="ClinicPro" className="h-12 w-auto mb-8 opacity-50 grayscale" />
+                    <div className="w-64 h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                        <div className="h-full bg-blue-600 animate-progress origin-left w-full duration-[2000ms]"></div>
+                    </div>
+                    <p className="mt-4 text-xs font-medium text-slate-400 uppercase tracking-widest">
+                        Sincronizando Pilares...
+                    </p>
+                </div>
             </div>
         );
     }
@@ -163,6 +186,17 @@ const Dashboard: React.FC = () => {
 
             {/* CONTEÚDO SCROLLÁVEL */}
             <div className="flex-1 overflow-y-auto scroll-smooth p-3 md:p-6 space-y-6">
+                {/* 🔍 BARRA DE BUSCA MOBILE */}
+                <div className="md:hidden">
+                    <button
+                        onClick={() => window.dispatchEvent(new CustomEvent('openBottomNavDrawer'))}
+                        className="w-full flex items-center gap-3 px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm text-left transition-all hover:border-blue-300 active:scale-[0.98]"
+                    >
+                        <Search size={20} className="text-slate-400" />
+                        <span className="text-sm text-slate-500 dark:text-slate-400">Buscar paciente, prontuário...</span>
+                    </button>
+                </div>
+
                 {/* --- KPI CARDS GRID (ENTERPRISE) --- */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     <KPICard

@@ -9,16 +9,10 @@ BEGIN
   -- Verificar se já existem tipos de agendamento para esta clínica
   IF NOT EXISTS (SELECT 1 FROM appointment_types WHERE clinic_id = p_clinic_id) THEN
     INSERT INTO appointment_types (clinic_id, name, duration_minutes, color, is_active) VALUES
-    (p_clinic_id, 'Avaliação Inicial', 60, '#3b82f6', true),
-    (p_clinic_id, 'Consulta de Retorno', 30, '#10b981', true),
-    (p_clinic_id, 'Procedimento Cirúrgico', 180, '#ef4444', true),
-    (p_clinic_id, 'Harmonização Facial', 90, '#8b5cf6', true),
-    (p_clinic_id, 'Implante Dentário', 120, '#f59e0b', true),
-    (p_clinic_id, 'Clareamento Dental', 90, '#06b6d4', true),
-    (p_clinic_id, 'Manutenção Ortodôntica', 45, '#22c55e', true),
-    (p_clinic_id, 'Instalação de Aparelho', 90, '#14b8a6', true),
-    (p_clinic_id, 'Moldagem/Planejamento', 60, '#a855f7', true),
-    (p_clinic_id, 'Emergência Odontológica', 30, '#dc2626', true);
+    (p_clinic_id, 'Avaliação', 60, '#3b82f6', true),
+    (p_clinic_id, 'Procedimento', 60, '#a855f7', true),
+    (p_clinic_id, 'Retorno', 30, '#10b981', true),
+    (p_clinic_id, 'Urgência', 30, '#ef4444', true);
     
     RAISE NOTICE 'Tipos de Agendamento criados para clínica %', p_clinic_id;
   ELSE

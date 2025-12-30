@@ -6,6 +6,7 @@ import React, {
   ReactNode,
 } from "react";
 import { supabase } from "../lib/supabase";
+import { withRetry } from "../lib/supabaseWithRetry";
 import { useAuth } from "./AuthContext";
 import { CashRegister, ClinicFinancialSettings, Expense, FinancialRecord } from "../types";
 
@@ -44,10 +45,12 @@ export const FinancialProvider: React.FC<{ children: ReactNode }> = ({ children 
   const activeSession = cashRegisters.find((cr) => cr.status === "Aberto") || null;
 
   // Initial Fetch
+  // Initial Fetch - 🛑 AUTO-FETCH DESATIVADO para evitar congestionamento
+  // O carregamento será acionado via DataContext ou on-demand
   useEffect(() => {
-    if (profile?.clinic_id) {
-      refreshFinancialData();
-    }
+    // if (profile?.clinic_id) {
+    //   refreshFinancialData();
+    // }
   }, [profile?.clinic_id]);
 
   const refreshFinancialData = async () => {
@@ -55,20 +58,34 @@ export const FinancialProvider: React.FC<{ children: ReactNode }> = ({ children 
 
     try {
       // 1. Settings
-      const { data: settingsData } = await supabase
-        .from("clinic_financial_settings")
-        .select("*")
-        .eq("clinic_id", profile.clinic_id)
-        .single();
+      const { data: settingsData, error: settingsError } = await withRetry(
+        () => supabase
+          .from("clinic_financial_settings")
+          .select("*")
+          .eq("clinic_id", profile.clinic_id)
+          .maybeSingle(),
+        {
+          onRetry: (attempt) => console.log(`🔄 [FINANCIAL] Retentando busca de configurações (tentativa ${attempt})`)
+        }
+      );
+
+      if (settingsError) {
+        console.error("Erro ao buscar configurações financeiras:", settingsError);
+      }
 
       if (settingsData) setFinancialSettings(settingsData);
 
+      // ⏱️ Delay para evitar congestionamento
+      await new Promise(resolve => setTimeout(resolve, 150));
+
       // 2. Expenses
-      const { data: expensesData } = await supabase
-        .from("expenses")
-        .select("*")
-        .eq("clinic_id", profile.clinic_id)
-        .order("due_date", { ascending: true });
+      const { data: expensesData } = await withRetry(
+        () => supabase
+          .from("expenses")
+          .select("*")
+          .eq("clinic_id", profile.clinic_id)
+          .order("due_date", { ascending: true })
+      );
 
       if (expensesData) {
         setExpenses(expensesData.map((e: any) => ({
@@ -87,25 +104,32 @@ export const FinancialProvider: React.FC<{ children: ReactNode }> = ({ children 
         })));
       }
 
+      // ⏱️ Delay para evitar congestionamento
+      await new Promise(resolve => setTimeout(resolve, 150));
+
       // 3. Cash Registers (History + Active)
       // Fetch History
-      const { data: historyData } = await supabase
-        .from("cash_registers")
-        .select("*")
-        .eq("clinic_id", profile.clinic_id)
-        .in("status", ["CLOSED", "AUDIT_PENDING"])
-        .order("closed_at", { ascending: false })
-        .limit(10);
+      const { data: historyData } = await withRetry(
+        () => supabase
+          .from("cash_registers")
+          .select("*")
+          .eq("clinic_id", profile.clinic_id)
+          .in("status", ["CLOSED", "AUDIT_PENDING"])
+          .order("closed_at", { ascending: false })
+          .limit(10)
+      );
 
       // Fetch Active
-      const { data: activeData } = await supabase
-        .from("cash_registers")
-        .select("*")
-        .eq("clinic_id", profile.clinic_id)
-        .eq("user_id", profile.id)
-        .eq("status", "OPEN") // DB Status
-        .is("closed_at", null)
-        .maybeSingle();
+      const { data: activeData } = await withRetry(
+        () => supabase
+          .from("cash_registers")
+          .select("*")
+          .eq("clinic_id", profile.clinic_id)
+          .eq("user_id", profile.id)
+          .eq("status", "OPEN")
+          .is("closed_at", null)
+          .maybeSingle()
+      );
 
       let registers: CashRegister[] = [];
 
@@ -348,6 +372,7 @@ export const FinancialProvider: React.FC<{ children: ReactNode }> = ({ children 
         openSession,
         closeSession,
         addExpense,
+        payExpense,
         addCashMovement,
         recordTransaction
       }}

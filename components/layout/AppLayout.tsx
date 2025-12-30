@@ -33,7 +33,7 @@ import {
     DropdownMenuLabel,
     DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
-import { Drawer, DrawerContent } from '../ui/drawer';
+import { Drawer, DrawerContent, DrawerTitle } from '../ui/drawer';
 
 // Navigation Configuration with Role-Based Access
 interface MenuItem {
@@ -137,7 +137,7 @@ const SECONDARY_NAV_ITEMS: MenuItem[] = [
 ];
 
 export const AppLayout: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
-    const { profile, signOut } = useAuth();
+    const { profile, signOut, loading } = useAuth();
     const { theme, toggleTheme } = useTheme();
     const navigate = useNavigate();
     const location = useLocation();
@@ -305,18 +305,32 @@ export const AppLayout: React.FC<{ children?: React.ReactNode }> = ({ children }
 
                     {/* User Profile */}
                     <button
+                        onClick={() => navigate('/settings')}
                         className={`w-full flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors ${!isSidebarExpanded && 'justify-center'}`}
                     >
                         <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center overflow-hidden min-w-[32px]">
                             {(profile as any)?.avatar_url ? (
                                 <img src={(profile as any).avatar_url} alt="Profile" className="w-full h-full object-cover" />
                             ) : (
-                                <span className="font-bold text-slate-500 dark:text-slate-300 text-xs">{profile?.name?.substring(0, 2).toUpperCase() || 'US'}</span>
+                                <span className="font-bold text-slate-500 dark:text-slate-300 text-[10px]">{profile?.name?.substring(0, 2).toUpperCase() || 'AD'}</span>
                             )}
                         </div>
                         <div className={`overflow-hidden transition-all duration-300 ${isSidebarExpanded ? 'w-auto opacity-100' : 'w-0 opacity-0'}`}>
-                            <p className="text-sm font-bold text-slate-800 dark:text-white truncate">{profile?.name || 'Usuário'}</p>
-                            <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">{profile?.role || 'Visitante'}</p>
+                            {loading ? (
+                                <div className="space-y-1">
+                                    <div className="h-4 w-20 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
+                                    <div className="h-3 w-16 bg-slate-100 dark:bg-slate-800 rounded animate-pulse" />
+                                </div>
+                            ) : (
+                                <>
+                                    <p className="text-sm font-bold text-slate-800 dark:text-white truncate">
+                                        {profile?.name || 'Administrador'}
+                                    </p>
+                                    <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                                        {profile?.role || 'MASTER'}
+                                    </p>
+                                </>
+                            )}
                         </div>
                     </button>
 
@@ -384,7 +398,7 @@ export const AppLayout: React.FC<{ children?: React.ReactNode }> = ({ children }
                 <Drawer open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
                     <DrawerContent className="h-[85vh] rounded-t-[10px] outline-none">
                         <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800">
-                            <h2 className="text-lg font-bold text-slate-800 dark:text-white">Menu</h2>
+                            <DrawerTitle className="text-lg font-bold text-slate-800 dark:text-white">Menu</DrawerTitle>
                             <button className="p-2" onClick={() => setIsMobileMenuOpen(false)}>
                                 <X size={20} className="text-slate-500" />
                             </button>

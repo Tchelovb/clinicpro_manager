@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { supabase } from "../lib/supabase";
 import { Building, Mail, Lock, User } from "lucide-react";
 
 const Login: React.FC = () => {
@@ -14,15 +15,19 @@ const Login: React.FC = () => {
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  // Navigate when user is authenticated
+
+
+  // 🛡️ BLINDAGEM REMOVIDA: A limpeza agressiva estava causando conflito com o redirecionamento.
+  // O AuthContext agora já trata sessões fantasmas com o 'Ghost Guard'.
+
+  // Navigate when user is authenticated (Triggers after successful login + state update)
   useEffect(() => {
     if (!loading && user) {
-      // Redirecionar para dashboard sempre (O AppLayout vai tratar se o perfil estiver quebrado)
       navigate("/dashboard", { replace: true });
     }
   }, [loading, user, navigate]);
 
-  // Se já está carregando ou já tem user → redireciona imediatamente ou não renderiza
+  // Se já está carregando → mostra loading
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
@@ -31,10 +36,8 @@ const Login: React.FC = () => {
     );
   }
 
-  if (user) {
-    // Já está logado → não mostra nada, o useEffect já redirecionou
-    return null;
-  }
+  // Se user existe, useEffect acima redireciona. Retorna null para evitar flash.
+  if (user) return null;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -57,9 +60,17 @@ const Login: React.FC = () => {
 
     try {
       await signIn(formData.clinicCode, formData.email, formData.password);
-      // Navigation will happen automatically when user is authenticated
     } catch (err: any) {
-      setError(err.message || "Erro na autenticação");
+      console.error("Login Falhou:", err);
+
+      // 🛡️ TRATAMENTO DE ERRO CORROMPIDO (400/Refresh Token)
+      if (err.message?.includes("refresh_token_not_found") || err.status === 400 || err.message?.includes("Invalid login credentials")) {
+        // Limpeza de emergência para garantir próxima tentativa limpa
+        localStorage.clear();
+        setError("Credenciais inválidas ou sessão expirada. Por favor, tente novamente.");
+      } else {
+        setError(err.message || "Erro na autenticação");
+      }
     } finally {
       setIsLoading(false);
     }

@@ -104,8 +104,8 @@ export const useWarRoom = () => {
             });
 
         } catch (err: any) {
-            console.error('Erro ao carregar War Room:', err);
-            setError(err.message);
+            console.warn('⚠️ [WARROOM] Falha ao carregar War Room:', err.message);
+            // setError(err.message); // Silent fail to protect UI
         } finally {
             setLoading(false);
         }

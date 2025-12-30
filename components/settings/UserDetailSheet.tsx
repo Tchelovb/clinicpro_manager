@@ -48,7 +48,8 @@ interface UserDetailSheetProps {
 }
 
 const UserDetailSheet: React.FC<UserDetailSheetProps> = ({ open, onOpenChange, userId, onSuccess }) => {
-    const { clinicId } = useAuth();
+    const { user } = useAuth(); // 🛠️ FIX: Get user object
+    const clinicId = user?.clinic_id; // Extract clinic_id
     const [loading, setLoading] = useState(false);
     const [activeTab, setActiveTab] = useState<'overview' | 'profile' | 'permissions' | 'security'>('overview');
 
@@ -172,20 +173,55 @@ const UserDetailSheet: React.FC<UserDetailSheetProps> = ({ open, onOpenChange, u
             if (updateError) console.warn("Edge function update warning:", updateError);
             if (publicError) throw publicError;
 
-            if (formData.role === 'PROFESSIONAL' && userData.professional_id) {
-                await supabase
-                    .from('professionals')
-                    .update({
-                        specialty: formData.specialty,
-                        crc: formData.council_number
-                    })
-                    .eq('id', userData.professional_id);
+            // 🔍 CHECK & CREATE PROFESSIONAL RECORD IF NEEDED
+            // Se o usuário virou PROFESSIONAL ou MASTER e não tem registro profissional, cria um.
+            if ((formData.role === 'PROFESSIONAL' || formData.role === 'MASTER')) {
+                let pid = userData.professional_id;
+
+                if (!pid) {
+                    console.log("⚠️ [UPDATE] Usuário promovido a Clínico sem registro. Criando...");
+                    const { data: newProf, error: createProfError } = await supabase
+                        .from('professionals')
+                        .insert({
+                            user_id: userId,
+                            name: formData.name,
+                            email: formData.email,
+                            clinic_id: clinicId,
+                            specialty: formData.specialty || 'Clínico Geral',
+                            crc: formData.council_number || '',
+                            active: true
+                        })
+                        .select()
+                        .single();
+
+                    if (createProfError) throw createProfError;
+                    pid = newProf.id;
+
+                    // Vincula o novo professional_id ao usuário
+                    await supabase.from('users').update({ professional_id: pid }).eq('id', userId);
+                } else {
+                    // Update existing
+                    await supabase
+                        .from('professionals')
+                        .update({
+                            specialty: formData.specialty,
+                            crc: formData.council_number,
+                            name: formData.name // Keep name synced
+                        })
+                        .eq('id', pid);
+                }
             }
 
             toast.success('Perfil atualizado com sucesso!');
             onSuccess();
             setIsEditing(false); // Exit edit mode
             fetchMemberData(); // Refresh data
+
+            // Check if we updated ourselves, if so, refresh global auth state
+            if (userId === user?.id) {
+                const { refreshProfile } = useAuth();
+                refreshProfile?.();
+            }
         } catch (error: any) {
             console.error('Save error:', error);
             toast.error('Erro ao salvar perfil: ' + error.message);

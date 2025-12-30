@@ -85,12 +85,20 @@ class ProfitAnalysisService {
         }
     }
 
+    private procedureCache = new Map<string, ProcedureData>();
+    private materialCostCache = new Map<string, number>();
+
     /**
      * Busca dados do procedimento incluindo comissão
      */
     async getProcedureData(procedureId: string): Promise<ProcedureData | null> {
         try {
-            if (!procedureId || procedureId.length < 10) return null; // Validação básica
+            if (!procedureId || procedureId.length < 10) return null;
+
+            // Check Cache
+            if (this.procedureCache.has(procedureId)) {
+                return this.procedureCache.get(procedureId)!;
+            }
 
             const { data, error } = await supabase
                 .from('procedure')
@@ -100,11 +108,14 @@ class ProfitAnalysisService {
 
             if (error) throw error;
 
-            // Map table column 'estimated_time_minutes' to 'estimated_duration' for internal compatibility
-            return {
+            const procData = {
                 ...data,
                 estimated_duration: data.estimated_time_minutes || 0
             };
+
+            // Update Cache
+            this.procedureCache.set(procedureId, procData);
+            return procData;
         } catch (error) {
             console.error('Erro ao buscar dados do procedimento:', error);
             return null;
@@ -116,6 +127,11 @@ class ProfitAnalysisService {
      */
     async getMaterialCost(procedureId: string): Promise<number> {
         try {
+            // Check Cache
+            if (this.materialCostCache.has(procedureId)) {
+                return this.materialCostCache.get(procedureId)!;
+            }
+
             const { data, error } = await supabase
                 .from('procedure_costs')
                 .select('material_cost')
@@ -124,7 +140,11 @@ class ProfitAnalysisService {
             if (error) throw error;
 
             // Soma todos os custos de materiais/kits
-            return data?.reduce((sum, item) => sum + (item.material_cost || 0), 0) || 0;
+            const total = data?.reduce((sum, item) => sum + (item.material_cost || 0), 0) || 0;
+
+            // Update Cache
+            this.materialCostCache.set(procedureId, total);
+            return total;
         } catch (error) {
             console.error('Erro ao buscar custo de materiais:', error);
             return 0;
