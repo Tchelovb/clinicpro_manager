@@ -244,22 +244,22 @@ const PatientForm: React.FC<PatientFormProps> = ({
   };
 
   // Estilos profissionais
-  const inputClass = "w-full bg-white dark:bg-slate-800 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-600 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all";
-  const labelClass = "block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wide";
-  const valueClass = "text-sm font-medium text-gray-900 dark:text-white";
-  const sectionClass = "bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-6 shadow-sm";
-  const sectionTitleClass = "text-sm font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wider mb-4 flex items-center gap-2 border-b border-gray-200 dark:border-slate-700 pb-2";
+  const inputClass = "w-full bg-card text-foreground border border-slate-200 dark:border-slate-800 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all";
+  const labelClass = "block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wide";
+  const valueClass = "text-sm font-medium text-foreground";
+  const sectionClass = "bg-card rounded-lg border border-slate-200 dark:border-slate-800 p-6 shadow-sm";
+  const sectionTitleClass = "text-sm font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider mb-4 flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2";
 
   if (loading) {
     return (
       <div className="max-w-6xl mx-auto pb-24 animate-in fade-in duration-500">
         {/* Skeleton Header */}
-        <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 py-4 border-b border-gray-200 dark:border-slate-800 sticky top-0 bg-gray-50 dark:bg-slate-900 z-20">
+        <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 py-4 border-b border-slate-200 dark:border-slate-800 sticky top-0 bg-background/80 backdrop-blur z-20">
           <div className="flex items-center gap-4 w-full">
-            <div className="w-10 h-10 rounded-lg bg-gray-200 dark:bg-slate-800 animate-pulse shrink-0" />
+            <div className="w-10 h-10 rounded-lg bg-slate-200 dark:bg-slate-800 animate-pulse shrink-0" />
             <div className="space-y-2 flex-1">
-              <div className="h-8 w-48 bg-gray-200 dark:bg-slate-800 rounded animate-pulse" />
-              <div className="h-4 w-64 bg-gray-200 dark:bg-slate-800 rounded animate-pulse" />
+              <div className="h-8 w-48 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" />
+              <div className="h-4 w-64 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" />
             </div>
           </div>
         </div>
@@ -267,18 +267,18 @@ const PatientForm: React.FC<PatientFormProps> = ({
         {/* Skeleton Form Sections */}
         <div className="space-y-6">
           {[1, 2, 3].map((section) => (
-            <div key={section} className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-6 shadow-sm">
-              <div className="flex items-center gap-2 mb-6 border-b border-gray-200 dark:border-slate-700 pb-2">
-                <div className="w-5 h-5 rounded bg-gray-200 dark:bg-slate-800 animate-pulse" />
-                <div className="h-5 w-40 bg-gray-200 dark:bg-slate-800 rounded animate-pulse" />
+            <div key={section} className="bg-card rounded-lg border border-slate-200 dark:border-slate-800 p-6 shadow-sm">
+              <div className="flex items-center gap-2 mb-6 border-b border-slate-200 dark:border-slate-800 pb-2">
+                <div className="w-5 h-5 rounded bg-slate-200 dark:bg-slate-800 animate-pulse" />
+                <div className="h-5 w-40 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" />
               </div>
               <div className="grid grid-cols-12 gap-4">
                 {/* Mimic inputs grid */}
-                <div className="col-span-12 h-11 bg-gray-100 dark:bg-slate-700/50 rounded animate-pulse" />
-                <div className="col-span-12 md:col-span-6 h-11 bg-gray-100 dark:bg-slate-700/50 rounded animate-pulse" />
-                <div className="col-span-12 md:col-span-6 h-11 bg-gray-100 dark:bg-slate-700/50 rounded animate-pulse" />
-                <div className="col-span-12 md:col-span-4 h-11 bg-gray-100 dark:bg-slate-700/50 rounded animate-pulse" />
-                <div className="col-span-12 md:col-span-8 h-11 bg-gray-100 dark:bg-slate-700/50 rounded animate-pulse" />
+                <div className="col-span-12 h-11 bg-slate-100 dark:bg-slate-700/50 rounded animate-pulse" />
+                <div className="col-span-12 md:col-span-6 h-11 bg-slate-100 dark:bg-slate-700/50 rounded animate-pulse" />
+                <div className="col-span-12 md:col-span-6 h-11 bg-slate-100 dark:bg-slate-700/50 rounded animate-pulse" />
+                <div className="col-span-12 md:col-span-4 h-11 bg-slate-100 dark:bg-slate-700/50 rounded animate-pulse" />
+                <div className="col-span-12 md:col-span-8 h-11 bg-slate-100 dark:bg-slate-700/50 rounded animate-pulse" />
               </div>
             </div>
           ))}
@@ -352,19 +352,19 @@ const PatientForm: React.FC<PatientFormProps> = ({
 
       {/* Header - Apenas se não estiver em modo readonly inicial */}
       {!initialReadonly && (
-        <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 sticky top-0 z-20 bg-gray-50 dark:bg-slate-900 py-4 border-b border-gray-200 dark:border-slate-800">
+        <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 sticky top-0 z-20 bg-background/80 backdrop-blur py-4 border-b border-slate-200 dark:border-slate-800">
           <div className="flex items-center gap-4">
             <button
               onClick={() => onCancel ? onCancel() : navigate(-1)}
-              className="p-2 hover:bg-white dark:hover:bg-slate-800 rounded-lg text-gray-600 dark:text-gray-400 transition-colors border border-gray-200 dark:border-slate-700"
+              className="p-2 hover:bg-card dark:hover:bg-slate-800 rounded-lg text-slate-600 dark:text-slate-400 transition-colors border border-slate-200 dark:border-slate-700"
             >
               <ArrowLeft size={20} />
             </button>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              <h1 className="text-2xl font-bold text-foreground">
                 {isEditMode ? "Editar Paciente" : "Novo Paciente"}
               </h1>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-sm text-muted-foreground">
                 {isEditMode ? "Atualize os dados cadastrais" : "Preencha os campos obrigatórios (*)"}
               </p>
             </div>
@@ -728,7 +728,7 @@ const PatientForm: React.FC<PatientFormProps> = ({
 
       {/* Sticky Footer com Botão de Salvar (apenas mobile e se não for readonly) */}
       {!initialReadonly && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-800 p-4 pb-[max(16px,env(safe-area-inset-bottom))] shadow-lg z-30 md:hidden">
+        <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-slate-200 dark:border-slate-800 p-4 pb-[max(16px,env(safe-area-inset-bottom))] shadow-lg z-30 md:hidden">
           <button
             onClick={handleSubmit}
             className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold shadow-md transition-all active:scale-95"

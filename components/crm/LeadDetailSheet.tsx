@@ -407,11 +407,11 @@ export function LeadDetailSheet({ leadId, pipelineId, initialStageId, open, onOp
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
-            <SheetContent side="right" className="w-[100%] sm:w-[85%] md:w-[80%] lg:w-[75%] xl:w-[1200px] sm:max-w-none p-0 flex flex-col bg-slate-50 dark:bg-slate-950 border-l border-slate-200 shadow-2xl transition-all duration-300 ease-in-out">
+            <SheetContent side="right" className="w-[100%] sm:w-[85%] md:w-[80%] lg:w-[75%] xl:w-[1200px] sm:max-w-none p-0 flex flex-col bg-background border-l border-slate-200 dark:border-slate-800 shadow-2xl transition-all duration-300 ease-in-out">
 
                 {/* 1. HEADER (Fixed) */}
                 <SheetHeader className="p-0 text-left">
-                    <div className="flex-none bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4">
+                    <div className="flex-none bg-card border-b border-slate-200 dark:border-slate-800 p-4">
                         <div className="flex items-start justify-between gap-4">
                             {/* LEFT: Avatar & Info */}
                             <div className="flex items-center gap-4">
@@ -479,30 +479,30 @@ export function LeadDetailSheet({ leadId, pipelineId, initialStageId, open, onOp
                     <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
 
                         {/* Tab Headers */}
-                        <div className="flex-none bg-white dark:bg-slate-900 border-b border-slate-200 px-6">
+                        <div className="flex-none bg-card border-b border-slate-200 dark:border-slate-800 px-6">
                             <TabsList className="bg-transparent h-auto w-full justify-start gap-6 p-0 overflow-x-auto no-scrollbar">
                                 <TabsTrigger
                                     value="negotiation"
-                                    className="flex items-center gap-2 border-b-2 border-transparent data-[state=active]:border-blue-600 rounded-none px-0 py-3 text-sm font-medium text-slate-600 data-[state=active]:text-blue-600 hover:text-slate-900 transition-colors"
+                                    className="flex items-center gap-2 border-b-2 border-transparent data-[state=active]:border-blue-600 rounded-none px-0 py-3 text-sm font-medium text-slate-600 dark:text-slate-400 data-[state=active]:text-blue-600 hover:text-slate-900 dark:hover:text-slate-200 transition-colors"
                                 >
                                     <MessageSquare size={14} />
                                     Negociação
                                 </TabsTrigger>
                                 <TabsTrigger
                                     value="data"
-                                    className="flex items-center gap-2 border-b-2 border-transparent data-[state=active]:border-blue-600 rounded-none px-0 py-3 text-sm font-medium text-slate-600 data-[state=active]:text-blue-600 hover:text-slate-900 transition-colors"
+                                    className="flex items-center gap-2 border-b-2 border-transparent data-[state=active]:border-blue-600 rounded-none px-0 py-3 text-sm font-medium text-slate-600 dark:text-slate-400 data-[state=active]:text-blue-600 hover:text-slate-900 dark:hover:text-slate-200 transition-colors"
                                 >
                                     <FileText size={14} />
                                     Dados
                                 </TabsTrigger>
                                 <TabsTrigger
                                     value="opportunities"
-                                    className="flex items-center gap-2 border-b-2 border-transparent data-[state=active]:border-blue-600 rounded-none px-0 py-3 text-sm font-medium text-slate-600 data-[state=active]:text-blue-600 hover:text-slate-900 transition-colors"
+                                    className="flex items-center gap-2 border-b-2 border-transparent data-[state=active]:border-blue-600 rounded-none px-0 py-3 text-sm font-medium text-slate-600 dark:text-slate-400 data-[state=active]:text-blue-600 hover:text-slate-900 dark:hover:text-slate-200 transition-colors"
                                 >
                                     <Wallet size={14} />
                                     Oportunidades
                                     {opportunities.length > 0 && (
-                                        <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600 font-bold">
+                                        <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold">
                                             {opportunities.length}
                                         </span>
                                     )}
@@ -531,7 +531,7 @@ export function LeadDetailSheet({ leadId, pipelineId, initialStageId, open, onOp
 
                         {/* 1. NEGOTIATION TAB (Contextual) */}
                         <TabsContent value="negotiation" className="flex-1 flex flex-col overflow-hidden m-0">
-                            <div className="flex-none p-6 bg-slate-50 border-b border-slate-100 dark:bg-slate-900 dark:border-slate-800">
+                            <div className="flex-none p-6 bg-background border-b border-slate-100 dark:border-slate-800">
                                 {/* Opportunity Context Selector */}
                                 <div className="space-y-6">
                                     {!isNewLead && (
@@ -543,7 +543,7 @@ export function LeadDetailSheet({ leadId, pipelineId, initialStageId, open, onOp
                                                         value={selectedOpportunityId || ''}
                                                         onValueChange={setSelectedOpportunityId}
                                                     >
-                                                        <SelectTrigger className="w-[400px] border-none shadow-none bg-transparent p-0 text-xl font-bold text-slate-900 hover:bg-slate-100/50 rounded-md px-2 -ml-2 h-auto focus:ring-0">
+                                                        <SelectTrigger className="w-[400px] border-none shadow-none bg-transparent p-0 text-xl font-bold text-slate-900 dark:text-white hover:bg-slate-100/50 dark:hover:bg-slate-800/50 rounded-md px-2 -ml-2 h-auto focus:ring-0">
                                                             <div className="flex flex-col items-start gap-1">
                                                                 <span className="text-xs font-normal text-slate-500 uppercase tracking-widest">Oportunidade</span>
                                                                 <SelectValue placeholder="Selecione uma oportunidade" />
@@ -619,7 +619,7 @@ export function LeadDetailSheet({ leadId, pipelineId, initialStageId, open, onOp
 
                                             {/* METRICS STRIP (Cockpit) */}
                                             {activeOpportunity ? (
-                                                <div className="border rounded-xl bg-white shadow-sm mb-6">
+                                                <div className="border border-slate-200 dark:border-slate-800 rounded-xl bg-card shadow-sm mb-6">
                                                     <div className="grid grid-cols-3 divide-x py-4">
                                                         {/* Valor */}
                                                         <div className="px-6 flex flex-col justify-center">
@@ -641,7 +641,7 @@ export function LeadDetailSheet({ leadId, pipelineId, initialStageId, open, onOp
                                                                 value={activeOpportunity.stage_id}
                                                                 onValueChange={(val) => updateOpportunityField(activeOpportunity.id, 'stage_id', val)}
                                                             >
-                                                                <SelectTrigger className="h-auto p-0 border-none bg-transparent shadow-none focus:ring-0 text-slate-900">
+                                                                <SelectTrigger className="h-auto p-0 border-none bg-transparent shadow-none focus:ring-0 text-slate-900 dark:text-white">
                                                                     <SelectValue className="font-semibold text-lg" />
                                                                 </SelectTrigger>
                                                                 <SelectContent>
@@ -658,9 +658,9 @@ export function LeadDetailSheet({ leadId, pipelineId, initialStageId, open, onOp
                                                         <div className="px-6 flex flex-col justify-center gap-2">
                                                             <div className="flex justify-between items-center">
                                                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Probabilidade</span>
-                                                                <span className="text-sm font-bold text-slate-700">50%</span>
+                                                                <span className="text-sm font-bold text-slate-700 dark:text-slate-200">50%</span>
                                                             </div>
-                                                            <Progress value={50} className="h-2 bg-slate-100" indicatorClassName="bg-blue-600" />
+                                                            <Progress value={50} className="h-2 bg-slate-100 dark:bg-slate-800" indicatorClassName="bg-blue-600" />
                                                         </div>
                                                     </div>
                                                 </div>
@@ -674,7 +674,7 @@ export function LeadDetailSheet({ leadId, pipelineId, initialStageId, open, onOp
                                     )}
 
                                     {/* ActionComposer */}
-                                    <div className="bg-white border rounded-xl overflow-hidden shadow-sm">
+                                    <div className="bg-card border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
                                         <ActionComposer
                                             onSend={handleNewInteraction}
                                             disabled={loading}
@@ -682,7 +682,7 @@ export function LeadDetailSheet({ leadId, pipelineId, initialStageId, open, onOp
                                     </div>
 
                                     <div className="text-center pt-2">
-                                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 text-xs text-slate-500 hover:bg-slate-200 cursor-pointer transition-colors" onClick={() => setActiveTab('timeline')}>
+                                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-xs text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer transition-colors" onClick={() => setActiveTab('timeline')}>
                                             <Clock className="w-3 h-3" />
                                             Ver todo o histórico na Timeline
                                         </div>
@@ -693,7 +693,7 @@ export function LeadDetailSheet({ leadId, pipelineId, initialStageId, open, onOp
 
                         {/* 2. DATA TAB */}
                         {/* 2. DATA TAB */}
-                        <TabsContent value="data" className="h-full overflow-y-auto bg-slate-50 p-6">
+                        <TabsContent value="data" className="h-full overflow-y-auto bg-background p-6">
                             {/* Container Principal - Alinhado ao Topo */}
                             <div className="w-full space-y-8">
 
@@ -714,7 +714,7 @@ export function LeadDetailSheet({ leadId, pipelineId, initialStageId, open, onOp
                                                 id="name"
                                                 value={lead?.name || ''}
                                                 onChange={(e) => updateLeadField('name', e.target.value)}
-                                                className="bg-white"
+                                                className="bg-card border-slate-200 dark:border-slate-800"
                                             />
                                         </div>
 
@@ -724,7 +724,7 @@ export function LeadDetailSheet({ leadId, pipelineId, initialStageId, open, onOp
                                                 id="phone"
                                                 value={lead?.phone || ''}
                                                 onChange={(e) => updateLeadField('phone', e.target.value)}
-                                                className="bg-white"
+                                                className="bg-card border-slate-200 dark:border-slate-800"
                                             />
                                         </div>
                                     </div>
@@ -737,7 +737,7 @@ export function LeadDetailSheet({ leadId, pipelineId, initialStageId, open, onOp
                                                 id="email"
                                                 value={lead?.email || ''}
                                                 onChange={(e) => updateLeadField('email', e.target.value)}
-                                                className="bg-white"
+                                                className="bg-card border-slate-200 dark:border-slate-800"
                                             />
                                         </div>
 
@@ -747,7 +747,7 @@ export function LeadDetailSheet({ leadId, pipelineId, initialStageId, open, onOp
                                                 value={lead?.source || ''}
                                                 onValueChange={(val) => updateLeadField('source', val)}
                                             >
-                                                <SelectTrigger className="bg-white">
+                                                <SelectTrigger className="bg-card border-slate-200 dark:border-slate-800">
                                                     <SelectValue placeholder="Selecione..." />
                                                 </SelectTrigger>
                                                 <SelectContent>
@@ -769,7 +769,7 @@ export function LeadDetailSheet({ leadId, pipelineId, initialStageId, open, onOp
                                             id="interest"
                                             value={lead?.interest || ''}
                                             onChange={(e) => updateLeadField('interest', e.target.value)}
-                                            className="bg-white resize-none h-24"
+                                            className="bg-card border-slate-200 dark:border-slate-800 resize-none h-24"
                                             placeholder="O que o lead está procurando..."
                                         />
                                     </div>
@@ -802,10 +802,10 @@ export function LeadDetailSheet({ leadId, pipelineId, initialStageId, open, onOp
                             </div >
 
                             {/* Tabela Full Width */}
-                            < div className="border rounded-lg shadow-sm" >
+                            < div className="border border-slate-200 dark:border-slate-800 rounded-lg shadow-sm overflow-hidden" >
                                 <Table>
                                     <TableHeader>
-                                        <TableRow className="bg-slate-50 hover:bg-slate-50">
+                                        <TableRow className="bg-slate-50 dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
                                             <TableHead className="w-[300px]">Título / Categoria</TableHead>
                                             <TableHead>Funil & Estágio</TableHead>
                                             <TableHead>Data Criação</TableHead>
@@ -910,7 +910,7 @@ export function LeadDetailSheet({ leadId, pipelineId, initialStageId, open, onOp
                         </TabsContent >
 
                         {/* 4. WORKFLOWS TAB */}
-                        < TabsContent value="workflows" className="h-full p-6 overflow-auto bg-slate-50" >
+                        < TabsContent value="workflows" className="h-full p-6 overflow-auto bg-background" >
                             <div className="flex items-center justify-between mb-6">
                                 <div>
                                     <h2 className="text-xl font-bold tracking-tight">Automações & Workflows</h2>
@@ -924,16 +924,16 @@ export function LeadDetailSheet({ leadId, pipelineId, initialStageId, open, onOp
                                 ) : (
                                     <div className="space-y-6">
                                         <div className="grid gap-4">
-                                            <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wider">Disponíveis</h3>
+                                            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-200 uppercase tracking-wider">Disponíveis</h3>
                                             {availableWorkflows.map(wf => (
-                                                <div key={wf.id} className="flex items-center justify-between p-4 bg-white border rounded-lg shadow-sm hover:border-blue-200 transition-colors">
+                                                <div key={wf.id} className="flex items-center justify-between p-4 bg-card border border-slate-200 dark:border-slate-800 rounded-lg shadow-sm hover:border-blue-200 dark:hover:border-blue-900 transition-colors">
                                                     <div className="flex items-center gap-4">
                                                         <div className="p-2 bg-amber-50 rounded-lg">
                                                             <Zap className="text-amber-500 w-5 h-5" />
                                                         </div>
                                                         <div>
-                                                            <span className="font-semibold text-slate-900 block">{wf.name}</span>
-                                                            <span className="text-xs text-slate-500">Clique para iniciar manualmente</span>
+                                                            <span className="font-semibold text-slate-900 dark:text-slate-200 block">{wf.name}</span>
+                                                            <span className="text-xs text-slate-500 dark:text-slate-400">Clique para iniciar manualmente</span>
                                                         </div>
                                                     </div>
                                                     <Button size="sm" variant="outline" className="border-blue-200 text-blue-700 hover:bg-blue-50" onClick={() => manualEnroll(wf.id)}>
@@ -942,7 +942,7 @@ export function LeadDetailSheet({ leadId, pipelineId, initialStageId, open, onOp
                                                 </div>
                                             ))}
                                             {availableWorkflows.length === 0 && (
-                                                <div className="text-center py-8 text-slate-500 bg-white rounded-lg border border-dashed">
+                                                <div className="text-center py-8 text-slate-500 dark:text-slate-400 bg-card rounded-lg border border-dashed border-slate-200 dark:border-slate-800">
                                                     <p>Nenhum workflow configurado.</p>
                                                 </div>
                                             )}
@@ -950,10 +950,10 @@ export function LeadDetailSheet({ leadId, pipelineId, initialStageId, open, onOp
 
                                         {executions.length > 0 && (
                                             <div className="grid gap-4">
-                                                <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wider mt-4">Histórico de Execuções</h3>
+                                                <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-200 uppercase tracking-wider mt-4">Histórico de Execuções</h3>
                                                 {executions.map(ex => (
-                                                    <div key={ex.id} className="flex items-center justify-between p-3 bg-white border rounded-lg text-sm">
-                                                        <span className="font-medium text-slate-700">{ex.workflow?.name}</span>
+                                                    <div key={ex.id} className="flex items-center justify-between p-3 bg-card border border-slate-200 dark:border-slate-800 rounded-lg text-sm">
+                                                        <span className="font-medium text-slate-700 dark:text-slate-300">{ex.workflow?.name}</span>
                                                         <Badge variant={ex.status === 'COMPLETED' ? 'success' : 'secondary'}>
                                                             {ex.status}
                                                         </Badge>
@@ -967,7 +967,7 @@ export function LeadDetailSheet({ leadId, pipelineId, initialStageId, open, onOp
                         </TabsContent >
 
                         {/* 5. TIMELINE TAB (New Home for Feed) */}
-                        < TabsContent value="timeline" className="h-full p-6 overflow-auto bg-slate-50" >
+                        < TabsContent value="timeline" className="h-full p-6 overflow-auto bg-background" >
                             <div className="flex items-center justify-between mb-6">
                                 <div>
                                     <h2 className="text-xl font-bold tracking-tight">Timeline do Lead</h2>
@@ -977,7 +977,7 @@ export function LeadDetailSheet({ leadId, pipelineId, initialStageId, open, onOp
 
                             <div className="space-y-4">
                                 {timeline.length === 0 ? (
-                                    <div className="text-center py-12 text-slate-500 bg-white rounded-lg border border-dashed">
+                                    <div className="text-center py-12 text-slate-500 dark:text-slate-400 bg-card rounded-lg border border-dashed border-slate-200 dark:border-slate-800">
                                         <p>Nenhuma interação registrada ainda.</p>
                                     </div>
                                 ) : (
@@ -1002,7 +1002,7 @@ export function LeadDetailSheet({ leadId, pipelineId, initialStageId, open, onOp
                 {/* STICKY FOOTER (New Lead) */}
                 {
                     isNewLead && !loading && (
-                        <div className="flex-none bg-white border-t p-4">
+                        <div className="flex-none bg-card border-t border-slate-200 dark:border-slate-800 p-4">
                             <div className="flex items-center justify-end gap-3">
                                 <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
                                 <Button onClick={createNewLead} className="bg-emerald-600 hover:bg-emerald-700 text-white">Salvar Lead</Button>

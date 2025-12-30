@@ -54,8 +54,8 @@ const CashClosingWizard: React.FC<CashClosingWizardProps> = ({ onClose, register
     };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-0 md:p-4">
-            <div className="bg-white dark:bg-slate-900 md:rounded-xl shadow-2xl w-full h-[100dvh] md:h-auto md:max-w-2xl overflow-hidden flex flex-col pt-[safe-area-inset-top]">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-0 md:p-4 transition-all">
+            <div className="bg-card md:rounded-xl shadow-2xl w-full h-[100dvh] md:h-auto md:max-w-2xl overflow-hidden flex flex-col pt-[safe-area-inset-top] border border-slate-200 dark:border-slate-800">
 
                 {/* Header */}
                 <div className="bg-gradient-to-r from-gray-800 to-gray-900 p-6 flex justify-between items-center text-white flex-shrink-0">
@@ -102,14 +102,14 @@ const CashClosingWizard: React.FC<CashClosingWizardProps> = ({ onClose, register
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Total em Comprovantes (Cartão + Pix)</label>
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Total em Comprovantes (Cartão + Pix)</label>
                                 <div className="relative">
-                                    <span className="absolute left-3 top-3 text-gray-400">R$</span>
+                                    <span className="absolute left-3 top-3 text-slate-400">R$</span>
                                     <input
                                         type="number"
                                         value={cardTotal}
                                         onChange={e => setCardTotal(e.target.value)}
-                                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg text-lg font-bold focus:ring-2 focus:ring-blue-500 outline-none"
+                                        className="w-full pl-10 pr-4 py-3 bg-card border border-slate-200 dark:border-slate-800 rounded-lg text-lg font-bold text-foreground focus:ring-2 focus:ring-blue-500 outline-none"
                                         placeholder="0.00"
                                         autoFocus
                                     />
@@ -134,14 +134,14 @@ const CashClosingWizard: React.FC<CashClosingWizardProps> = ({ onClose, register
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Valor Total em Dinheiro</label>
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Valor Total em Dinheiro</label>
                                 <div className="relative">
-                                    <span className="absolute left-3 top-3 text-gray-400">R$</span>
+                                    <span className="absolute left-3 top-3 text-slate-400">R$</span>
                                     <input
                                         type="number"
                                         value={cashTotal}
                                         onChange={e => setCashTotal(e.target.value)}
-                                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg text-lg font-bold focus:ring-2 focus:ring-green-500 outline-none"
+                                        className="w-full pl-10 pr-4 py-3 bg-card border border-slate-200 dark:border-slate-800 rounded-lg text-lg font-bold text-foreground focus:ring-2 focus:ring-green-500 outline-none"
                                         placeholder="0.00"
                                         autoFocus
                                     />
@@ -149,11 +149,11 @@ const CashClosingWizard: React.FC<CashClosingWizardProps> = ({ onClose, register
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Observações / Justificativa</label>
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Observações / Justificativa</label>
                                 <textarea
                                     value={observations}
                                     onChange={e => setObservations(e.target.value)}
-                                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none h-24 resize-none"
+                                    className="w-full p-3 bg-card border border-slate-200 dark:border-slate-800 rounded-lg text-foreground focus:ring-2 focus:ring-green-500 outline-none h-24 resize-none"
                                     placeholder="Se houver diferença, explique aqui..."
                                 />
                             </div>
@@ -162,16 +162,16 @@ const CashClosingWizard: React.FC<CashClosingWizardProps> = ({ onClose, register
 
                     {step === 'REPORT' && (
                         <div className="space-y-6">
-                            <h3 className="text-lg font-bold text-gray-800 text-center">Resumo do Fechamento</h3>
+                            <h3 className="text-lg font-bold text-foreground text-center">Resumo do Fechamento</h3>
 
                             <div className="grid grid-cols-2 gap-4">
-                                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                                    <p className="text-xs uppercase text-gray-500 font-bold mb-1">Total Declarado (Dinheiro)</p>
-                                    <p className="text-2xl font-bold text-gray-900">R$ {parseFloat(cashTotal || '0').toFixed(2)}</p>
+                                <div className="bg-muted p-4 rounded-lg border border-slate-200 dark:border-slate-800">
+                                    <p className="text-xs uppercase text-muted-foreground font-bold mb-1">Total Declarado (Dinheiro)</p>
+                                    <p className="text-2xl font-bold text-foreground">R$ {parseFloat(cashTotal || '0').toFixed(2)}</p>
                                 </div>
-                                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                                    <p className="text-xs uppercase text-gray-500 font-bold mb-1">Total Sistema (Dinheiro)</p>
-                                    <p className="text-2xl font-bold text-gray-900">
+                                <div className="bg-muted p-4 rounded-lg border border-slate-200 dark:border-slate-800">
+                                    <p className="text-xs uppercase text-muted-foreground font-bold mb-1">Total Sistema (Dinheiro)</p>
+                                    <p className="text-2xl font-bold text-foreground">
                                         {financialSettings?.blind_closing ? '---' : `R$ ${systemCash.toFixed(2)}`}
                                     </p>
                                 </div>
@@ -206,9 +206,9 @@ const CashClosingWizard: React.FC<CashClosingWizardProps> = ({ onClose, register
                 </div>
 
                 {/* Footer */}
-                <div className="bg-gray-50 dark:bg-slate-800 px-8 py-5 flex justify-between items-center border-t border-gray-200 dark:border-slate-700 flex-shrink-0 pb-[max(20px,env(safe-area-inset-bottom))]">
+                <div className="bg-muted px-8 py-5 flex justify-between items-center border-t border-slate-200 dark:border-slate-800 flex-shrink-0 pb-[max(20px,env(safe-area-inset-bottom))]">
                     {step !== 'CARDS' ? (
-                        <button onClick={handleBack} className="text-gray-600 hover:text-gray-900 font-medium flex items-center gap-1">
+                        <button onClick={handleBack} className="text-slate-600 dark:text-slate-400 hover:text-foreground font-medium flex items-center gap-1">
                             <ChevronLeft size={18} /> Voltar
                         </button>
                     ) : (

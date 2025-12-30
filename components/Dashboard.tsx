@@ -169,12 +169,10 @@ const Dashboard: React.FC = () => {
   // Componente ReminderCard
   const ReminderCard: React.FC<{ item: any }> = ({ item }) => {
     const colors: any = {
-      orange:
-        "border-l-orange-500 bg-white dark:bg-gray-800 dark:border-gray-700",
-      purple:
-        "border-l-purple-500 bg-white dark:bg-gray-800 dark:border-gray-700",
-      blue: "border-l-blue-500 bg-white dark:bg-gray-800 dark:border-gray-700",
-      red: "border-l-red-500 bg-white dark:bg-gray-800 dark:border-gray-700",
+      orange: "border-l-orange-500 bg-white dark:bg-slate-800 dark:border-slate-700",
+      purple: "border-l-purple-500 bg-white dark:bg-slate-800 dark:border-slate-700",
+      blue: "border-l-blue-500 bg-white dark:bg-slate-800 dark:border-slate-700",
+      red: "border-l-red-500 bg-white dark:bg-slate-800 dark:border-slate-700",
     };
 
     const badgeColors: any = {
@@ -188,8 +186,7 @@ const Dashboard: React.FC = () => {
 
     return (
       <div
-        className={`p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 border-l-4 relative group transition-all duration-300 hover:shadow-md ${colors[item.color]
-          }`}
+        className={`p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 border-l-4 relative group transition-all duration-300 hover:shadow-md ${colors[item.color]}`}
       >
         <div className="flex justify-between items-start mb-2">
           <div className="flex items-center gap-2">
@@ -220,22 +217,22 @@ const Dashboard: React.FC = () => {
           </div>
           <button
             onClick={() => handleCompleteTask(item.id)}
-            className="text-gray-300 hover:text-green-500 transition-colors"
+            className="text-slate-300 hover:text-green-500 transition-colors"
             title="Concluir Lembrete"
           >
             <CheckCircle size={20} />
           </button>
         </div>
-        <h4 className="font-bold text-gray-800 dark:text-gray-200 text-sm">
+        <h4 className="font-bold text-slate-800 dark:text-slate-200 text-sm">
           {item.title}
         </h4>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
           {item.desc}
         </p>
 
         <button
           onClick={() => navigate(item.actionPath)}
-          className="mt-3 w-full py-2 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-xs font-bold rounded-lg border border-gray-200 dark:border-gray-600 transition-colors flex items-center justify-center gap-2"
+          className="mt-3 w-full py-2 bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-lg border border-slate-200 dark:border-slate-600 transition-colors flex items-center justify-center gap-2"
         >
           {item.actionLabel} <ArrowRight size={12} />
         </button>
@@ -248,10 +245,10 @@ const Dashboard: React.FC = () => {
       {/* HEADER & GLOBAL STATUS */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 shrink-0">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800 dark:text-white">
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-white">
             Painel Operacional
           </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2 mt-1">
+          <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-2 mt-1">
             <Calendar size={14} />{" "}
             {new Date().toLocaleDateString("pt-BR", {
               weekday: "long",
@@ -260,7 +257,7 @@ const Dashboard: React.FC = () => {
             })}
           </p>
           {profile && (
-            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
               Clínica: {profile.clinics?.name || "Não identificada"}
             </p>
           )}
@@ -269,15 +266,15 @@ const Dashboard: React.FC = () => {
         <div className="flex items-center gap-4 w-full md:w-auto">
           {/* KPI Cards */}
           <div className="flex gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0 scrollbar-hide">
-            <div className="bg-white dark:bg-gray-800 px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm min-w-[120px]">
-              <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase font-bold">
+            <div className="bg-white dark:bg-slate-800 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm min-w-[120px]">
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold">
                 Atendimentos
               </p>
               <div className="flex items-center gap-2">
-                <span className="text-lg font-bold text-gray-900 dark:text-white">
+                <span className="text-lg font-bold text-slate-900 dark:text-white">
                   {kpis.confirmed}/{kpis.appointments}
                 </span>
-                <div className="h-1.5 w-10 bg-gray-100 dark:bg-gray-700 rounded-full">
+                <div className="h-1.5 w-10 bg-slate-100 dark:bg-slate-700 rounded-full">
                   <div
                     className="h-1.5 bg-blue-500 rounded-full"
                     style={{
@@ -291,8 +288,8 @@ const Dashboard: React.FC = () => {
               </div>
             </div>
 
-            <div className="bg-white dark:bg-gray-800 px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm min-w-[120px]">
-              <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase font-bold">
+            <div className="bg-white dark:bg-slate-800 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm min-w-[120px]">
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold">
                 Novas Oportunidades
               </p>
               <span className="text-lg font-bold text-purple-600 dark:text-purple-400">
@@ -300,8 +297,8 @@ const Dashboard: React.FC = () => {
               </span>
             </div>
 
-            <div className="bg-white dark:bg-gray-800 px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm min-w-[130px]">
-              <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase font-bold flex items-center gap-1">
+            <div className="bg-white dark:bg-slate-800 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm min-w-[130px]">
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold flex items-center gap-1">
                 <Target size={10} /> Meta do Dia
               </p>
               <div className="flex items-center gap-2">
@@ -309,7 +306,7 @@ const Dashboard: React.FC = () => {
                   75%
                 </span>
                 <div
-                  className="h-1.5 w-10 bg-gray-100 dark:bg-gray-700 rounded-full"
+                  className="h-1.5 w-10 bg-slate-100 dark:bg-slate-700 rounded-full"
                   title="Progresso do dia"
                 >
                   <div
@@ -327,23 +324,23 @@ const Dashboard: React.FC = () => {
               onClick={() => setShowNotifications(!showNotifications)}
               className={`p-3 rounded-xl border transition-colors relative ${showNotifications
                 ? "bg-blue-50 dark:bg-blue-900 border-blue-200 dark:border-blue-700 text-blue-600 dark:text-blue-300"
-                : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
                 }`}
             >
               <Bell size={20} />
             </button>
 
             {showNotifications && (
-              <div className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 z-50 animate-in fade-in zoom-in-95 duration-100 overflow-hidden">
-                <div className="p-3 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-900">
-                  <h3 className="font-bold text-gray-700 dark:text-gray-300 text-xs uppercase">
+              <div className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-100 dark:border-slate-700 z-50 animate-in fade-in zoom-in-95 duration-100 overflow-hidden">
+                <div className="p-3 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900">
+                  <h3 className="font-bold text-slate-700 dark:text-slate-300 text-xs uppercase">
                     Notificações
                   </h3>
                   <button onClick={() => setShowNotifications(false)}>
-                    <X size={14} className="text-gray-400 dark:text-gray-500" />
+                    <X size={14} className="text-slate-400 dark:text-slate-500" />
                   </button>
                 </div>
-                <div className="p-8 text-center text-gray-400 dark:text-gray-500">
+                <div className="p-8 text-center text-slate-400 dark:text-slate-500">
                   <Bell size={32} className="mb-2 opacity-50 mx-auto" />
                   <p className="text-sm">Nenhuma notificação pendente</p>
                 </div>
@@ -362,7 +359,7 @@ const Dashboard: React.FC = () => {
         {/* 2. BOS INTELLIGENCE CARD */}
         <div
           onClick={() => navigate('/dashboard/bos-intelligence')}
-          className="relative bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-6 shadow-xl border border-gray-700 overflow-hidden cursor-pointer group hover:scale-[1.02] transition-all"
+          className="relative bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl p-6 shadow-xl border border-slate-700 overflow-hidden cursor-pointer group hover:scale-[1.02] transition-all"
         >
           <div className="absolute inset-0 opacity-10">
             <div className="absolute top-0 right-0 w-32 h-32">
@@ -379,10 +376,10 @@ const Dashboard: React.FC = () => {
                 <h2 className="text-lg font-bold text-white">BOS Intelligence</h2>
                 <p className="text-red-200 text-xs">SCR-01-B</p>
               </div>
-              <ArrowRight className="ml-auto text-gray-500 group-hover:text-white transition-colors" size={20} />
+              <ArrowRight className="ml-auto text-slate-500 group-hover:text-white transition-colors" size={20} />
             </div>
 
-            <p className="text-gray-400 text-sm mb-6 h-10">
+            <p className="text-slate-400 text-sm mb-6 h-10">
               Alertas críticos e insights proativos para maximizar resultados.
             </p>
 
@@ -390,21 +387,21 @@ const Dashboard: React.FC = () => {
               <div className="flex items-center justify-between bg-white/5 p-3 rounded-lg">
                 <div className="flex items-center gap-2">
                   <AlertCircle size={16} className="text-red-400" />
-                  <span className="text-gray-300 text-sm font-medium">Alertas Críticos</span>
+                  <span className="text-slate-300 text-sm font-medium">Alertas Críticos</span>
                 </div>
                 <span className="text-white font-bold">3</span>
               </div>
               <div className="flex items-center justify-between bg-white/5 p-3 rounded-lg">
                 <div className="flex items-center gap-2">
                   <Sparkles size={16} className="text-yellow-400" />
-                  <span className="text-gray-300 text-sm font-medium">Insights Ativos</span>
+                  <span className="text-slate-300 text-sm font-medium">Insights Ativos</span>
                 </div>
                 <span className="text-white font-bold">7</span>
               </div>
             </div>
 
-            <div className="mt-4 pt-4 border-t border-gray-700">
-              <span className="text-xs text-gray-500 group-hover:text-gray-300 transition-colors">Clique para ver todos os alertas</span>
+            <div className="mt-4 pt-4 border-t border-slate-700">
+              <span className="text-xs text-slate-500 group-hover:text-slate-300 transition-colors">Clique para ver todos os alertas</span>
             </div>
           </div>
         </div>
@@ -412,7 +409,7 @@ const Dashboard: React.FC = () => {
         {/* 3. SAÚDE DA CLÍNICA (SCORE) */}
         <div
           onClick={() => navigate('/dashboard/clinic-health')}
-          className="relative bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-6 shadow-xl border border-gray-700 overflow-hidden cursor-pointer group hover:scale-[1.02] transition-all"
+          className="relative bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl p-6 shadow-xl border border-slate-700 overflow-hidden cursor-pointer group hover:scale-[1.02] transition-all"
         >
           <div className="absolute inset-0 opacity-10">
             <div className="absolute top-0 right-0 w-32 h-32">
@@ -429,22 +426,22 @@ const Dashboard: React.FC = () => {
                 <h2 className="text-lg font-bold text-white">Saúde da Clínica</h2>
                 <p className="text-blue-200 text-xs">Health Score</p>
               </div>
-              <ArrowRight className="ml-auto text-gray-500 group-hover:text-white transition-colors" size={20} />
+              <ArrowRight className="ml-auto text-slate-500 group-hover:text-white transition-colors" size={20} />
             </div>
 
-            <p className="text-gray-400 text-sm mb-6 h-10">
+            <p className="text-slate-400 text-sm mb-6 h-10">
               Score geral de saúde baseado nos 5 pilares operacionais.
             </p>
 
             <div className="flex items-center justify-center py-2">
-              <div className="relative w-24 h-24 flex items-center justify-center rounded-full border-4 border-gray-700">
+              <div className="relative w-24 h-24 flex items-center justify-center rounded-full border-4 border-slate-700">
                 <span className="text-3xl font-black text-white">0</span>
-                <span className="absolute -bottom-6 text-xs text-gray-500 font-bold uppercase">Score</span>
+                <span className="absolute -bottom-6 text-xs text-slate-500 font-bold uppercase">Score</span>
               </div>
             </div>
 
-            <div className="mt-8 pt-4 border-t border-gray-700 text-center">
-              <span className="text-xs text-gray-500 group-hover:text-gray-300 transition-colors">Clique para análise detalhada</span>
+            <div className="mt-8 pt-4 border-t border-slate-700 text-center">
+              <span className="text-xs text-slate-500 group-hover:text-slate-300 transition-colors">Clique para análise detalhada</span>
             </div>
           </div>
         </div>
@@ -467,30 +464,30 @@ const Dashboard: React.FC = () => {
             </span>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col">
             {todaysAppointments.length > 0 ? (
               <div className="p-2 space-y-2">
                 {todaysAppointments.map((apt) => (
                   <div
                     key={apt.id}
-                    className="p-3 rounded-lg border border-gray-100 dark:border-gray-700 hover:border-blue-200 dark:hover:border-blue-800 hover:bg-blue-50/30 dark:hover:bg-blue-900/20 transition-all group relative"
+                    className="p-3 rounded-lg border border-slate-100 dark:border-slate-700 hover:border-blue-200 dark:hover:border-blue-800 hover:bg-blue-50/30 dark:hover:bg-blue-900/20 transition-all group relative"
                   >
                     <div className="flex justify-between items-start mb-2">
                       <div className="flex items-center gap-3">
                         <div className="text-center min-w-[45px]">
-                          <span className="block text-sm font-bold text-gray-900 dark:text-white">
+                          <span className="block text-sm font-bold text-slate-900 dark:text-white">
                             {apt.time}
                           </span>
-                          <span className="block text-[10px] text-gray-400 uppercase">
+                          <span className="block text-[10px] text-slate-400 uppercase">
                             {apt.type}
                           </span>
                         </div>
-                        <div className="w-px h-8 bg-gray-200 dark:bg-gray-600"></div>
+                        <div className="w-px h-8 bg-slate-200 dark:bg-slate-600"></div>
                         <div>
-                          <p className="font-bold text-gray-800 dark:text-gray-200 text-sm">
+                          <p className="font-bold text-slate-800 dark:text-slate-200 text-sm">
                             {apt.patientName}
                           </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                          <p className="text-xs text-slate-500 dark:text-slate-400">
                             {apt.doctorName}
                           </p>
                         </div>
@@ -502,7 +499,7 @@ const Dashboard: React.FC = () => {
                             ? "bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300"
                             : apt.status === "Concluído"
                               ? "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300"
-                              : "bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-300"
+                              : "bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-300"
                           }`}
                       >
                         {apt.status}
@@ -511,7 +508,7 @@ const Dashboard: React.FC = () => {
 
                     {/* Actions for Pending */}
                     {apt.status === "Pendente" && (
-                      <div className="mt-2 pt-2 border-t border-gray-100 dark:border-gray-700 flex gap-2">
+                      <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-700 flex gap-2">
                         <button
                           onClick={() => handleConfirmAppointment(apt.id)}
                           className="flex-1 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/50 py-1.5 rounded text-xs font-bold flex items-center justify-center gap-1 transition-colors"
@@ -538,7 +535,7 @@ const Dashboard: React.FC = () => {
                 description="Não há agendamentos marcados para hoje. Que tal verificar a agenda completa?"
               />
             )}
-            <div className="p-3 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-center shrink-0">
+            <div className="p-3 border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-center shrink-0">
               <button
                 onClick={() => navigate("/agenda")}
                 className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline"
@@ -567,22 +564,22 @@ const Dashboard: React.FC = () => {
                 ))}
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center h-32 bg-gray-100 dark:bg-gray-800/50 rounded-xl border border-dashed border-gray-300 dark:border-gray-700 text-gray-400">
+              <div className="flex flex-col items-center justify-center h-32 bg-slate-100 dark:bg-slate-800/50 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 text-slate-400">
                 <CheckCircle size={32} className="mb-2" />
                 <p className="text-sm">Tudo em dia!</p>
               </div>
             )}
 
             {/* Manual Task Input */}
-            <div className="p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
-              <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2">
+            <div className="p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+              <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2">
                 Novo Lembrete Rápido
               </p>
               <div className="relative">
                 <input
                   type="text"
                   placeholder="Digite e pressione Enter..."
-                  className="w-full pl-3 pr-10 py-2 text-xs border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:border-blue-500"
+                  className="w-full pl-3 pr-10 py-2 text-xs border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg focus:outline-none focus:border-blue-500"
                 />
                 <button className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-600 dark:text-blue-400 hover:text-blue-800">
                   <ArrowRight size={16} />
@@ -604,9 +601,9 @@ const Dashboard: React.FC = () => {
             </h3>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col">
             {priorityLeads.length > 0 ? (
-              <div className="divide-y divide-gray-100 dark:divide-gray-700">
+              <div className="divide-y divide-slate-100 dark:divide-slate-700">
                 {priorityLeads.map((lead) => (
                   <div
                     key={lead.id}
@@ -621,13 +618,13 @@ const Dashboard: React.FC = () => {
                               : "bg-yellow-500"
                               }`}
                           ></span>
-                          <h4 className="text-sm font-bold text-gray-800 dark:text-gray-200">
+                          <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">
                             {lead.name}
                           </h4>
                         </div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 ml-4">
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 ml-4">
                           Origem: {lead.source} •{" "}
-                          <span className="font-medium text-gray-700 dark:text-gray-300">
+                          <span className="font-medium text-slate-700 dark:text-slate-300">
                             {lead.status}
                           </span>
                         </p>

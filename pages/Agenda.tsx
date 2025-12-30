@@ -265,7 +265,7 @@ const Agenda: React.FC = () => {
                                         onClick={() => handleStatusChange(appointment.id, status as Appointment['status'])}
                                         className={`p-3 rounded-lg border-2 text-left transition-all hover:shadow-md ${appointment.status === status
                                             ? config.color + ' border-current'
-                                            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
+                                            : 'bg-card border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
                                             }`}
                                     >
                                         <Icon size={16} className="mb-1" />
@@ -379,11 +379,11 @@ const Agenda: React.FC = () => {
     }
 
     return (
-        <div className="h-full flex flex-col bg-slate-50 dark:bg-slate-950 overflow-hidden">
+        <div className="h-full flex flex-col bg-background overflow-hidden">
             {/* ============================================ */}
             {/* HEADER - FIXO */}
             {/* ============================================ */}
-            <div className="flex-none bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-3 md:p-4">
+            <div className="flex-none bg-card border-b border-slate-200 dark:border-slate-800 p-3 md:p-4">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4 mb-3 md:mb-4">
                     <div>
                         <h1 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -449,7 +449,7 @@ const Agenda: React.FC = () => {
                         <select
                             value={filterProfessional}
                             onChange={(e) => setFilterProfessional(e.target.value)}
-                            className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white min-h-[44px]"
+                            className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-card text-slate-900 dark:text-white min-h-[44px]"
                         >
                             <option value="ALL">Todos Profissionais</option>
                             {professionals.map(prof => (
@@ -462,7 +462,7 @@ const Agenda: React.FC = () => {
                             <button
                                 onClick={() => setViewMode('week')}
                                 className={`px-3 py-2 rounded text-xs font-bold transition-all min-h-[40px] ${viewMode === 'week'
-                                    ? 'bg-white dark:bg-slate-600 text-slate-900 dark:text-white shadow'
+                                    ? 'bg-background text-slate-900 dark:text-white shadow'
                                     : 'text-slate-600 dark:text-slate-400'
                                     }`}
                             >
@@ -471,7 +471,7 @@ const Agenda: React.FC = () => {
                             <button
                                 onClick={() => setViewMode('day')}
                                 className={`px-3 py-2 rounded text-xs font-bold transition-all min-h-[40px] ${viewMode === 'day'
-                                    ? 'bg-white dark:bg-slate-600 text-slate-900 dark:text-white shadow'
+                                    ? 'bg-background text-slate-900 dark:text-white shadow'
                                     : 'text-slate-600 dark:text-slate-400'
                                     }`}
                             >
@@ -497,7 +497,7 @@ const Agenda: React.FC = () => {
                                 return (
                                     <div
                                         key={idx}
-                                        className={`bg-white dark:bg-slate-900 rounded-xl border ${isToday
+                                        className={`bg-card rounded-xl border ${isToday
                                             ? 'border-blue-400 dark:border-blue-600 shadow-md'
                                             : 'border-slate-200 dark:border-slate-800'
                                             } overflow-hidden transition-colors`}
@@ -566,7 +566,7 @@ const Agenda: React.FC = () => {
                                 return (
                                     <div
                                         key={idx}
-                                        className={`bg-white dark:bg-slate-900 rounded-xl border ${isToday
+                                        className={`bg-card rounded-xl border ${isToday
                                             ? 'border-blue-400 dark:border-blue-600 shadow-md'
                                             : 'border-slate-200 dark:border-slate-800'
                                             } overflow-hidden transition-colors`}
@@ -639,7 +639,7 @@ const Agenda: React.FC = () => {
                     </>
                 ) : (
                     // DAY VIEW - Timeline
-                    <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4">
+                    <div className="bg-card rounded-xl border border-slate-200 dark:border-slate-800 p-4">
                         <div className="space-y-1">
                             {getTimeSlots().map(time => {
                                 const hourAppts = getAppointmentsForDay(currentDate).filter(apt =>
@@ -714,11 +714,11 @@ const Agenda: React.FC = () => {
                                 value={newAppointmentForm.patient_name}
                                 onChange={(e) => setNewAppointmentForm({ ...newAppointmentForm, patient_name: e.target.value, patient_id: '' })}
                                 onFocus={() => newAppointmentForm.patient_name.length >= 3 && setShowPatientDropdown(true)}
-                                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-card text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                                 placeholder="Digite pelo menos 3 letras..."
                             />
                             {showPatientDropdown && patientSearchResults.length > 0 && (
-                                <div className="absolute z-50 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                                <div className="absolute z-50 w-full mt-1 bg-card border border-slate-300 dark:border-slate-600 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                                     {patientSearchResults.map((patient) => (
                                         <button
                                             key={patient.id}
@@ -756,7 +756,7 @@ const Agenda: React.FC = () => {
                             <select
                                 value={newAppointmentForm.doctor_id}
                                 onChange={(e) => setNewAppointmentForm({ ...newAppointmentForm, doctor_id: e.target.value })}
-                                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-card text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                             >
                                 <option value="">Selecione um profissional</option>
                                 {professionals.map(prof => (
@@ -775,7 +775,7 @@ const Agenda: React.FC = () => {
                                     type="date"
                                     value={newAppointmentForm.date}
                                     onChange={(e) => setNewAppointmentForm({ ...newAppointmentForm, date: e.target.value })}
-                                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-card text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                                 />
                             </div>
                             <div>
@@ -786,7 +786,7 @@ const Agenda: React.FC = () => {
                                     type="time"
                                     value={newAppointmentForm.time}
                                     onChange={(e) => setNewAppointmentForm({ ...newAppointmentForm, time: e.target.value })}
-                                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-card text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                                 />
                             </div>
                         </div>

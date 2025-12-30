@@ -185,9 +185,9 @@ const FinancialDRE: React.FC = () => {
                     >
                         <ChevronRight size={20} className="text-slate-600 dark:text-slate-400" />
                     </button>
-                    <div className="ml-2 flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-lg">
+                    <div className="ml-2 flex items-center gap-2 px-4 py-2 bg-card rounded-lg border border-slate-200 dark:border-slate-800">
                         <Calendar size={16} className="text-slate-600 dark:text-slate-400" />
-                        <span className="text-sm font-bold text-slate-900 dark:text-white">
+                        <span className="text-sm font-bold text-foreground">
                             {format(selectedDate, "MMMM 'de' yyyy", { locale: ptBR })}
                         </span>
                     </div>
@@ -197,9 +197,9 @@ const FinancialDRE: React.FC = () => {
             {/* KPI Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Receita Total */}
-                <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-6">
+                <div className="bg-card rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
                     <div className="flex items-center justify-between mb-2">
-                        <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Receita Bruta</p>
+                        <p className="text-xs font-bold text-muted-foreground uppercase">Receita Bruta</p>
                         <div className="p-2 bg-green-50 dark:bg-green-900/20 rounded-lg">
                             <TrendingUp className="text-green-600 dark:text-green-400" size={20} />
                         </div>
@@ -207,13 +207,13 @@ const FinancialDRE: React.FC = () => {
                     <p className="text-2xl font-bold text-green-600 dark:text-green-400">
                         {formatCurrency(dreData.receitaBruta)}
                     </p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">100% da receita</p>
+                    <p className="text-xs text-muted-foreground mt-1">100% da receita</p>
                 </div>
 
                 {/* Despesas Totais */}
-                <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-6">
+                <div className="bg-card rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
                     <div className="flex items-center justify-between mb-2">
-                        <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Despesas Totais</p>
+                        <p className="text-xs font-bold text-muted-foreground uppercase">Despesas Totais</p>
                         <div className="p-2 bg-rose-50 dark:bg-rose-900/20 rounded-lg">
                             <TrendingDown className="text-rose-600 dark:text-rose-400" size={20} />
                         </div>
@@ -221,7 +221,7 @@ const FinancialDRE: React.FC = () => {
                     <p className="text-2xl font-bold text-rose-600 dark:text-rose-400">
                         {formatCurrency(dreData.despesasVariaveis + dreData.despesasFixas)}
                     </p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    <p className="text-xs text-muted-foreground mt-1">
                         {dreData.receitaBruta > 0 ? ((dreData.despesasVariaveis + dreData.despesasFixas) / dreData.receitaBruta * 100).toFixed(1) : 0}% da receita
                     </p>
                 </div>
@@ -249,19 +249,19 @@ const FinancialDRE: React.FC = () => {
             </div>
 
             {/* Tabela Cascata DRE */}
-            <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
-                <div className="p-6 border-b border-slate-200 dark:border-slate-700">
-                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">Demonstrativo Detalhado</h3>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Análise cascata de receitas e despesas</p>
+            <div className="bg-card rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+                <div className="p-6 border-b border-slate-200 dark:border-slate-800">
+                    <h3 className="text-lg font-bold text-foreground">Demonstrativo Detalhado</h3>
+                    <p className="text-sm text-muted-foreground mt-1">Análise cascata de receitas e despesas</p>
                 </div>
 
                 <div className="overflow-x-auto">
                     <table className="w-full">
-                        <thead className="bg-slate-50 dark:bg-slate-900">
+                        <thead className="bg-muted">
                             <tr>
-                                <th className="px-3 md:px-6 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">Descrição</th>
-                                <th className="px-3 md:px-6 py-3 text-right text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">Valor</th>
-                                <th className="px-3 md:px-6 py-3 text-right text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">% Receita</th>
+                                <th className="px-3 md:px-6 py-3 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Descrição</th>
+                                <th className="px-3 md:px-6 py-3 text-right text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Valor</th>
+                                <th className="px-3 md:px-6 py-3 text-right text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">% Receita</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">

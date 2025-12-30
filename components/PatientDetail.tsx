@@ -230,13 +230,13 @@ export const PatientDetailSheet: React.FC<PatientDetailProps> = ({
     );
 
     const renderHeader = () => (
-        <div className="flex-none bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-6 z-50 shadow-sm">
+        <div className="flex-none bg-card border-b border-slate-200 dark:border-slate-800 p-6 z-50 shadow-sm">
             <div className="flex items-center justify-between mb-4">
                 <button onClick={onClose} className="flex items-center gap-2 text-slate-600 hover:text-slate-900 transition-colors">
                     <ArrowLeft size={20} /> <span className="font-medium">Voltar</span>
                 </button>
                 {!isCreateMode && (
-                    <button onClick={handleDeletePatient} className="bg-rose-600 hover:bg-rose-700 text-white px-3 py-2 rounded-lg">
+                    <button onClick={handleDeletePatient} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground px-3 py-2 rounded-lg">
                         <Trash2 size={16} />
                     </button>
                 )}
@@ -269,15 +269,15 @@ export const PatientDetailSheet: React.FC<PatientDetailProps> = ({
                     </div>
                     {/* KPI Cards Rápidos (Header) */}
                     <div className="grid grid-cols-3 gap-3">
-                        <div className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-3">
+                        <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg p-3">
                             <p className="text-[10px] text-slate-500 uppercase font-bold mb-1">Saldo Devedor</p>
                             <p className={`text-lg font-black ${financialData.balanceDue > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>R$ {financialData.balanceDue.toLocaleString('pt-BR')}</p>
                         </div>
-                        <div className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-3">
+                        <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg p-3">
                             <p className="text-[10px] text-slate-500 uppercase font-bold mb-1">Aprovado</p>
                             <p className="text-lg font-black text-blue-600">R$ {financialData.totalApproved.toLocaleString('pt-BR')}</p>
                         </div>
-                        <div className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-3">
+                        <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg p-3">
                             <p className="text-[10px] text-slate-500 uppercase font-bold mb-1">Pago</p>
                             <p className="text-lg font-black text-emerald-600">R$ {financialData.totalPaid.toLocaleString('pt-BR')}</p>
                         </div>
@@ -288,7 +288,7 @@ export const PatientDetailSheet: React.FC<PatientDetailProps> = ({
     );
 
     const renderDesktopTabs = () => (
-        <div className="flex-none z-40 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-md">
+        <div className="flex-none z-40 bg-card border-b border-slate-200 dark:border-slate-800 shadow-md">
             <div className="flex gap-1 overflow-x-auto px-6 scrollbar-hide snap-x">
                 {[
                     { id: 'overview', label: 'Visão Geral', icon: Activity },
@@ -303,7 +303,7 @@ export const PatientDetailSheet: React.FC<PatientDetailProps> = ({
                     <button
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
-                        className={`flex items-center gap-2 px-3 py-2 text-xs font-medium transition-colors border-b-2 whitespace-nowrap snap-start ${activeTab === tab.id ? 'border-blue-500 text-blue-600' : 'border-transparent text-slate-600 hover:text-slate-900'
+                        className={`flex items-center gap-2 px-3 py-2 text-xs font-medium transition-colors border-b-2 whitespace-nowrap snap-start ${activeTab === tab.id ? 'border-blue-500 text-blue-600' : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                             }`}
                     >
                         <tab.icon size={14} /> {tab.label}
@@ -345,18 +345,18 @@ export const PatientDetailSheet: React.FC<PatientDetailProps> = ({
                         )}
                         {/* 5 Pilares - Cards Resumidos */}
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            <div className="bg-white p-5 rounded-lg border shadow-sm hover:shadow-md transition-shadow">
-                                <h3 className="font-bold text-slate-700 mb-2 flex items-center gap-2"><User size={16} /> Origem & Perfil</h3>
+                            <div className="bg-card p-5 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow">
+                                <h3 className="font-bold text-slate-700 dark:text-slate-200 mb-2 flex items-center gap-2"><User size={16} /> Origem & Perfil</h3>
                                 <p className="text-sm">Origem: <span className="font-semibold">{patient.origin || 'N/A'}</span></p>
                                 <p className="text-sm">Profissão: <span className="font-semibold">{patient.occupation || 'N/A'}</span></p>
                             </div>
-                            <div className="bg-white p-5 rounded-lg border shadow-sm hover:shadow-md transition-shadow">
-                                <h3 className="font-bold text-slate-700 mb-2 flex items-center gap-2"><Activity size={16} /> Produção</h3>
+                            <div className="bg-card p-5 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow">
+                                <h3 className="font-bold text-slate-700 dark:text-slate-200 mb-2 flex items-center gap-2"><Activity size={16} /> Produção</h3>
                                 <p className="text-sm text-green-600 font-bold">{clinicalTreatments.length} tratamentos ativos</p>
                                 <p className="text-xs text-slate-500">Última vinda: {patient.last_attendance ? new Date(patient.last_attendance).toLocaleDateString() : '-'}</p>
                             </div>
-                            <div className="bg-white p-5 rounded-lg border shadow-sm hover:shadow-md transition-shadow">
-                                <h3 className="font-bold text-slate-700 mb-2 flex items-center gap-2"><DollarSign size={16} /> Financeiro</h3>
+                            <div className="bg-card p-5 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow">
+                                <h3 className="font-bold text-slate-700 dark:text-slate-200 mb-2 flex items-center gap-2"><DollarSign size={16} /> Financeiro</h3>
                                 <p className="text-sm text-emerald-600 font-bold">LTV: R$ {patient.total_paid?.toLocaleString()}</p>
                                 <p className="text-xs text-slate-500">Ticket Médio: R$ {((patient.total_paid || 0) / (clinicalTreatments.length || 1)).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}</p>
                             </div>
@@ -378,7 +378,7 @@ export const PatientDetailSheet: React.FC<PatientDetailProps> = ({
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {budgets.map(b => (
-                                        <div key={b.id} onClick={() => { setEditingBudget(b); setShowBudgetForm(true); }} className="bg-white border p-5 rounded-lg hover:shadow-lg cursor-pointer group transition-all">
+                                        <div key={b.id} onClick={() => { setEditingBudget(b); setShowBudgetForm(true); }} className="bg-card border border-slate-200 dark:border-slate-800 p-5 rounded-lg hover:shadow-lg cursor-pointer group transition-all">
                                             <div className="flex justify-between">
                                                 <h4 className="font-bold group-hover:text-blue-600">Proposta #{b.id.slice(0, 8)}</h4>
                                                 <span className={`text-xs px-2 py-1 rounded ${b.status === 'APPROVED' ? 'bg-green-100 text-green-700' : 'bg-slate-100'}`}>{b.status}</span>
@@ -401,9 +401,9 @@ export const PatientDetailSheet: React.FC<PatientDetailProps> = ({
                     <div className="space-y-6">
                         <h2 className="text-lg font-bold">Tratamentos Clínicos</h2>
                         {clinicalTreatments.map(t => (
-                            <div key={t.id} className="bg-white border p-4 rounded-lg flex justify-between items-center shadow-sm">
+                            <div key={t.id} className="bg-card border border-slate-200 dark:border-slate-800 p-4 rounded-lg flex justify-between items-center shadow-sm">
                                 <div>
-                                    <h4 className="font-bold text-slate-800">{t.procedure_name}</h4>
+                                    <h4 className="font-bold text-slate-800 dark:text-slate-200">{t.procedure_name}</h4>
                                     <p className="text-xs text-slate-500 flex items-center gap-2">
                                         <span className={`w-2 h-2 rounded-full ${t.status === 'COMPLETED' ? 'bg-green-500' : 'bg-blue-500'}`}></span>
                                         {t.status}
@@ -521,7 +521,7 @@ export const PatientDetailSheet: React.FC<PatientDetailProps> = ({
                     </DrawerHeader>
                     {renderHeader()}
 
-                    <div className="flex-1 overflow-y-auto bg-slate-50 dark:bg-slate-900 relative">
+                    <div className="flex-1 overflow-y-auto bg-background relative">
                         {/* Nível 0: Menu Principal */}
                         <PatientMenuList
                             budgetsCount={budgets.length}
@@ -583,12 +583,12 @@ export const PatientDetailSheet: React.FC<PatientDetailProps> = ({
                                     <DrawerDescription>Escolha uma ação para o paciente</DrawerDescription>
                                 </DrawerHeader>
                                 <div className="p-4 space-y-2">
-                                    <button onClick={() => { setShowBudgetForm(true); setIsActionSheetOpen(false); }} className="w-full bg-white dark:bg-slate-800 p-4 rounded-xl border flex items-center gap-4 hover:bg-slate-50">
-                                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600"><FileText size={20} /></div>
+                                    <button onClick={() => { setShowBudgetForm(true); setIsActionSheetOpen(false); }} className="w-full bg-card p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center gap-4 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                                        <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400"><FileText size={20} /></div>
                                         <div className="text-left"><p className="font-bold text-slate-900 dark:text-white">Novo Orçamento</p></div>
                                     </button>
-                                    <button onClick={() => { toast('Em breve!', { icon: '📷' }); setIsActionSheetOpen(false); }} className="w-full bg-white dark:bg-slate-800 p-4 rounded-xl border flex items-center gap-4 hover:bg-slate-50">
-                                        <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-600"><Image size={20} /></div>
+                                    <button onClick={() => { toast('Em breve!', { icon: '📷' }); setIsActionSheetOpen(false); }} className="w-full bg-card p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center gap-4 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                                        <div className="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-purple-600 dark:text-purple-400"><Image size={20} /></div>
                                         <div className="text-left"><p className="font-bold text-slate-900 dark:text-white">Nova Foto</p></div>
                                     </button>
                                 </div>
@@ -610,7 +610,7 @@ export const PatientDetailSheet: React.FC<PatientDetailProps> = ({
                 </SheetHeader>
                 {renderHeader()}
                 {renderDesktopTabs()}
-                <div ref={scrollContainerRef} tabIndex={-1} className="flex-1 overflow-y-auto min-h-0 bg-slate-50 dark:bg-slate-900 scroll-smooth outline-none">
+                <div ref={scrollContainerRef} tabIndex={-1} className="flex-1 overflow-y-auto min-h-0 bg-background scroll-smooth outline-none">
                     <div className="p-6 min-h-full">
                         {renderTabContent()}
                     </div>

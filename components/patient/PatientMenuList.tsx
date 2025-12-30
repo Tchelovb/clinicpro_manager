@@ -39,7 +39,7 @@ export const PatientMenuList: React.FC<MenuListProps> = ({
                     <button
                         key={item.id}
                         onClick={() => onSelectSection(item.id)}
-                        className="w-full flex items-center justify-between p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-blue-500 dark:hover:border-blue-500 transition-all active:scale-[0.98] shadow-sm"
+                        className="w-full flex items-center justify-between p-4 bg-card rounded-xl border border-slate-200 dark:border-slate-800 hover:border-blue-500 dark:hover:border-blue-500 transition-all active:scale-[0.98] shadow-sm"
                     >
                         <div className="flex items-center gap-3">
                             <div className="w-10 h-10 bg-blue-50 dark:bg-blue-900/30 rounded-lg flex items-center justify-center shrink-0">

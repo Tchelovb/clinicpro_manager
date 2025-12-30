@@ -49,7 +49,7 @@ export const PatientNavigationDrawers: React.FC<PatientNavigationDrawersProps> =
                                 <button
                                     key={budget.id}
                                     onClick={() => onOpenDetail(budget.id, `Orçamento #${budget.id.slice(0, 8)}`)}
-                                    className="w-full p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-blue-500 transition-all active:scale-[0.98] text-left"
+                                    className="w-full p-4 bg-card rounded-xl border border-slate-200 dark:border-slate-800 hover:border-blue-500 transition-all active:scale-[0.98] text-left"
                                 >
                                     <div className="flex items-center justify-between mb-2">
                                         <span className="font-bold text-slate-900 dark:text-white">
@@ -88,7 +88,7 @@ export const PatientNavigationDrawers: React.FC<PatientNavigationDrawersProps> =
                             treatments.map(treatment => (
                                 <div
                                     key={treatment.id}
-                                    className="p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700"
+                                    className="p-4 bg-card rounded-xl border border-slate-200 dark:border-slate-800"
                                 >
                                     <p className="font-bold text-slate-900 dark:text-white mb-1">{treatment.procedure_name}</p>
                                     <p className="text-sm text-slate-600 dark:text-slate-400">
@@ -170,7 +170,7 @@ export const PatientNavigationDrawers: React.FC<PatientNavigationDrawersProps> =
 
     return (
         <Drawer open={navigationStack.length > 0} onOpenChange={() => onGoBack()}>
-            <DrawerContent className="h-[95vh] rounded-t-[10px] flex flex-col">
+            <DrawerContent className="h-[95vh] rounded-t-[10px] flex flex-col bg-background">
                 <DrawerHeader className="sr-only">
                     <DrawerTitle>{currentLevel.title}</DrawerTitle>
                     <DrawerDescription>Detalhes da seção {currentLevel.sectionId || currentLevel.type}</DrawerDescription>

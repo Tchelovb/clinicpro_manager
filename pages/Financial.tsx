@@ -8,7 +8,7 @@ import {
     ArrowUpFromLine, ArrowDownFromLine
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
-import { Drawer, DrawerContent } from "../components/ui/drawer";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "../components/ui/drawer";
 import {
     Table,
     TableBody,
@@ -109,9 +109,9 @@ const Financial: React.FC = () => {
     ).sort((a, b) => a.dueDate.localeCompare(b.dueDate));
 
     return (
-        <div className="h-full flex flex-col bg-slate-50 dark:bg-slate-950 overflow-hidden">
+        <div className="h-full flex flex-col bg-background overflow-hidden transition-colors duration-300">
             {/* HEADER FIXO */}
-            <header className="flex-none bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 md:p-6">
+            <header className="flex-none bg-card border-b border-slate-200 dark:border-slate-800 p-4 md:p-6">
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                     {/* Left: Título + Saldo */}
                     <div>
@@ -149,7 +149,7 @@ const Financial: React.FC = () => {
 
             {/* TABS */}
             <Tabs defaultValue="overview" className="flex-1 flex flex-col overflow-hidden">
-                <TabsList className="flex-none bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-b border-slate-200 dark:border-slate-800 px-3 md:px-6 overflow-x-auto">
+                <TabsList className="flex-none bg-card/80 backdrop-blur-sm border-b border-slate-200 dark:border-slate-800 px-3 md:px-6 overflow-x-auto">
                     <TabsTrigger value="overview" className="flex items-center gap-2">
                         <TrendingUp size={16} />
                         <span className="hidden sm:inline">Visão Geral</span>
@@ -218,7 +218,7 @@ const Financial: React.FC = () => {
 
                         {/* Fintech Shortcuts */}
                         <div>
-                            <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-4">Acesso Rápido Fintech</h3>
+                            <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-4">Acesso Rápido Fintech</h3>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div
                                     onClick={() => navigate('/cfo')}
@@ -234,7 +234,7 @@ const Financial: React.FC = () => {
 
                                 <div
                                     onClick={() => navigate('/receivables')}
-                                    className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-blue-500 dark:hover:border-blue-500 transition-colors group"
+                                    className="bg-card p-6 rounded-xl border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-blue-500 dark:hover:border-blue-500 transition-colors group"
                                 >
                                     <div className="flex justify-between items-start mb-4">
                                         <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg group-hover:bg-blue-100 dark:group-hover:bg-blue-900/40 transition-colors">
@@ -247,7 +247,7 @@ const Financial: React.FC = () => {
 
                                 <div
                                     onClick={() => navigate('/professional-financial')}
-                                    className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-green-500 dark:hover:border-green-500 transition-colors group"
+                                    className="bg-card p-6 rounded-xl border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-green-500 dark:hover:border-green-500 transition-colors group"
                                 >
                                     <div className="flex justify-between items-start mb-4">
                                         <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg group-hover:bg-green-100 dark:group-hover:bg-green-900/40 transition-colors">
@@ -261,11 +261,11 @@ const Financial: React.FC = () => {
                         </div>
 
                         {/* Recent Transactions */}
-                        <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
-                            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
-                                <h3 className="font-bold text-slate-800 dark:text-white">Últimas Movimentações</h3>
+                        <div className="bg-card rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+                            <div className="p-6 border-b border-slate-100 dark:border-slate-800/50 flex justify-between items-center">
+                                <h3 className="font-bold text-slate-800 dark:text-slate-100">Últimas Movimentações</h3>
                             </div>
-                            <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                            <div className="divide-y divide-slate-100 dark:divide-slate-800/50">
                                 {globalFinancials.length > 0 ? (
                                     globalFinancials.slice(0, 5).map((t, idx) => (
                                         <div key={idx} className="p-4 flex justify-between items-center hover:bg-slate-50 dark:hover:bg-slate-800/50">
@@ -295,7 +295,7 @@ const Financial: React.FC = () => {
                     {/* MOVIMENTAÇÕES - Placeholder por enquanto */}
                     {/* MOVIMENTAÇÕES (All Transactions) */}
                     <TabsContent value="transactions" className="p-3 md:p-6 m-0 space-y-4">
-                        <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+                        <div className="bg-card rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
                             {/* Desktop Table */}
                             <div className="hidden md:block">
                                 <Table>
@@ -355,7 +355,7 @@ const Financial: React.FC = () => {
                     {/* A RECEBER - Placeholder */}
                     {/* A RECEBER */}
                     <TabsContent value="receivables" className="p-3 md:p-6 m-0 space-y-4">
-                        <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+                        <div className="bg-card rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
                             {/* Desktop Table */}
                             <div className="hidden md:block">
                                 <Table>
@@ -416,7 +416,7 @@ const Financial: React.FC = () => {
                     {/* A PAGAR - Placeholder */}
                     {/* A PAGAR */}
                     <TabsContent value="payables" className="p-3 md:p-6 m-0 space-y-4">
-                        <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+                        <div className="bg-card rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
                             {/* Desktop Table */}
                             <div className="hidden md:block">
                                 <Table>
@@ -542,7 +542,7 @@ const Financial: React.FC = () => {
                                     setShowExpenseSheet(true);
                                     setIsActionSheetOpen(false);
                                 }}
-                                className="w-full bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center gap-4 active:bg-slate-50 dark:active:bg-slate-700"
+                                className="w-full bg-card p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center gap-4 active:bg-slate-50 dark:active:bg-slate-800"
                             >
                                 <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400">
                                     <ArrowDownFromLine size={20} />
@@ -559,7 +559,7 @@ const Financial: React.FC = () => {
                                     toast('Receita em Breve!', { icon: '💰' });
                                     setIsActionSheetOpen(false);
                                 }}
-                                className="w-full bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center gap-4 active:bg-slate-50 dark:active:bg-slate-700"
+                                className="w-full bg-card p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center gap-4 active:bg-slate-50 dark:active:bg-slate-800"
                             >
                                 <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 dark:text-green-400">
                                     <ArrowUpFromLine size={20} />
@@ -575,7 +575,7 @@ const Financial: React.FC = () => {
                                     navigate('/financial/closing');
                                     setIsActionSheetOpen(false);
                                 }}
-                                className="w-full bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center gap-4 active:bg-slate-50 dark:active:bg-slate-700"
+                                className="w-full bg-card p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center gap-4 active:bg-slate-50 dark:active:bg-slate-800"
                             >
                                 <div className="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-purple-600 dark:text-purple-400">
                                     <Calculator size={20} />

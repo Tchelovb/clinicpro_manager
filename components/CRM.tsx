@@ -62,7 +62,7 @@ const CRM: React.FC = () => {
         return (
             <div
                 onClick={() => handleLeadClick(lead.id)}
-                className="bg-white dark:bg-gray-800 p-4 md:p-3 rounded-xl md:rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-600 transition-all cursor-pointer mb-3 group relative w-full"
+                className="bg-card p-4 md:p-3 rounded-xl md:rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-600 transition-all cursor-pointer mb-3 group relative w-full"
             >
                 <div className="flex justify-between items-start mb-2">
                     <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold uppercase tracking-wide
@@ -86,9 +86,9 @@ const CRM: React.FC = () => {
                     </div>
                 )}
 
-                <h4 className="font-semibold text-gray-800 dark:text-gray-200 text-sm mb-1 line-clamp-1">{lead.name}</h4>
+                <h4 className="font-semibold text-slate-800 dark:text-slate-200 text-sm mb-1 line-clamp-1">{lead.name}</h4>
                 {lead.value && (
-                    <p className="text-gray-900 dark:text-white font-bold text-xs mb-2">R$ {lead.value.toLocaleString('pt-BR')}</p>
+                    <p className="text-slate-900 dark:text-white font-bold text-xs mb-2">R$ {lead.value.toLocaleString('pt-BR')}</p>
                 )}
 
                 <div className="flex items-center gap-3 text-gray-400 dark:text-gray-500 text-xs mt-3 pt-3 border-t border-gray-50 dark:border-gray-700">
@@ -106,18 +106,18 @@ const CRM: React.FC = () => {
             {/* --- DASHBOARD HEADER --- */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 flex-shrink-0">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Central de Conversão</h1>
-                    <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400 mt-1">
-                        <span><strong className="text-gray-900 dark:text-gray-200">{leads.length}</strong> Oportunidades</span>
+                    <h1 className="text-2xl font-bold text-slate-800 dark:text-white">Central de Conversão</h1>
+                    <div className="flex items-center gap-4 text-sm text-slate-500 dark:text-slate-400 mt-1">
+                        <span><strong className="text-slate-900 dark:text-slate-200">{leads.length}</strong> Oportunidades</span>
                         <span><strong className="text-green-600 dark:text-green-400">{conversionRate.toFixed(1)}%</strong> Conversão</span>
                         <span><strong className="text-blue-600 dark:text-blue-400">R$ {totalValue.toLocaleString('pt-BR')}</strong> em Pipeline</span>
                     </div>
                 </div>
                 <div className="flex items-center gap-2 w-full md:w-auto">
-                    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-1 flex">
-                        <button onClick={() => setActiveView('kanban')} className={`p-2 rounded ${activeView === 'kanban' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'}`} title="Kanban"><LayoutGrid size={18} /></button>
-                        <button onClick={() => setActiveView('list')} className={`p-2 rounded ${activeView === 'list' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'}`} title="Lista"><List size={18} /></button>
-                        <button onClick={() => setActiveView('budgets')} className={`p-2 rounded ${activeView === 'budgets' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'}`} title="Recuperação de Orçamentos"><FileText size={18} /></button>
+                    <div className="bg-card border border-slate-200 dark:border-slate-700 rounded-lg p-1 flex">
+                        <button onClick={() => setActiveView('kanban')} className={`p-2 rounded ${activeView === 'kanban' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'}`} title="Kanban"><LayoutGrid size={18} /></button>
+                        <button onClick={() => setActiveView('list')} className={`p-2 rounded ${activeView === 'list' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'}`} title="Lista"><List size={18} /></button>
+                        <button onClick={() => setActiveView('budgets')} className={`p-2 rounded ${activeView === 'budgets' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'}`} title="Recuperação de Orçamentos"><FileText size={18} /></button>
                     </div>
 
                     {/* Desktop Button */}
@@ -139,10 +139,10 @@ const CRM: React.FC = () => {
                             const columnLeads = leads.filter(l => l.status === column.id);
 
                             return (
-                                <div key={column.id} className="w-full md:w-72 flex flex-col min-h-[500px] md:min-h-0 md:h-full rounded-xl bg-gray-50/50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 md:max-h-full shrink-0">
-                                    <div className={`p-3 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-white dark:bg-gray-800 rounded-t-xl border-t-4 ${column.color} flex-shrink-0 sticky top-0 z-10 md:static`}>
-                                        <h3 className="font-bold text-gray-700 dark:text-gray-200 text-sm">{column.title}</h3>
-                                        <span className="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[10px] px-2 py-0.5 rounded-full font-bold">
+                                <div key={column.id} className="w-full md:w-72 flex flex-col min-h-[500px] md:min-h-0 md:h-full rounded-xl bg-slate-50/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 md:max-h-full shrink-0">
+                                    <div className={`p-3 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-card rounded-t-xl border-t-4 ${column.color} flex-shrink-0 sticky top-0 z-10 md:static`}>
+                                        <h3 className="font-bold text-slate-700 dark:text-slate-200 text-sm">{column.title}</h3>
+                                        <span className="bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[10px] px-2 py-0.5 rounded-full font-bold">
                                             {columnLeads.length}
                                         </span>
                                     </div>
@@ -177,8 +177,8 @@ const CRM: React.FC = () => {
                             >
                                 <div className="flex justify-between items-start mb-2">
                                     <div>
-                                        <h4 className="font-bold text-gray-900 dark:text-white">{lead.name}</h4>
-                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-1">
+                                        <h4 className="font-bold text-slate-900 dark:text-white">{lead.name}</h4>
+                                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1">
                                             {lead.source} • <Clock size={10} /> {new Date(lead.lastInteraction).toLocaleDateString()}
                                         </p>
                                     </div>
@@ -189,7 +189,7 @@ const CRM: React.FC = () => {
                                         {lead.status}
                                     </span>
                                     {lead.value && (
-                                        <span className="font-bold text-gray-900 dark:text-white">R$ {lead.value.toLocaleString('pt-BR')}</span>
+                                        <span className="font-bold text-slate-900 dark:text-white">R$ {lead.value.toLocaleString('pt-BR')}</span>
                                     )}
                                 </div>
                             </div>
@@ -209,11 +209,11 @@ const CRM: React.FC = () => {
                                         <th className="px-6 py-3 font-medium text-right">Ações</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                                <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                                     {leads.map(lead => (
-                                        <tr key={lead.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors" onClick={() => handleLeadClick(lead.id)}>
-                                            <td className="px-6 py-3 font-medium text-gray-900 dark:text-white">{lead.name}</td>
-                                            <td className="px-6 py-3 text-gray-500 dark:text-gray-400">{lead.source}</td>
+                                        <tr key={lead.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer transition-colors" onClick={() => handleLeadClick(lead.id)}>
+                                            <td className="px-6 py-3 font-medium text-slate-900 dark:text-white">{lead.name}</td>
+                                            <td className="px-6 py-3 text-slate-500 dark:text-slate-400">{lead.source}</td>
                                             <td className="px-6 py-3">
                                                 <span className="bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-full text-xs font-bold border border-blue-100 dark:border-blue-800">
                                                     {lead.status}
@@ -245,13 +245,13 @@ const CRM: React.FC = () => {
                     {/* Mobile Card List */}
                     <div className="md:hidden grid grid-cols-1 gap-4">
                         {unapprovedBudgets.map((budget, idx) => (
-                            <div key={`${budget.id}-${idx}`} className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm relative">
+                            <div key={`${budget.id}-${idx}`} className="bg-card p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm relative">
                                 <div className="flex justify-between items-start mb-2">
                                     <div>
-                                        <h4 className="font-bold text-gray-900 dark:text-white">{budget.patientName}</h4>
-                                        <p className="text-xs text-gray-500 dark:text-gray-400">{budget.patientPhone}</p>
+                                        <h4 className="font-bold text-slate-900 dark:text-white">{budget.patientName}</h4>
+                                        <p className="text-xs text-slate-500 dark:text-slate-400">{budget.patientPhone}</p>
                                     </div>
-                                    <span className="font-bold text-gray-900 dark:text-white">R$ {budget.totalValue.toLocaleString('pt-BR')}</span>
+                                    <span className="font-bold text-slate-900 dark:text-white">R$ {budget.totalValue.toLocaleString('pt-BR')}</span>
                                 </div>
 
                                 <div className="flex items-center gap-2 mb-4">
@@ -301,21 +301,21 @@ const CRM: React.FC = () => {
                                         <th className="px-6 py-3 font-medium text-right">Ação</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                                <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                                     {unapprovedBudgets.map((budget, idx) => (
-                                        <tr key={`${budget.id}-${idx}`} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                        <tr key={`${budget.id}-${idx}`} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
                                             <td className="px-6 py-3">
-                                                <p className="font-bold text-gray-900 dark:text-white">{budget.patientName}</p>
-                                                <p className="text-xs text-gray-500 dark:text-gray-400">{budget.patientPhone}</p>
+                                                <p className="font-bold text-slate-900 dark:text-white">{budget.patientName}</p>
+                                                <p className="text-xs text-slate-500 dark:text-slate-400">{budget.patientPhone}</p>
                                             </td>
-                                            <td className="px-6 py-3 text-gray-500 dark:text-gray-400">{budget.createdAt}</td>
+                                            <td className="px-6 py-3 text-slate-500 dark:text-slate-400">{budget.createdAt}</td>
                                             <td className="px-6 py-3">
                                                 <span className={`px-2 py-1 rounded-full text-xs font-bold border 
                                             ${budget.status === 'Em Negociação' ? 'bg-orange-50 text-orange-700 border-orange-100' : 'bg-yellow-50 text-yellow-700 border-yellow-100'} dark:bg-opacity-20`}>
                                                     {budget.status === 'Em Análise' ? 'Aguardando Aprovação' : budget.status}
                                                 </span>
                                             </td>
-                                            <td className="px-6 py-3 text-right font-bold text-gray-900 dark:text-white">
+                                            <td className="px-6 py-3 text-right font-bold text-slate-900 dark:text-white">
                                                 R$ {budget.totalValue.toLocaleString('pt-BR')}
                                             </td>
                                             <td className="px-6 py-3 text-right">
@@ -354,7 +354,7 @@ const CRM: React.FC = () => {
             )}
 
             {/* MOBILE FLOATING ACTION BUTTON */}
-            <div className="md:hidden fixed bottom-0 left-0 right-0 p-4 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 z-50">
+            <div className="md:hidden fixed bottom-16 left-0 right-0 p-4 bg-background/80 backdrop-blur-sm border-t border-slate-200 dark:border-slate-700 z-40">
                 <button
                     onClick={() => navigate('/crm/new')}
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl flex items-center justify-center gap-2 font-bold shadow-lg"

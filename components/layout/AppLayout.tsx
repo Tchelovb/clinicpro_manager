@@ -391,6 +391,18 @@ export const AppLayout: React.FC<{ children?: React.ReactNode }> = ({ children }
                         </div>
 
                         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+                            {/* Pesquisa Global - Acesso Rápido */}
+                            <button
+                                onClick={() => {
+                                    navigate('/');
+                                    setIsMobileMenuOpen(false);
+                                }}
+                                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 border-b border-slate-100 dark:border-slate-800/50 mb-2 rounded-b-none"
+                            >
+                                <Search size={20} className="text-violet-600 dark:text-violet-400" />
+                                <span className="font-bold text-base">Pesquisa Global</span>
+                            </button>
+
                             {[...allowedMainItems, ...allowedSecondaryItems].map((item) => {
                                 const active = isActive(item.path);
                                 const Icon = item.icon;
