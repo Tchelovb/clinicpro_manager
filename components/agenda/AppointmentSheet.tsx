@@ -56,7 +56,8 @@ export const AppointmentSheet: React.FC<AppointmentSheetProps> = ({
     const [isPinModalOpen, setIsPinModalOpen] = useState(false);
     const [pendingSave, setPendingSave] = useState<(() => Promise<void>) | null>(null);
 
-    // Delete Confirmation Dialog State
+    // Cancel & Delete Dialog States
+    const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
     // Initialize form or load appointment data
@@ -401,8 +402,7 @@ export const AppointmentSheet: React.FC<AppointmentSheetProps> = ({
         await executeSave();
     };
 
-    const handleDelete = async () => {
-        if (!confirm('Tem certeza que deseja cancelar este agendamento?')) return;
+    const handleCancel = async () => {
         setLoading(true);
         try {
             const { error } = await supabase
@@ -416,6 +416,25 @@ export const AppointmentSheet: React.FC<AppointmentSheetProps> = ({
             onClose();
         } catch (err) {
             toast.error('Erro ao cancelar');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDelete = async () => {
+        setLoading(true);
+        try {
+            const { error } = await supabase
+                .from('appointments')
+                .delete()
+                .eq('id', appointmentId);
+
+            if (error) throw error;
+            toast.success('Agendamento excluído');
+            onSuccess();
+            onClose();
+        } catch (err) {
+            toast.error('Erro ao excluir');
         } finally {
             setLoading(false);
         }
@@ -749,15 +768,25 @@ export const AppointmentSheet: React.FC<AppointmentSheetProps> = ({
                 </div >
 
                 {/* Footer Actions - Sticky iOS Style */}
-                <div className="sticky bottom-0 left-0 right-0 p-4 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 flex gap-3">
+                <div className="sticky bottom-0 left-0 right-0 p-4 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 flex gap-2">
                     {appointmentId && (
-                        <button
-                            onClick={() => setIsDeleteDialogOpen(true)}
-                            disabled={loading}
-                            className="flex-[2] py-3 px-4 border-2 border-red-500 text-red-600 dark:text-red-400 rounded-xl font-semibold hover:bg-red-50 dark:hover:bg-red-900/20 transition-all disabled:opacity-50"
-                        >
-                            Cancelar Agendamento
-                        </button>
+                        <>
+                            <button
+                                onClick={() => setIsDeleteDialogOpen(true)}
+                                disabled={loading}
+                                className="p-3 border-2 border-red-100 dark:border-red-900/30 text-red-500 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 transition-all disabled:opacity-50"
+                                title="Excluir Permanentemente"
+                            >
+                                <Trash2 size={20} />
+                            </button>
+                            <button
+                                onClick={() => setIsCancelDialogOpen(true)}
+                                disabled={loading}
+                                className="flex-[2] py-3 px-4 border-2 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 rounded-xl font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition-all disabled:opacity-50"
+                            >
+                                Cancelar
+                            </button>
+                        </>
                     )}
                     <button
                         onClick={handleSave}
@@ -769,20 +798,61 @@ export const AppointmentSheet: React.FC<AppointmentSheetProps> = ({
                     </button>
                 </div>
 
-                {/* Delete Confirmation Dialog */}
-                {isDeleteDialogOpen && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setIsDeleteDialogOpen(false)}>
+                {/* Cancel Confirmation Dialog */}
+                {isCancelDialogOpen && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setIsCancelDialogOpen(false)}>
                         <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-md mx-4 shadow-2xl" onClick={e => e.stopPropagation()}>
                             <div className="flex items-start gap-4">
-                                <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-full">
-                                    <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400" />
+                                <div className="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-full">
+                                    <AlertTriangle className="w-6 h-6 text-amber-600 dark:text-amber-400" />
                                 </div>
                                 <div className="flex-1">
                                     <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">
-                                        Cancelar este agendamento?
+                                        Cancelar Atendimento?
                                     </h3>
                                     <p className="text-sm text-slate-600 dark:text-slate-400">
-                                        Esta ação não pode ser desfeita e o horário ficará livre na agenda.
+                                        O status será alterado para "Cancelado", mas o histórico permanecerá salvo.
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="flex gap-3 mt-6">
+                                <button
+                                    onClick={() => setIsCancelDialogOpen(false)}
+                                    className="flex-1 py-2.5 px-4 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-xl font-semibold hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
+                                >
+                                    Voltar
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setIsCancelDialogOpen(false);
+                                        handleCancel();
+                                    }}
+                                    className="flex-1 py-2.5 px-4 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold transition-all"
+                                >
+                                    Confirmar Cancelamento
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* HARD DELETE Dialog */}
+                {isDeleteDialogOpen && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setIsDeleteDialogOpen(false)}>
+                        <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-md mx-4 shadow-2xl border-2 border-red-500" onClick={e => e.stopPropagation()}>
+                            <div className="flex items-start gap-4">
+                                <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-full">
+                                    <Trash2 className="w-6 h-6 text-red-600 dark:text-red-400" />
+                                </div>
+                                <div className="flex-1">
+                                    <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">
+                                        Excluir Permanentemente?
+                                    </h3>
+                                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                                        Esta ação irá <b>apagar todos os dados</b> deste agendamento do banco de dados.
+                                    </p>
+                                    <p className="text-xs text-red-500 mt-2 font-bold uppercase">
+                                        Esta ação é irreversível.
                                     </p>
                                 </div>
                             </div>
@@ -791,16 +861,16 @@ export const AppointmentSheet: React.FC<AppointmentSheetProps> = ({
                                     onClick={() => setIsDeleteDialogOpen(false)}
                                     className="flex-1 py-2.5 px-4 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-xl font-semibold hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
                                 >
-                                    Manter Agendamento
+                                    Cancelar
                                 </button>
                                 <button
                                     onClick={() => {
                                         setIsDeleteDialogOpen(false);
                                         handleDelete();
                                     }}
-                                    className="flex-1 py-2.5 px-4 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold transition-all"
+                                    className="flex-1 py-2.5 px-4 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold transition-all shadow-lg shadow-red-500/30"
                                 >
-                                    Confirmar Cancelamento
+                                    SIM, EXCLUIR
                                 </button>
                             </div>
                         </div>
