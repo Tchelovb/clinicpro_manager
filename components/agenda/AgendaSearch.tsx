@@ -123,7 +123,7 @@ export const AgendaSearch: React.FC<AgendaSearchProps> = ({ onSelectDate, onSele
 
             {/* Results Dropdown - Absolute & Floating */}
             {open && (query.length > 1) && (
-                <div className="absolute top-[calc(100%+8px)] left-0 right-0 bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-100 dark:border-slate-800 p-2 max-h-[200px] md:max-h-[350px] overflow-y-auto no-scrollbar z-[100] animate-in fade-in zoom-in-95 duration-200">
+                <div className="absolute top-[calc(100%+8px)] left-0 right-0 bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-100 dark:border-slate-800 p-2 max-h-[180px] md:max-h-[350px] overflow-y-auto no-scrollbar z-[100] animate-in fade-in zoom-in-95 duration-200">
 
                     {loading && (
                         <div className="py-8 text-center text-slate-400 text-sm flex items-center justify-center gap-2">
