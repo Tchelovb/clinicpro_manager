@@ -555,7 +555,7 @@ export const AppointmentSheet: React.FC<AppointmentSheetProps> = ({
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-scroll p-6 space-y-6" style={{ maxHeight: 'calc(100vh - 200px)' }}>
+                <div className="flex-1 overflow-y-auto p-6 space-y-6 scroll-pt-32">
                     {/* Patient Section */}
                     <div className="space-y-3">
                         {!formData.patient_id ? (

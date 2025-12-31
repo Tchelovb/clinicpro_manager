@@ -68,7 +68,7 @@ export const PatientSearch: React.FC<PatientSearchProps> = ({ onSelect, onAddNew
                 <div className="flex items-center px-3 border-b border-slate-100 dark:border-slate-800">
                     <Search className="w-4 h-4 text-slate-400 mr-2" />
                     <input
-                        className="flex-1 py-2.5 bg-transparent text-sm outline-none placeholder:text-slate-400 text-slate-900 dark:text-white"
+                        className="flex-1 py-2.5 bg-transparent text-sm outline-none placeholder:text-slate-400 text-slate-900 dark:text-white scroll-mt-20"
                         placeholder="Buscar ou cadastrar..."
                         value={search}
                         onChange={(e) => {
@@ -85,7 +85,7 @@ export const PatientSearch: React.FC<PatientSearchProps> = ({ onSelect, onAddNew
                 </div>
 
                 {open && search.length >= 2 && (
-                    <div className="max-h-[250px] overflow-y-auto p-1 z-50 absolute w-full bg-white dark:bg-slate-900 border border-t-0 border-slate-200 dark:border-slate-700 rounded-b-lg shadow-xl">
+                    <div className="max-h-[180px] overflow-y-auto p-1 z-[100] absolute w-full bg-white dark:bg-slate-900 border border-t-0 border-slate-200 dark:border-slate-700 rounded-b-lg shadow-xl">
                         {loading ? (
                             <div className="p-3 text-xs text-center text-slate-400">Buscando...</div>
                         ) : (
