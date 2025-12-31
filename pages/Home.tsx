@@ -1,95 +1,82 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { UserPlus, Calendar, DollarSign, TrendingUp } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
-import { Button } from '../components/ui/button';
-import { SearchContent } from '../components/ui/SearchContent';
+import { PageContainer } from '../components/layout/PageContainer';
+import { AppCard } from '../components/ui/AppCard';
+import { TrendingUp, Users, DollarSign, Activity } from 'lucide-react';
 
 export default function Home() {
-    const { profile } = useAuth();
-    const navigate = useNavigate();
-
-    const getGreeting = () => {
-        const hour = new Date().getHours();
-        if (hour < 12) return 'Bom dia';
-        if (hour < 18) return 'Boa tarde';
-        return 'Boa noite';
-    };
-
-    const quickActions = [
-        {
-            label: 'Novo Paciente',
-            icon: UserPlus,
-            color: 'bg-blue-500 hover:bg-blue-600',
-            onClick: () => navigate('/patients'),
-        },
-        {
-            label: 'Agenda',
-            icon: Calendar,
-            color: 'bg-purple-500 hover:bg-purple-600',
-            onClick: () => navigate('/agenda'),
-        },
-        {
-            label: 'Financeiro',
-            icon: DollarSign,
-            color: 'bg-emerald-500 hover:bg-emerald-600',
-            onClick: () => navigate('/financial'),
-        },
-        {
-            label: 'Dashboard',
-            icon: TrendingUp,
-            color: 'bg-violet-500 hover:bg-violet-600',
-            onClick: () => navigate('/dashboard'),
-        },
-    ];
-
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
-            <div className="w-full max-w-2xl px-4 md:px-6 py-12 text-center space-y-8">
-                {/* Logo / Clinic Name */}
-                <div className="space-y-2 animate-in fade-in duration-500">
-                    <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-violet-600 to-purple-600 dark:from-violet-500 dark:to-purple-500 rounded-2xl shadow-lg mb-4">
-                        <span className="text-3xl font-black text-white">CP</span>
+        <PageContainer
+            title="Visão Geral"
+            subtitle="Bem-vindo de volta, Dr. Marcelo"
+            action={
+                <button className="bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-bold shadow-lg shadow-primary/20 hover:bg-primary-dark transition-colors">
+                    + Acesso Rápido
+                </button>
+            }
+        >
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+
+                {/* Card 1: Faturamento (Primary) */}
+                <AppCard className="relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-4 opacity-10">
+                        <DollarSign size={64} />
                     </div>
-                    <h1 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white">
-                        {profile?.clinics?.name || 'ClinicPro'}
-                    </h1>
-                </div>
+                    <h3 className="text-muted-foreground text-xs font-bold uppercase tracking-wider">Faturamento do Dia</h3>
+                    <p className="text-3xl font-bold text-slate-800 mt-2">R$ 15.400</p>
+                    <span className="text-xs text-success font-medium flex items-center mt-2">
+                        <TrendingUp size={12} className="mr-1" /> +12% vs ontem
+                    </span>
+                </AppCard>
 
-                {/* Greeting */}
-                <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 delay-150">
-                    <p className="text-xl md:text-2xl text-slate-600 dark:text-slate-400">
-                        {getGreeting()}, <span className="font-semibold text-slate-900 dark:text-white">{profile?.name?.split(' ')[0] || 'Usuário'}</span> 👋
-                    </p>
-                </div>
-
-                {/* INLINE SEARCH - Google Style */}
-                <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
-                    <div className="w-full max-w-xl mx-auto">
-                        <SearchContent className="w-full shadow-xl" />
-                        <p className="text-xs text-center text-slate-400 dark:text-slate-600 mt-2">
-                            Dica: Pressione <kbd className="px-1.5 py-0.5 bg-slate-200 dark:bg-slate-800 rounded text-slate-600 dark:text-slate-400 font-mono text-[10px]">Ctrl</kbd> + <kbd className="px-1.5 py-0.5 bg-slate-200 dark:bg-slate-800 rounded text-slate-600 dark:text-slate-400 font-mono text-[10px]">K</kbd> em outras telas
-                        </p>
+                {/* Card 2: Meta (Glassmorphism) */}
+                <AppCard variant="glass" className="bg-gradient-to-br from-primary/10 to-white border-primary/20">
+                    <h3 className="text-primary text-xs font-bold uppercase tracking-wider">Meta Mensal</h3>
+                    <div className="flex items-end gap-2 mt-2">
+                        <p className="text-3xl font-bold text-primary">82%</p>
+                        <p className="text-sm text-primary/60 mb-1">atingida</p>
                     </div>
-                </div>
+                    {/* Barra de progresso */}
+                    <div className="w-full h-1.5 bg-primary/20 rounded-full mt-3">
+                        <div className="h-1.5 bg-primary rounded-full w-[82%] transition-all duration-500"></div>
+                    </div>
+                </AppCard>
 
-                {/* Quick Actions */}
-                <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 delay-500">
-                    <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-4">Ações Rápidas</p>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                        {quickActions.map((action, index) => (
-                            <Button
-                                key={index}
-                                onClick={action.onClick}
-                                className={`${action.color} text-white h-auto py-4 flex-col gap-2 shadow-md hover:shadow-lg transition-all`}
-                            >
-                                <action.icon className="h-6 w-6" />
-                                <span className="text-sm font-medium">{action.label}</span>
-                            </Button>
+                {/* Card 3: Novos Pacientes */}
+                <AppCard>
+                    <h3 className="text-muted-foreground text-xs font-bold uppercase tracking-wider">Novos Pacientes</h3>
+                    <p className="text-3xl font-bold text-slate-800 mt-2">08</p>
+                    <div className="flex -space-x-2 mt-3">
+                        {[1, 2, 3, 4].map(i => (
+                            <div key={i} className="w-6 h-6 rounded-full bg-slate-200 border-2 border-white"></div>
                         ))}
+                        <div className="w-6 h-6 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center text-[8px] font-bold text-slate-500">+4</div>
                     </div>
-                </div>
+                </AppCard>
+
+                {/* Card 4: Atividade */}
+                <AppCard className="relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-4 opacity-10">
+                        <Activity size={64} />
+                    </div>
+                    <h3 className="text-muted-foreground text-xs font-bold uppercase tracking-wider">Atendimentos Hoje</h3>
+                    <p className="text-3xl font-bold text-slate-800 mt-2">12</p>
+                    <span className="text-xs text-warning font-medium flex items-center mt-2">
+                        3 aguardando
+                    </span>
+                </AppCard>
+
             </div>
-        </div>
+
+            {/* Seção Principal */}
+            <h2 className="text-lg font-bold text-slate-800 mb-4">Agenda Hoje</h2>
+            <AppCard padding="none">
+                <div className="p-12 text-center text-slate-400">
+                    <Activity size={48} className="mx-auto mb-4 opacity-20" />
+                    <p className="text-sm">Área de conteúdo da agenda...</p>
+                    <p className="text-xs mt-2 text-slate-300">Integração com módulo de Agenda em breve</p>
+                </div>
+            </AppCard>
+
+        </PageContainer>
     );
 }

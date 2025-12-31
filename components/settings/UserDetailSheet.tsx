@@ -696,7 +696,7 @@ const UserDetailSheet: React.FC<UserDetailSheetProps> = ({ open, onOpenChange, u
         <Sheet open={open} onOpenChange={onOpenChange}>
             <SheetContent
                 side="right"
-                className="w-full sm:max-w-2xl p-0 gap-0 border-l border-slate-200 shadow-2xl bg-white flex flex-col h-full"
+                className="w-full sm:max-w-2xl p-0 gap-0 border-l border-slate-200 shadow-2xl bg-white flex flex-col h-[100dvh]"
             >
                 {/* FIXED HEADER */}
                 <div className="flex flex-col bg-slate-50 border-b border-slate-200 flex-shrink-0">

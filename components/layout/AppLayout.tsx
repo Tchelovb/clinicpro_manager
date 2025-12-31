@@ -22,7 +22,11 @@ import {
     UserPlus,
     Target,
     Search,
-    MoreHorizontal
+    MoreHorizontal,
+    ShoppingCart,
+    FileText,
+    CreditCard,
+    Landmark
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -82,11 +86,26 @@ const MAIN_NAV_ITEMS: MenuItem[] = [
         color: 'text-violet-600'
     },
     {
+        path: '/sales',
+        label: 'Terminal de Vendas',
+        icon: CreditCard,
+        roles: ['MASTER', 'ADMIN', 'RECEPTIONIST'],
+        color: 'text-blue-600',
+        highlight: true
+    },
+    {
+        path: '/budgets',
+        label: 'Orçamentos',
+        icon: FileText,
+        roles: ['MASTER', 'ADMIN', 'PROFESSIONAL', 'CRC'],
+        color: 'text-blue-600'
+    },
+    {
         path: '/financial',
-        label: 'Financeiro',
-        icon: DollarSign,
+        label: 'Financeiro & Caixa',
+        icon: Landmark,
         roles: ['MASTER', 'ADMIN'],
-        color: 'text-violet-600'
+        color: 'text-amber-600'
     },
 ];
 

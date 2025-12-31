@@ -200,6 +200,8 @@ export const useBudgetOperations = () => {
                     procedure_name: item.procedure,
                     // procedure_id: we need to find this if possible, but form sends name
                     region: item.region,
+                    tooth_number: item.tooth_number, // Add missing field
+                    face: item.face,                 // Add missing field
                     quantity: item.quantity,
                     unit_value: item.unitValue,
                     total_value: item.total
@@ -300,6 +302,8 @@ export const useBudgetOperations = () => {
                     budget_id: budgetId,
                     procedure_name: item.procedure,
                     region: item.region,
+                    tooth_number: item.tooth_number, // Add missing field
+                    face: item.face,                 // Add missing field
                     quantity: item.quantity,
                     unit_value: item.unitValue,
                     total_value: item.total

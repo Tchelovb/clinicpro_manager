@@ -22,7 +22,11 @@ import {
     Building2,
     Plus,
     Gamepad2,
-    Rocket
+    Rocket,
+    CreditCard,
+    Landmark,
+    Trello,
+    ShoppingBag
 } from "lucide-react";
 import { CreateClinicModal } from "./CreateClinicModal";
 import { ClinicSwitcher } from "./ClinicSwitcher";
@@ -56,53 +60,97 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar }) => {
     };
 
     // =====================================================
-    // MENU OPERACIONAL (Admin, Professional, CRC, Receptionist)
+    // MENU OPERACIONAL - ESTRUTURA CATEGORIZADA
+    // Separação Clara: ATAQUE vs DEFESA
     // =====================================================
-    // OPERATIONAL SECTION
-    const OPERATIONAL_ITEMS = [
-        { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-        // INTELLIGENCE SECTION (PRIORITY)
+    const OPERATIONAL_SECTIONS = [
+        // --- BLOCO 1: COMERCIAL / VENDAS (Ataque - Fazer Dinheiro) ---
         {
-            path: "/chat-bos",
-            label: "ChatBOS",
-            icon: Sparkles,
-            highlight: true
+            category: "Comercial",
+            items: [
+                { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+                { path: "/agenda", label: "Agenda", icon: Calendar },
+                {
+                    path: "/pipeline-ghl",
+                    label: "Pipeline CRM",
+                    icon: Trello,
+                    highlight: true
+                },
+                { path: "/crm", label: "Leads", icon: Megaphone },
+            ]
         },
-        // TEAM MANAGEMENT (ADMIN ONLY)
-        ...(profile?.role === 'ADMIN' ? [{
-            path: "/dashboard/team-command",
-            label: "Gestão de Equipe",
-            icon: UserCog,
-            highlight: true,
-            adminOnly: true
-        }] : []),
-        // OPERATIONAL SECTION
-        { path: "/crm", label: "Comercial", icon: TrendingUp },
+
+        // --- BLOCO 2: VENDAS (Terminal de Pagamento) ---
         {
-            path: "/pipeline-ghl",
-            label: "Pipeline GHL",
-            icon: Megaphone,
-            highlight: true
+            category: "Vendas",
+            items: [
+                {
+                    path: "/sales",
+                    label: "Terminal de Vendas",
+                    icon: CreditCard,
+                    highlight: true,
+                    desc: "Checkout e recebimentos"
+                },
+                { path: "/budgets", label: "Orçamentos", icon: FileText },
+            ]
         },
-        { path: "/patients", label: "Pacientes", icon: Users },
-        { path: "/agenda", label: "Agenda", icon: Calendar },
-        { path: "/financial", label: "Financeiro", icon: DollarSign },
-        // FINTECH MODULES
-        { path: "/receivables", label: "Contas a Receber", icon: BarChart3 },
-        ...(profile?.role === 'ADMIN' || profile?.role === 'MANAGER' ? [{
-            path: "/professional-financial",
-            label: "Extrato Profissional",
-            icon: UserCog
-        }] : []),
-        ...(profile?.role === 'ADMIN' || profile?.role === 'MANAGER' ? [{
-            path: "/cfo",
-            label: "CFO Dashboard",
-            icon: TrendingUp,
-            highlight: true
-        }] : []),
-        { path: "/documents", label: "Central Docs", icon: FileText },
-        { path: "/reports", label: "Relatórios", icon: PieChart },
-        { path: "/settings", label: "Configurações", icon: Settings },
+
+        // --- BLOCO 3: CLÍNICO (Operação Técnica) ---
+        {
+            category: "Clínico",
+            items: [
+                { path: "/patients", label: "Pacientes", icon: Users },
+                { path: "/documents", label: "Central Docs", icon: FileText },
+            ]
+        },
+
+        // --- BLOCO 4: GESTÃO / FINANCEIRO (Defesa - Proteger Dinheiro) ---
+        {
+            category: "Gestão",
+            items: [
+                {
+                    path: "/financial",
+                    label: "Financeiro & Caixa",
+                    icon: Landmark,
+                    desc: "Fluxo de caixa e DRE"
+                },
+                { path: "/receivables", label: "Contas a Receber", icon: BarChart3 },
+                ...(profile?.role === 'ADMIN' || profile?.role === 'MANAGER' ? [{
+                    path: "/professional-financial",
+                    label: "Extrato Profissional",
+                    icon: UserCog
+                }] : []),
+                ...(profile?.role === 'ADMIN' || profile?.role === 'MANAGER' ? [{
+                    path: "/cfo",
+                    label: "CFO Dashboard",
+                    icon: TrendingUp,
+                    highlight: true
+                }] : []),
+                { path: "/reports", label: "Relatórios", icon: PieChart },
+                { path: "/settings", label: "Configurações", icon: Settings },
+            ]
+        },
+
+        // --- BLOCO 5: INTELIGÊNCIA (IA) ---
+        {
+            category: "Inteligência",
+            items: [
+                {
+                    path: "/chat-bos",
+                    label: "ChatBOS",
+                    icon: Sparkles,
+                    highlight: true,
+                    desc: "Assistente IA"
+                },
+                ...(profile?.role === 'ADMIN' ? [{
+                    path: "/dashboard/team-command",
+                    label: "Gestão de Equipe",
+                    icon: UserCog,
+                    highlight: true,
+                    adminOnly: true
+                }] : []),
+            ]
+        }
     ];
 
     // =====================================================
@@ -138,7 +186,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar }) => {
     ];
 
     // Selecionar menu baseado no role
-    const navItems = profile?.role === 'MASTER' ? MASTER_ITEMS : OPERATIONAL_ITEMS;
+    const menuSections = profile?.role === 'MASTER' ? [{ category: "Master", items: MASTER_ITEMS }] : OPERATIONAL_SECTIONS;
 
     return (
         <div className="flex flex-col h-full bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 transition-all duration-300">
@@ -158,48 +206,60 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar }) => {
                 </button>
             </div>
 
-            {/* Navigation Items */}
-            <nav className="flex-1 py-4 overflow-y-auto overflow-x-hidden space-y-1 px-2">
-                {navItems.map((item) => (
-                    <NavLink
-                        key={item.path}
-                        to={item.path}
-                        className={({ isActive }) => {
-                            const baseClasses = "flex items-center px-3 py-2.5 rounded-lg transition-all duration-200 group relative";
-
-                            // Intelligence items get special styling
-                            if (item.highlight) {
-                                return `${baseClasses} ${isActive
-                                    ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold shadow-lg"
-                                    : "bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 text-purple-700 dark:text-purple-300 hover:from-purple-100 hover:to-indigo-100 dark:hover:from-purple-900/30 dark:hover:to-indigo-900/30 font-semibold border border-purple-200 dark:border-purple-800"
-                                    }`;
-                            }
-
-                            // Regular items
-                            return `${baseClasses} ${isActive
-                                ? "bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 font-medium"
-                                : "hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white"
-                                }`;
-                        }}
-                    >
-                        <item.icon
-                            size={20}
-                            className={`shrink-0 transition-colors ${isCollapsed ? "mx-auto" : "mr-3"
-                                } ${item.highlight ? "animate-pulse" : ""}`}
-                        />
-                        {!isCollapsed && (
-                            <span className="truncate animate-in fade-in duration-200">
-                                {item.label}
-                            </span>
+            {/* Navigation Items - Categorized */}
+            <nav className="flex-1 py-4 overflow-y-auto overflow-x-hidden space-y-4 px-2">
+                {menuSections.map((section, sectionIdx) => (
+                    <div key={sectionIdx} className="space-y-1">
+                        {/* Category Header */}
+                        {!isCollapsed && section.category && (
+                            <p className="px-3 text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                                {section.category}
+                            </p>
                         )}
 
-                        {/* Tooltip for collapsed state */}
-                        {isCollapsed && (
-                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-opacity">
-                                {item.label}
-                            </div>
-                        )}
-                    </NavLink>
+                        {/* Category Items */}
+                        {section.items.map((item) => (
+                            <NavLink
+                                key={item.path}
+                                to={item.path}
+                                className={({ isActive }) => {
+                                    const baseClasses = "flex items-center px-3 py-2.5 rounded-lg transition-all duration-200 group relative";
+
+                                    // Highlight items get special styling
+                                    if (item.highlight) {
+                                        return `${baseClasses} ${isActive
+                                            ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold shadow-lg"
+                                            : "bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 text-purple-700 dark:text-purple-300 hover:from-purple-100 hover:to-indigo-100 dark:hover:from-purple-900/30 dark:hover:to-indigo-900/30 font-semibold border border-purple-200 dark:border-purple-800"
+                                            }`;
+                                    }
+
+                                    // Regular items
+                                    return `${baseClasses} ${isActive
+                                        ? "bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 font-medium"
+                                        : "hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white"
+                                        }`;
+                                }}
+                            >
+                                <item.icon
+                                    size={20}
+                                    className={`shrink-0 transition-colors ${isCollapsed ? "mx-auto" : "mr-3"
+                                        } ${item.highlight ? "animate-pulse" : ""}`}
+                                />
+                                {!isCollapsed && (
+                                    <span className="truncate animate-in fade-in duration-200">
+                                        {item.label}
+                                    </span>
+                                )}
+
+                                {/* Tooltip for collapsed state */}
+                                {isCollapsed && (
+                                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-opacity">
+                                        {item.label}
+                                    </div>
+                                )}
+                            </NavLink>
+                        ))}
+                    </div>
                 ))}
             </nav>
 

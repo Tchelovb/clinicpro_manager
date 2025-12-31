@@ -21,6 +21,9 @@ import {
 } from "lucide-react";
 import SecurityPinModal from "./SecurityPinModal";
 import toast from "react-hot-toast";
+import InputMask from "react-input-mask";
+import { format, parse, isValid } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 interface PatientFormProps {
   onSuccess?: (newId: string) => void;
@@ -244,7 +247,7 @@ const PatientForm: React.FC<PatientFormProps> = ({
   };
 
   // Estilos profissionais
-  const inputClass = "w-full bg-card text-foreground border border-slate-200 dark:border-slate-800 rounded-md px-3 py-2 text-base focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all";
+  const inputClass = "w-full bg-card text-foreground border border-slate-200 dark:border-slate-800 rounded-md px-3 py-2 text-base md:text-sm focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all";
   const labelClass = "block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wide";
   const valueClass = "text-base font-medium text-foreground";
   const sectionClass = "bg-card rounded-lg border border-slate-200 dark:border-slate-800 p-6 shadow-sm";
@@ -294,46 +297,101 @@ const PatientForm: React.FC<PatientFormProps> = ({
   }
 
   // Componente auxiliar para renderizar campo
-  const Field = ({ label, value, name, type = "text", options, required = false }: any) => (
-    <div>
-      <label className={labelClass}>
-        {label} {required && <span className="text-red-500">*</span>}
-      </label>
-      {isEditing ? (
-        options ? (
-          <select
-            name={name}
-            value={value || ""}
-            className={inputClass}
-            onChange={handleChange}
-          >
-            {options.map((opt: any) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
-        ) : type === "textarea" ? (
-          <textarea
-            name={name}
-            value={value || ""}
-            className={`${inputClass} resize-none`}
-            rows={3}
-            onChange={handleChange}
-          />
+  const Field = ({ label, value, name, type = "text", options, required = false }: any) => {
+    // Lógica para Data com Máscara
+    if (name === 'birth_date' && isEditing) {
+      // Converte YYYY-MM-DD para DD/MM/YYYY para exibição
+      const displayValue = value ? format(parse(value, 'yyyy-MM-dd', new Date()), 'dd/MM/yyyy') : '';
+
+      const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value;
+        // Tenta converter DD/MM/YYYY de volta para YYYY-MM-DD
+        if (!val.includes('_') && val.length === 10) {
+          try {
+            const parsedDate = parse(val, 'dd/MM/yyyy', new Date());
+            if (isValid(parsedDate)) {
+              const isoDate = format(parsedDate, 'yyyy-MM-dd');
+              setFormData(prev => ({ ...prev, [name]: isoDate }));
+              return;
+            }
+          } catch (err) {
+            // Data inválida
+          }
+        }
+        // Se apagou tudo, limpa
+        if (val === '') {
+          setFormData(prev => ({ ...prev, [name]: '' }));
+        }
+      };
+
+      return (
+        <div>
+          <label className={labelClass}>
+            {label} {required && <span className="text-red-500">*</span>}
+          </label>
+          <div className="relative">
+            <InputMask
+              mask="99/99/9999"
+              value={displayValue}
+              onChange={handleDateChange}
+              className={inputClass}
+              placeholder="DD/MM/AAAA"
+            />
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+              <span className="mr-1">📅</span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div>
+        <label className={labelClass}>
+          {label} {required && <span className="text-red-500">*</span>}
+        </label>
+        {isEditing ? (
+          options ? (
+            <select
+              name={name}
+              value={value || ""}
+              className={inputClass}
+              onChange={handleChange}
+            >
+              {options.map((opt: any) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          ) : type === "textarea" ? (
+            <textarea
+              name={name}
+              value={value || ""}
+              className={`${inputClass} resize-none`}
+              rows={3}
+              onChange={handleChange}
+            />
+          ) : (
+            <input
+              name={name}
+              value={value || ""}
+              type={type}
+              className={inputClass}
+              onChange={handleChange}
+              required={required}
+              // Impede zoom em inputs normais caso não pego pela classe
+              style={{ fontSize: '16px' }}
+            />
+          )
         ) : (
-          <input
-            name={name}
-            value={value || ""}
-            type={type}
-            className={inputClass}
-            onChange={handleChange}
-            required={required}
-          />
-        )
-      ) : (
-        <p className={valueClass}>{value || 'Não informado'}</p>
-      )}
-    </div>
-  );
+          <p className={valueClass}>
+            {name === 'birth_date' && value
+              ? format(parse(value, 'yyyy-MM-dd', new Date()), 'dd/MM/yyyy')
+              : (value || 'Não informado')}
+          </p>
+        )}
+      </div>
+    )
+  };
 
   return (
     <div className="flex flex-col h-[100dvh] max-w-6xl mx-auto">

@@ -30,9 +30,10 @@ import Dashboard from "./pages/Dashboard";
 import Home from "./pages/Home";
 import Agenda from "./pages/Agenda";
 import AttendanceQueue from "./pages/AttendanceQueue";
-import PatientsList from "./pages/PatientsList";
+import { PatientsList } from "./pages/PatientsList";
 import LeadsList from "./pages/LeadsList";
 // import PatientDetail from "./pages/PatientDetail";
+import { PatientProfilePage } from "./pages/PatientProfilePage"; // New Immersive Page
 import PipelinePage from "./pages/Pipeline";
 import Financial from "./pages/Financial";
 import BudgetDetail from "./pages/BudgetDetail"; // New Budget Negotiator
@@ -72,6 +73,18 @@ import ClinicHealthDetails from "./components/ClinicHealthDetails";
 import Receivables from "./pages/Receivables";
 import ProfessionalFinancial from "./pages/ProfessionalFinancial";
 import CFO from "./pages/CFO";
+import { SalesTerminalPage } from "./pages/sales/SalesTerminalPage";
+import { SalesCheckoutPage } from "./pages/sales/SalesCheckoutPage";
+import { SalesReceiptPage } from "./pages/sales/SalesReceiptPage";
+import { BudgetStudioPage } from "./pages/clinical/BudgetStudioPage";
+import { BudgetPipelinePage } from "./pages/budgets/BudgetPipelinePage";
+
+// ============================================
+// CLINICAL WORKSTATIONS
+// ============================================
+import { GeneralClinicalPage } from "./pages/clinical/GeneralClinicalPage";
+import { HofPage } from "./pages/clinical/HofPage";
+import { OrthoPage } from "./pages/clinical/OrthoPage";
 
 // Wrapper to adapt AppLayout for Router Outlet
 const LayoutWrapper = () => (
@@ -123,7 +136,23 @@ const App: React.FC = () => {
                     <Route path="/patients" element={<PatientsList />} />
                     <Route path="/patients/new" element={<PatientForm />} />
                     {/* <Route path="/patients/:id" element={<PatientDetail />} /> */}
+                    <Route path="/sales" element={<SalesTerminalPage />} />
+                    <Route path="/sales/checkout/:budgetId" element={<SalesCheckoutPage />} />
+                    <Route path="/sales/receipt/:saleId" element={<SalesReceiptPage />} />
+                    <Route path="/patients/:id" element={<PatientProfilePage />} />
                     <Route path="/patients/:id/edit" element={<PatientForm />} />
+
+                    {/* --- CLINICAL WORKSTATIONS --- */}
+                    <Route path="/patients/:id/clinical/general" element={<GeneralClinicalPage />} />
+                    <Route path="/patients/:id/clinical/hof" element={<HofPage />} />
+                    <Route path="/patients/:id/clinical/ortho" element={<OrthoPage />} />
+
+                    {/* --- BUDGET STUDIO --- */}
+                    <Route path="/patients/:id/budget-studio" element={<BudgetStudioPage />} />
+                    <Route path="/patients/:id/budget-studio/:budgetId" element={<BudgetStudioPage />} />
+
+                    {/* --- BUDGET PIPELINE --- */}
+                    <Route path="/budgets" element={<BudgetPipelinePage />} />
 
                     {/* --- PIPELINE (CRM) MODULE --- */}
                     <Route path="/pipeline" element={<PipelinePage />} />

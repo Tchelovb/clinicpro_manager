@@ -14,7 +14,7 @@ import { InstallmentSchedule } from './budget/InstallmentSchedule';
 import {
     ArrowLeft, Plus, Trash2, Save, CheckCircle,
     DollarSign, Briefcase, TrendingUp, Loader, FileText,
-    MessageCircle, AlertCircle, Printer, Share2
+    MessageCircle, AlertCircle, Printer, Share2, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { DocumentGeneratorModal } from './documents/DocumentGeneratorModal';
 import { ProfitBar } from './profit/ProfitBar';
@@ -29,6 +29,7 @@ import { useQuickAdd } from '../hooks/useQuickAdd';
 import { QUICK_ADD_CONFIGS } from '../types/quickAdd';
 import { cn } from '../lib/utils';
 import { Drawer, DrawerContent, DrawerTrigger } from './ui/drawer';
+import toast from 'react-hot-toast';
 
 // --- CONFIGURAÇÃO DE ESTILO IOS ---
 // text-[16px] impede zoom automático no iOS
@@ -83,6 +84,7 @@ const BudgetForm: React.FC<BudgetFormProps> = ({
     const [selectedProfessionalId, setSelectedProfessionalId] = useState('');
     const [toothNumber, setToothNumber] = useState('');
     const [face, setFace] = useState('');
+    const [region, setRegion] = useState('');
     const [price, setPrice] = useState(0);
     const [qty, setQty] = useState(1);
     const [categoryId, setCategoryId] = useState('');
@@ -96,6 +98,7 @@ const BudgetForm: React.FC<BudgetFormProps> = ({
     const [costPerMinute, setCostPerMinute] = useState<number>(0);
     const [budgetMarginAnalysis, setBudgetMarginAnalysis] = useState<any>(null);
     const [selectedSalesRepId, setSelectedSalesRepId] = useState('');
+    const [showFinancialAnalysis, setShowFinancialAnalysis] = useState(false); // Collapsible controller
 
     // UI State
     const [showDocModal, setShowDocModal] = useState(false);
@@ -112,6 +115,10 @@ const BudgetForm: React.FC<BudgetFormProps> = ({
             setPrice(newProc.base_price || 0);
         }
     });
+
+    // Helper: Determine Procedure Category
+    const currentProc = procedures.find(p => p.name === selectedProcedure);
+    const isMedicalOrAesthetic = currentProc && ['HOF', 'CIRURGIA', 'ESTETICA'].includes(currentProc.category || '');
 
     // --- EFEITOS (CARREGAMENTO E CÁLCULOS) ---
 
@@ -134,7 +141,7 @@ const BudgetForm: React.FC<BudgetFormProps> = ({
                         const mappedItems = data.items.map((item: any) => ({
                             id: item.id || Math.random().toString(36).substr(2, 9),
                             procedure: item.procedure_name || item.procedure || '',
-                            region: item.region || 'Geral',
+                            region: item.region || '',
                             tooth_number: item.tooth_number || '',
                             face: item.face || '',
                             quantity: item.quantity || 1,
@@ -283,15 +290,19 @@ const BudgetForm: React.FC<BudgetFormProps> = ({
         const newItem: BudgetItem = {
             id: Math.random().toString(36).substr(2, 5),
             procedure: selectedProcedure,
-            region: 'Geral',
-            tooth_number: toothNumber,
-            face: face,
+            region: isMedicalOrAesthetic ? region : 'Geral',
+            tooth_number: !isMedicalOrAesthetic ? toothNumber : '',
+            face: !isMedicalOrAesthetic ? face : '',
             quantity: qty,
             unitValue: price,
             total: price * qty
         };
         setItems([...items, newItem]);
+        setItems([...items, newItem]);
         setQty(1);
+        setRegion('');
+        setToothNumber('');
+        setFace('');
     };
 
     const handleRemoveItem = (itemId: string) => {
@@ -300,26 +311,29 @@ const BudgetForm: React.FC<BudgetFormProps> = ({
 
     const handleSave = () => {
         if (!selectedPriceTableId || !selectedProfessionalId || items.length === 0) {
-            alert("Preencha todos os campos obrigatórios e adicione itens.");
+            toast.error("Preencha campos obrigatórios (Profissional, Tabela) e adicione procedimentos.");
             return;
         }
 
         if (!patient || !patient.id) {
-            alert("Erro crítico: Paciente não identificado.");
+            toast.error("Erro crítico: Paciente não identificado.");
             return;
         }
 
-        // --- SANITIZAÇÃO DE DADOS (CRASH FIX) ---
-        // Prepara apenas os dados que o banco aceita, removendo lixo ou campos calculados
+        console.log("Saving Budget Payload...", { items, discount, finalTotal });
+
+        // --- SANITIZAÇÃO DE DADOS (CRASH FIX & 400 ERROR) ---
+        // FIX: Provide keys expected by useBudgets.ts (unitValue, total)
         const cleanItems = items.map(item => ({
-            procedure: item.procedure, // Nome do procedimento
-            quantity: item.quantity,
-            unit_value: item.unitValue, // Mapear para snake_case se sua tabela usar
-            total_value: item.total,
-            tooth_number: item.tooth_number || null,
+            procedure: item.procedure,
+            quantity: Number(item.quantity) || 1,
+            unitValue: Number(item.unitValue) || 0, // camelCase for hook
+            total: Number(item.total) || 0,         // camelCase for hook
+            // SECURITY: Ensure correct fields for HOF vs Clinical
+            // CRITICAL FIX: Convert empty strings to null for integer/numeric columns
+            tooth_number: item.tooth_number ? parseInt(String(item.tooth_number)) : null,
             face: item.face || null,
             region: item.region || null
-            // REMOVIDO: tempId, isExisting, total_costs (se existir no objeto local)
         }));
 
         const payload = {
@@ -329,14 +343,19 @@ const BudgetForm: React.FC<BudgetFormProps> = ({
             totalValue: subtotal,
             finalValue: finalTotal,
             discount: discount,
-            items: cleanItems, // Envia lista limpa
+            items: cleanItems,
             paymentConfig: { method: paymentMethod, installments }
         };
+
+        console.log("Final Payload to Service:", payload);
 
         if (budgetId) {
             updateBudget({
                 budgetId: budgetId,
                 data: payload
+            }, {
+                onSuccess: () => toast.success("Orçamento atualizado com sucesso!"),
+                onError: (err: any) => toast.error("Erro ao atualizar: " + err.message)
             });
         } else {
             createBudget({
@@ -344,12 +363,17 @@ const BudgetForm: React.FC<BudgetFormProps> = ({
                 data: payload
             }, {
                 onSuccess: (data: any) => {
+                    toast.success("Orçamento salvo com sucesso!");
                     setIsSavedLocally(true);
                     if (isInline && onSaveSuccess) {
                         onSaveSuccess();
                         return;
                     }
                     navigate(`/budgets/new?id=${data.id}&patient_id=${patient.id}`, { replace: true });
+                },
+                onError: (err: any) => {
+                    console.error("Budget Creation Error:", err);
+                    toast.error("Erro ao salvar: " + (err.message || "Verifique os dados"));
                 }
             });
         }
@@ -366,7 +390,7 @@ const BudgetForm: React.FC<BudgetFormProps> = ({
 
     const handleWhatsApp = () => {
         if (!patient?.phone) {
-            alert("Paciente sem telefone");
+            toast.error("Paciente sem telefone");
             return;
         }
         const message = `Olá ${patient.name}, segue o orçamento no valor de R$ ${finalTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
@@ -378,7 +402,8 @@ const BudgetForm: React.FC<BudgetFormProps> = ({
 
     return (
         // Container Principal com PB-32 (Safe Area Padding)
-        <div className={`flex flex-col ${isInline ? 'bg-transparent pb-32' : 'min-h-screen bg-slate-50 dark:bg-slate-950 pb-32'}`}>
+        // FIX: h-full overflow-y-auto for correct scrolling in Sheet (Inline Mode)
+        <div className={`flex flex-col ${isInline ? 'bg-transparent pb-32 h-full overflow-y-auto' : 'min-h-screen bg-slate-50 dark:bg-slate-950 pb-32'}`}>
 
             {/* --- HEADER --- */}
             {isInline ? (
@@ -501,16 +526,30 @@ const BudgetForm: React.FC<BudgetFormProps> = ({
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
+                        {/* Inteligência de Região: HOF/Cirurgia vs Dente/Face */}
+                        {isMedicalOrAesthetic ? (
                             <div>
-                                <label className={labelClass}>Dente</label>
-                                <input type="text" className={inputClass} value={toothNumber} onChange={e => setToothNumber(e.target.value)} placeholder="Ex: 11" inputMode="numeric" />
+                                <label className={labelClass}>Região</label>
+                                <input
+                                    type="text"
+                                    className={inputClass}
+                                    value={region}
+                                    onChange={e => setRegion(e.target.value)}
+                                    placeholder="Ex: Pálpebra, Pescoço..."
+                                />
                             </div>
-                            <div>
-                                <label className={labelClass}>Face</label>
-                                <input type="text" className={inputClass} value={face} onChange={e => setFace(e.target.value)} placeholder="Ex: V" />
+                        ) : (
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className={labelClass}>Dente</label>
+                                    <input type="text" className={inputClass} value={toothNumber} onChange={e => setToothNumber(e.target.value)} placeholder="Ex: 11" inputMode="numeric" />
+                                </div>
+                                <div>
+                                    <label className={labelClass}>Face</label>
+                                    <input type="text" className={inputClass} value={face} onChange={e => setFace(e.target.value)} placeholder="Ex: V" />
+                                </div>
                             </div>
-                        </div>
+                        )}
 
                         <div className="grid grid-cols-2 gap-4">
                             <div>
@@ -543,6 +582,7 @@ const BudgetForm: React.FC<BudgetFormProps> = ({
                                         <h4 className="font-bold text-slate-900 dark:text-white text-[15px]">{item.procedure}</h4>
                                         <p className="text-xs text-slate-500 mt-1">
                                             {item.quantity}x R$ {item.unitValue.toLocaleString('pt-BR')}
+                                            {item.region && ` • ${item.region}`}
                                             {item.tooth_number && ` • Dente ${item.tooth_number}`}
                                         </p>
                                     </div>
@@ -592,34 +632,48 @@ const BudgetForm: React.FC<BudgetFormProps> = ({
                     </div>
                 </div>
 
-                {/* ANALYTICS & SUMMARY */}
-                {budgetMarginAnalysis && costPerMinute > 0 && (
-                    <ProfitBar
-                        price={budgetMarginAnalysis.totalPrice}
-                        profit={budgetMarginAnalysis.totalProfit}
-                        marginPercent={budgetMarginAnalysis.marginPercent}
-                        status={(budgetMarginAnalysis.marginPercent ?? 0) >= 30 ? 'excellent' : 'warning'}
-                    />
-                )}
+                {/* ANALYTICS & SUMMARY (Collapsible) */}
+                <div className="space-y-4">
+                    <button
+                        onClick={() => setShowFinancialAnalysis(!showFinancialAnalysis)}
+                        className="w-full flex items-center justify-center gap-2 text-xs font-semibold text-slate-500 hover:text-blue-600 py-2 transition-colors uppercase tracking-wider"
+                    >
+                        {showFinancialAnalysis ? 'Ocultar' : 'Ver'} Análise de Lucratividade
+                        {showFinancialAnalysis ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                    </button>
 
-                {calculatedValues && !calcLoading && (
-                    <FinancialSummaryPanel
-                        totalValue={finalTotal}
-                        downPayment={downPayment}
-                        installments={installments}
-                        installmentValue={calculatedValues.installmentValue}
-                        totalFees={calculatedValues.totalFees}
-                        netReceive={calculatedValues.netReceive}
-                        cashIn24h={calculatedValues.cashIn24h}
-                        anticipationCost={calculatedValues.anticipationCost}
-                        daysToReceive={calculatedValues.daysToReceive}
-                        recommendation={calculatedValues.recommendation}
-                        estimatedProfit={calculatedValues.estimatedProfit}
-                        estimatedMarginPercent={calculatedValues.estimatedMarginPercent}
-                        isAnticipationViable={calculatedValues.isAnticipationViable}
-                        paymentMethod={paymentMethod}
-                    />
-                )}
+                    {showFinancialAnalysis && (
+                        <div className="animate-in slide-in-from-top-4 fade-in duration-300 space-y-4">
+                            {budgetMarginAnalysis && costPerMinute > 0 && (
+                                <ProfitBar
+                                    price={budgetMarginAnalysis.totalPrice}
+                                    profit={budgetMarginAnalysis.totalProfit}
+                                    marginPercent={budgetMarginAnalysis.marginPercent}
+                                    status={(budgetMarginAnalysis.marginPercent ?? 0) >= 30 ? 'excellent' : 'warning'}
+                                />
+                            )}
+
+                            {calculatedValues && !calcLoading && (
+                                <FinancialSummaryPanel
+                                    totalValue={finalTotal}
+                                    downPayment={downPayment}
+                                    installments={installments}
+                                    installmentValue={calculatedValues.installmentValue}
+                                    totalFees={calculatedValues.totalFees}
+                                    netReceive={calculatedValues.netReceive}
+                                    cashIn24h={calculatedValues.cashIn24h}
+                                    anticipationCost={calculatedValues.anticipationCost}
+                                    daysToReceive={calculatedValues.daysToReceive}
+                                    recommendation={calculatedValues.recommendation}
+                                    estimatedProfit={calculatedValues.estimatedProfit}
+                                    estimatedMarginPercent={calculatedValues.estimatedMarginPercent}
+                                    isAnticipationViable={calculatedValues.isAnticipationViable}
+                                    paymentMethod={paymentMethod}
+                                />
+                            )}
+                        </div>
+                    )}
+                </div>
 
             </div>
 

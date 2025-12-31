@@ -156,7 +156,7 @@ export function SearchContent({ onSelectResult, className }: SearchContentProps)
                 onValueChange={setQuery}
                 className="border-0"
             />
-            <CommandList>
+            <CommandList className="max-h-[40vh] md:max-h-[500px] overflow-y-auto relative block">
                 {/* Only show content when user has typed something */}
                 {query.length > 0 ? (
                     <>

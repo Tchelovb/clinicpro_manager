@@ -104,26 +104,34 @@ export const AgendaSearch: React.FC<AgendaSearchProps> = ({ onSelectDate, onSele
     };
 
     return (
-        <div ref={containerRef} className={cn("relative w-full", className)}>
-            {/* Input Wrapper - No PopoverTrigger */}
-            <input
-                className="w-full h-full bg-transparent border-none text-base outline-none placeholder:text-slate-400 text-slate-900 dark:text-white scroll-mt-20"
-                placeholder={placeholder || "Buscar..."}
-                value={query}
-                onChange={(e) => {
-                    setQuery(e.target.value);
-                    if (e.target.value.length > 0) setOpen(true);
-                }}
-                onFocus={(e) => {
-                    if (query.length > 0) setOpen(true);
-                    // Scroll into view on focus to help with keyboard
-                    e.target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }}
-            />
+        <div ref={containerRef} className={cn("flex flex-col relative w-full", className)}>
+            {/* Input Wrapper - Sticky on Mobile */}
+            <div className="sticky top-0 z-50 bg-white dark:bg-slate-900 border-b border-transparent">
+                <input
+                    className="w-full h-full bg-transparent border-none text-base outline-none placeholder:text-slate-400 text-slate-900 dark:text-white scroll-mt-20 py-2"
+                    placeholder={placeholder || "Buscar..."}
+                    value={query}
+                    onChange={(e) => {
+                        setQuery(e.target.value);
+                        if (e.target.value.length > 0) setOpen(true);
+                    }}
+                    onFocus={(e) => {
+                        if (query.length > 0) setOpen(true);
+                        // Scroll into view on focus to help with keyboard
+                        e.target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }}
+                />
+            </div>
 
-            {/* Results Dropdown - Absolute & Floating */}
+            {/* Results Dropdown - Solid Block (Mobile) vs Absolute (Desktop) */}
             {open && (query.length > 1) && (
-                <div className="absolute top-[calc(100%+8px)] left-0 right-0 bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-100 dark:border-slate-800 p-2 max-h-[180px] md:max-h-[350px] overflow-y-auto no-scrollbar z-[100] animate-in fade-in zoom-in-95 duration-200">
+                <div className={cn(
+                    "bg-white dark:bg-slate-900 overflow-y-auto no-scrollbar animate-in fade-in zoom-in-95 duration-200",
+                    // Mobile: Solid Block (Relative)
+                    "relative w-full border-b border-slate-100 dark:border-slate-800 shadow-none max-h-[40vh] z-40",
+                    // Desktop: Absolute (Floating)
+                    "md:absolute md:top-[calc(100%+8px)] md:left-0 md:right-0 md:shadow-2xl md:border md:rounded-xl md:max-h-[350px] md:z-[100]"
+                )}>
 
                     {loading && (
                         <div className="py-8 text-center text-slate-400 text-sm flex items-center justify-center gap-2">

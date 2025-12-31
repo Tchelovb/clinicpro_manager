@@ -885,7 +885,7 @@ export const AppointmentSheet: React.FC<AppointmentSheetProps> = ({
             <Drawer.Root open={isOpen} onOpenChange={(o) => (!o && !isPinModalOpen) && onClose()}>
                 <Drawer.Portal>
                     <Drawer.Overlay className="fixed inset-0 bg-black/40 z-50 transition-opacity" />
-                    <Drawer.Content className="!bg-white dark:!bg-slate-900 fixed bottom-0 left-0 right-0 h-[95dvh] z-50 rounded-t-[10px] flex flex-col outline-none after:hidden">
+                    <Drawer.Content className="!bg-white dark:!bg-slate-900 fixed bottom-0 left-0 right-0 h-[100dvh] z-50 rounded-t-[10px] flex flex-col outline-none after:hidden">
                         <Drawer.Title className="sr-only">
                             {appointmentId ? 'Editar Agendamento' : 'Novo Agendamento'}
                         </Drawer.Title>

@@ -10,6 +10,13 @@ export default {
 	],
 	darkMode: "class",
 	theme: {
+		container: {
+			center: true,
+			padding: "2rem",
+			screens: {
+				"2xl": "1400px",
+			},
+		},
 		extend: {
 			colors: {
 				border: 'hsl(var(--border))',
@@ -17,25 +24,40 @@ export default {
 				ring: 'hsl(var(--ring))',
 				background: 'hsl(var(--background))',
 				foreground: 'hsl(var(--foreground))',
+
+				// --- CORES SEMÂNTICAS (ClinicPro Design System) ---
 				primary: {
-					DEFAULT: 'hsl(var(--primary))',
-					foreground: 'hsl(var(--primary-foreground))'
+					DEFAULT: "#2563EB", // blue-600 (Ação Principal)
+					foreground: "#FFFFFF",
+					light: "#EFF6FF", // blue-50
+					dark: "#1D4ED8", // blue-700
 				},
 				secondary: {
-					DEFAULT: 'hsl(var(--secondary))',
-					foreground: 'hsl(var(--secondary-foreground))'
+					DEFAULT: "#F8FAFC", // slate-50
+					foreground: "#1E293B", // slate-800
+				},
+				success: {
+					DEFAULT: "#10B981", // green-500
+					foreground: "#FFFFFF",
+					light: "#ECFDF5", // green-50
+				},
+				warning: {
+					DEFAULT: "#F59E0B", // amber-500
+					foreground: "#FFFFFF",
+					light: "#FFFBEB", // amber-50
 				},
 				destructive: {
-					DEFAULT: 'hsl(var(--destructive))',
-					foreground: 'hsl(var(--destructive-foreground))'
+					DEFAULT: "#EF4444", // red-500
+					foreground: "#FFFFFF",
+					light: "#FEF2F2", // red-50
 				},
 				muted: {
-					DEFAULT: 'hsl(var(--muted))',
-					foreground: 'hsl(var(--muted-foreground))'
+					DEFAULT: "#F1F5F9", // slate-100
+					foreground: "#64748B", // slate-500
 				},
 				accent: {
-					DEFAULT: 'hsl(var(--accent))',
-					foreground: 'hsl(var(--accent-foreground))'
+					DEFAULT: "#F1F5F9",
+					foreground: "#0F172A",
 				},
 				popover: {
 					DEFAULT: 'hsl(var(--popover))',
@@ -56,7 +78,11 @@ export default {
 			borderRadius: {
 				lg: 'var(--radius)',
 				md: 'calc(var(--radius) - 2px)',
-				sm: 'calc(var(--radius) - 4px)'
+				sm: 'calc(var(--radius) - 4px)',
+				// Padrão Apple (Curvas suaves)
+				xl: "1rem",
+				'2xl': "1.5rem",
+				'3xl': "2rem",
 			}
 		}
 	},

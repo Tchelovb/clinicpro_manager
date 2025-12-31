@@ -31,8 +31,8 @@ CREATE TABLE IF NOT EXISTS public.medical_alerts (
   PRIMARY KEY (id)
 );
 
-CREATE INDEX idx_medical_alerts_patient ON public.medical_alerts(patient_id) WHERE is_active = true;
-CREATE INDEX idx_medical_alerts_critical ON public.medical_alerts(patient_id, is_critical) WHERE is_active = true AND is_critical = true;
+CREATE INDEX IF NOT EXISTS idx_medical_alerts_patient ON public.medical_alerts(patient_id) WHERE is_active = true;
+CREATE INDEX IF NOT EXISTS idx_medical_alerts_critical ON public.medical_alerts(patient_id, is_critical) WHERE is_active = true AND is_critical = true;
 
 COMMENT ON TABLE public.medical_alerts IS 'Alertas médicos críticos que aparecem como pop-up ao acessar paciente';
 
@@ -91,7 +91,7 @@ CREATE TABLE IF NOT EXISTS public.patient_anamnesis (
   UNIQUE(patient_id)
 );
 
-CREATE INDEX idx_anamnesis_contraindications ON public.patient_anamnesis(clinic_id, is_pregnant, has_pacemaker, has_bleeding_disorder);
+CREATE INDEX IF NOT EXISTS idx_anamnesis_contraindications ON public.patient_anamnesis(clinic_id, is_pregnant, has_pacemaker, has_bleeding_disorder);
 
 COMMENT ON TABLE public.patient_anamnesis IS 'Anamnese digital estruturada com campos específicos para alertas automáticos';
 
@@ -135,9 +135,9 @@ CREATE TABLE IF NOT EXISTS public.clinical_images (
   PRIMARY KEY (id)
 );
 
-CREATE INDEX idx_clinical_images_patient ON public.clinical_images(patient_id, capture_date DESC);
-CREATE INDEX idx_clinical_images_treatment ON public.clinical_images(treatment_item_id, is_before_treatment);
-CREATE INDEX idx_clinical_images_type ON public.clinical_images(clinic_id, image_type);
+CREATE INDEX IF NOT EXISTS idx_clinical_images_patient ON public.clinical_images(patient_id, capture_date DESC);
+CREATE INDEX IF NOT EXISTS idx_clinical_images_treatment ON public.clinical_images(treatment_item_id, is_before_treatment);
+CREATE INDEX IF NOT EXISTS idx_clinical_images_type ON public.clinical_images(clinic_id, image_type);
 
 COMMENT ON TABLE public.clinical_images IS 'Armazenamento de imagens clínicas com suporte a antes/depois';
 
@@ -191,9 +191,9 @@ CREATE TABLE IF NOT EXISTS public.recurring_contracts (
   PRIMARY KEY (id)
 );
 
-CREATE INDEX idx_recurring_contracts_clinic ON public.recurring_contracts(clinic_id, status);
-CREATE INDEX idx_recurring_contracts_patient ON public.recurring_contracts(patient_id);
-CREATE INDEX idx_recurring_contracts_billing_day ON public.recurring_contracts(clinic_id, billing_day) WHERE status = 'ACTIVE';
+CREATE INDEX IF NOT EXISTS idx_recurring_contracts_clinic ON public.recurring_contracts(clinic_id, status);
+CREATE INDEX IF NOT EXISTS idx_recurring_contracts_patient ON public.recurring_contracts(patient_id);
+CREATE INDEX IF NOT EXISTS idx_recurring_contracts_billing_day ON public.recurring_contracts(clinic_id, billing_day) WHERE status = 'ACTIVE';
 
 -- View para MRR (Monthly Recurring Revenue)
 CREATE OR REPLACE VIEW mrr_dashboard_view AS
@@ -246,7 +246,7 @@ CREATE TABLE IF NOT EXISTS public.dental_charting (
   PRIMARY KEY (id)
 );
 
-CREATE INDEX idx_dental_charting_patient ON public.dental_charting(patient_id);
+CREATE INDEX IF NOT EXISTS idx_dental_charting_patient ON public.dental_charting(patient_id);
 
 COMMENT ON TABLE public.dental_charting IS 'Odontograma digital - estado atual da dentição do paciente';
 
@@ -337,8 +337,8 @@ CREATE TABLE IF NOT EXISTS public.medical_certificates (
   PRIMARY KEY (id)
 );
 
-CREATE INDEX idx_prescriptions_patient ON public.prescriptions(patient_id, created_at DESC);
-CREATE INDEX idx_certificates_patient ON public.medical_certificates(patient_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_prescriptions_patient ON public.prescriptions(patient_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_certificates_patient ON public.medical_certificates(patient_id, created_at DESC);
 
 COMMENT ON TABLE public.prescriptions IS 'Prescrições eletrônicas com medicamentos estruturados';
 COMMENT ON TABLE public.medication_library IS 'Biblioteca de medicamentos para prescrições rápidas';
@@ -389,8 +389,8 @@ CREATE TABLE IF NOT EXISTS public.procedure_material_usage (
   PRIMARY KEY (id)
 );
 
-CREATE INDEX idx_material_usage_treatment ON public.procedure_material_usage(treatment_item_id);
-CREATE INDEX idx_material_usage_inventory ON public.procedure_material_usage(inventory_item_id, used_at DESC);
+CREATE INDEX IF NOT EXISTS idx_material_usage_treatment ON public.procedure_material_usage(treatment_item_id);
+CREATE INDEX IF NOT EXISTS idx_material_usage_inventory ON public.procedure_material_usage(inventory_item_id, used_at DESC);
 
 COMMENT ON TABLE public.procedure_recipes IS 'Receitas de materiais necessários para cada procedimento';
 COMMENT ON TABLE public.procedure_material_usage IS 'Consumo real de materiais por procedimento executado';
@@ -507,7 +507,7 @@ CREATE TABLE IF NOT EXISTS public.clinic_kpis (
   UNIQUE(clinic_id, period_start, period_end)
 );
 
-CREATE INDEX idx_clinic_kpis_period ON public.clinic_kpis(clinic_id, period_start, period_end);
+CREATE INDEX IF NOT EXISTS idx_clinic_kpis_period ON public.clinic_kpis(clinic_id, period_start, period_end);
 
 COMMENT ON TABLE public.clinic_kpis IS 'KPIs históricos consolidados por período para análise de tendências';
 

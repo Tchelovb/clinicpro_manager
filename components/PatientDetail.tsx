@@ -476,7 +476,7 @@ export const PatientDetailSheet: React.FC<PatientDetailProps> = ({
     if (loading) {
         return isMobile ? (
             <Drawer open={open} onOpenChange={onClose}>
-                <DrawerContent className="h-[95dvh] rounded-t-[10px] outline-none">
+                <DrawerContent className="h-[100dvh] rounded-t-[10px] outline-none">
                     <DrawerHeader className="sr-only">
                         <DrawerTitle>Carregando...</DrawerTitle>
                         <DrawerDescription>Carregando dados do paciente</DrawerDescription>
@@ -501,7 +501,7 @@ export const PatientDetailSheet: React.FC<PatientDetailProps> = ({
     if (!patient && !isCreateMode) {
         return isMobile ? (
             <Drawer open={open} onOpenChange={onClose}>
-                <DrawerContent className="h-[95dvh]">
+                <DrawerContent className="h-[100dvh]">
                     <DrawerHeader className="sr-only">
                         <DrawerTitle>Não Encontrado</DrawerTitle>
                         <DrawerDescription>Paciente não encontrado no sistema</DrawerDescription>
@@ -527,7 +527,7 @@ export const PatientDetailSheet: React.FC<PatientDetailProps> = ({
         // MOBILE: Apple Drill-Down Navigation
         return (
             <Drawer open={open} onOpenChange={onClose}>
-                <DrawerContent className="h-[95dvh] overflow-hidden p-0 rounded-t-[10px] outline-none flex flex-col">
+                <DrawerContent className="h-[100dvh] overflow-hidden p-0 rounded-t-[10px] outline-none flex flex-col">
                     <DrawerHeader className="sr-only">
                         <DrawerTitle>{patient?.name || "Paciente"}</DrawerTitle>
                         <DrawerDescription>Prontuário e histórico do paciente</DrawerDescription>
@@ -568,7 +568,7 @@ export const PatientDetailSheet: React.FC<PatientDetailProps> = ({
 
                         {/* Drawer do Formulário de Orçamento (Mobile Drill-down) */}
                         <Drawer open={showBudgetForm} onOpenChange={setShowBudgetForm}>
-                            <DrawerContent className="h-[95dvh] rounded-t-[10px] flex flex-col outline-none">
+                            <DrawerContent className="h-[100dvh] rounded-t-[10px] flex flex-col outline-none">
                                 <DrawerHeader className="sr-only">
                                     <DrawerTitle>Novo Orçamento</DrawerTitle>
                                     <DrawerDescription>Preencha os dados da nova proposta comercial</DrawerDescription>

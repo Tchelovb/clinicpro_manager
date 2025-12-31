@@ -42,8 +42,8 @@ const sizeClasses: Record<SheetSize, string> = {
     'md': 'sm:max-w-md',   // 448px - Formulários simples
     'lg': 'sm:max-w-lg',   // 512px - Formulários padrão
     'xl': 'sm:max-w-xl',   // 576px - Formulários complexos
-    '2xl': 'sm:max-w-2xl', // 672px - Formulários com listas
-    '4xl': 'sm:max-w-4xl', // 896px - Formulários muito complexos
+    '2xl': 'sm:max-w-3xl', // FIX: Increased to 3xl (768px for "2xl")
+    '4xl': 'sm:max-w-[1000px]', // FIX: Hardcoded 1000px for "4xl" to ensure comfort on desktop
     'full': 'sm:max-w-full' // Full width
 };
 
@@ -126,7 +126,7 @@ export const BaseSheet: React.FC<BaseSheetProps> = ({
     if (isMobile) {
         return (
             <Drawer open={open} onOpenChange={onOpenChange}>
-                <DrawerContent className="h-[95vh] flex flex-col rounded-t-[10px]">
+                <DrawerContent className="h-[100dvh] flex flex-col rounded-t-[10px]">
                     <DrawerHeader className="text-left">
                         <DrawerTitle>{title}</DrawerTitle>
                         {description && (
