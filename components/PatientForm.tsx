@@ -336,7 +336,7 @@ const PatientForm: React.FC<PatientFormProps> = ({
   );
 
   return (
-    <div className="flex flex-col h-full max-w-6xl mx-auto">
+    <div className="flex flex-col h-[100dvh] max-w-6xl mx-auto">
       {/* Security Pin Modal */}
       <SecurityPinModal
         isOpen={showPinModal}
@@ -730,7 +730,7 @@ const PatientForm: React.FC<PatientFormProps> = ({
       </div>
 
       {/* Sticky Footer with Side-by-Side Buttons */}
-      <div className="sticky bottom-0 left-0 right-0 p-4 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 flex gap-3 z-30">
+      <div className="sticky bottom-0 left-0 right-0 p-4 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 flex gap-3 z-50">
         {!isEditing ? (
           <button
             type="button"

@@ -107,21 +107,23 @@ export const AgendaSearch: React.FC<AgendaSearchProps> = ({ onSelectDate, onSele
         <div ref={containerRef} className={cn("relative w-full", className)}>
             {/* Input Wrapper - No PopoverTrigger */}
             <input
-                className="w-full h-full bg-transparent border-none text-base outline-none placeholder:text-slate-400 text-slate-900 dark:text-white"
+                className="w-full h-full bg-transparent border-none text-base outline-none placeholder:text-slate-400 text-slate-900 dark:text-white scroll-mt-20"
                 placeholder={placeholder || "Buscar..."}
                 value={query}
                 onChange={(e) => {
                     setQuery(e.target.value);
                     if (e.target.value.length > 0) setOpen(true);
                 }}
-                onFocus={() => {
+                onFocus={(e) => {
                     if (query.length > 0) setOpen(true);
+                    // Scroll into view on focus to help with keyboard
+                    e.target.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }}
             />
 
             {/* Results Dropdown - Absolute & Floating */}
             {open && (query.length > 1) && (
-                <div className="absolute top-[calc(100%+8px)] left-0 right-0 bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-100 dark:border-slate-800 p-2 max-h-[350px] overflow-y-auto no-scrollbar z-[100] animate-in fade-in zoom-in-95 duration-200">
+                <div className="absolute top-[calc(100%+8px)] left-0 right-0 bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-100 dark:border-slate-800 p-2 max-h-[200px] md:max-h-[350px] overflow-y-auto no-scrollbar z-[100] animate-in fade-in zoom-in-95 duration-200">
 
                     {loading && (
                         <div className="py-8 text-center text-slate-400 text-sm flex items-center justify-center gap-2">
@@ -145,7 +147,7 @@ export const AgendaSearch: React.FC<AgendaSearchProps> = ({ onSelectDate, onSele
                                 setOpen(false);
                                 setQuery(''); // Clear search to avoid overlay
                             }}
-                            className="w-full flex items-center gap-3 p-3 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-colors group text-left"
+                            className="w-full flex items-center gap-3 p-2 md:p-3 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-colors group text-left"
                         >
                             <div className={`p-2 rounded-full shrink-0 ${apt.type === 'TREATMENT' ? 'bg-purple-100 text-purple-600' :
                                 apt.type === 'EVALUATION' ? 'bg-blue-100 text-blue-600' :
