@@ -159,6 +159,7 @@ interface DataContextType {
     observations?: string
   ) => void;
   addExpense: (expense: Omit<Expense, "id">) => void;
+  refreshData: () => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -171,7 +172,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
     return (localStorage.getItem("theme") as "light" | "dark") || "light";
   });
 
-  // 🛡️ Ref para rastrear último clinic_id e prevenir re-fetches desnecessários
   const lastClinicIdRef = useRef<string | null>(null);
 
   const [patients, setPatients] = useState<Patient[]>(MOCK_PATIENTS);
@@ -230,412 +230,79 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
     localStorage.setItem("theme", theme);
   }, [theme]);
 
-  // Fetch real patients from Supabase when user is logged in
+  // CORE DATA FETCHING LOGIC - Defined outside useEffect to be reusable
+  const fetchCoreData = async (force = false) => {
+    // If we don't have a clinic ID, we can't fetch real data
+    if (!profile?.clinic_id) {
+      if (!force) return; // Silent return if not forced
+    }
+
+    // Bypass cache check if forced
+    if (!force && profile?.clinic_id === lastClinicIdRef.current) {
+      return;
+    }
+
+    if (profile?.clinic_id) lastClinicIdRef.current = profile.clinic_id;
+
+    console.log(`📊 [DATA] Fetching data for clinic: ${profile?.clinic_id} (Force: ${force})`);
+
+    try {
+      // ONDA 1: Pacientes
+      const { data: patientsData, error: patientsError } = await withRetry(
+        () => supabase
+          .from("patients")
+          .select("*")
+          .eq("clinic_id", profile.clinic_id)
+          .order("name", { ascending: true })
+          .limit(50)
+      );
+
+      if (patientsError) throw patientsError;
+      setPatients(patientsData || []);
+
+      // ONDA 2: Procedures & Professionals
+      const [procRes, profRes] = await Promise.all([
+        withRetry(() => supabase.from("procedure").select("*").eq("clinic_id", profile.clinic_id).order("name")),
+        withRetry(() => supabase.from("professionals").select("id, name, specialty, color, users!inner(id, active, clinic_id)").eq("users.clinic_id", profile.clinic_id).eq("users.active", true))
+      ]);
+
+      if (procRes.data) setProcedures(procRes.data.map((proc: any) => ({
+        id: proc.id, name: proc.name, category: proc.category, price: proc.base_price, duration: proc.duration_min || proc.duration || 30
+      })));
+
+      if (profRes.data) setProfessionals(profRes.data.map((prof: any) => ({
+        id: prof.users[0]?.id || prof.id, name: prof.name, role: prof.specialty || 'Dentista', color: prof.color || 'blue', active: true, email: ''
+      })));
+
+      // ONDA 3: Price Tables
+      const { data: ptData } = await withRetry(() =>
+        supabase.from("price_tables")
+          .select("*, items:price_table_items(*)")
+          .eq("clinic_id", profile.clinic_id)
+          .eq("active", true)
+      );
+      if (ptData) setPriceTables(ptData.map(pt => ({
+        id: pt.id, name: pt.name, type: pt.type as any, external_code: pt.external_code, active: pt.active, items: pt.items.map((i: any) => ({ procedureId: i.procedure_id, price: i.price }))
+      })));
+
+    } catch (err) {
+      console.error("Error fetching core data:", err);
+    }
+  };
+
+  // Initial Fetch Effect
   useEffect(() => {
-    // ✅ Apenas busca se clinic_id mudou (previne re-fetches desnecessários)
-    if (profile?.clinic_id && profile.clinic_id !== lastClinicIdRef.current) {
-      lastClinicIdRef.current = profile.clinic_id;
-      console.log("📊 [DATA] Buscando dados para clinic_id:", profile.clinic_id);
-
-      const fetchPatients = async () => {
-        // Fetch patients com retry
-        const { data: patientsData, error: patientsError } = await withRetry(
-          () => supabase
-            .from("patients")
-            .select("*")
-            .eq("clinic_id", profile.clinic_id)
-            .order("name", { ascending: true }),
-          { onRetry: (attempt) => console.log(`🔄 [RETRY] Pacientes - tentativa ${attempt}`) }
-        );
-
-        if (patientsError) {
-          console.error("Error fetching patients:", patientsError);
-          return;
-        }
-
-        // ⏱️ WAVE 2 & 3: Dados Secundários (Waterfall)
-
-        // 🌊 ONDA 2: Procedures & Professionals (400ms delay)
-        setTimeout(async () => {
-          console.log("🌊 [DATA] Iniciando Onda 2: Procedures & Professionals");
-
-          // Fetch Procedures
-          const { data: proceduresData, error: proceduresError } = await withRetry(
-            () => supabase
-              .from("procedure")
-              .select("*")
-              .eq("clinic_id", profile.clinic_id)
-              .order("name")
-          );
-
-          if (proceduresError) console.error("Error fetching procedures:", proceduresError);
-          else if (proceduresData) {
-            setProcedures(proceduresData.map((proc: any) => ({
-              id: proc.id,
-              name: proc.name,
-              category: proc.category,
-              price: proc.base_price,
-              duration: proc.duration_min || proc.duration || 30
-            })));
-          }
-
-          // Fetch Professionals
-          const { data: professionalsData, error: professionalsError } = await withRetry(
-            () => supabase
-              .from("professionals")
-              .select(`
-                id,
-                name,
-                specialty,
-                color,
-                users!inner (
-                  id,
-                  active,
-                  clinic_id
-                )
-              `)
-              .eq("users.clinic_id", profile.clinic_id)
-              .eq("users.active", true)
-              .order("name")
-          );
-
-          if (professionalsError) console.error("Error fetching professionals:", professionalsError);
-          else if (professionalsData) {
-            setProfessionals(professionalsData.map((prof: any) => {
-              const user = Array.isArray(prof.users) ? prof.users[0] : prof.users;
-              return {
-                id: user?.id || prof.id,
-                name: prof.name,
-                role: prof.specialty || 'Dentista',
-                color: prof.color || 'blue',
-                active: true,
-                email: ''
-              };
-            }));
-          }
-        }, 400);
-
-        // 🌊 ONDA 3: Price Tables (800ms delay)
-        setTimeout(async () => {
-          console.log("🌊 [DATA] Iniciando Onda 3: Price Tables");
-
-          const { data: ptData, error: ptError } = await withRetry(
-            () => supabase
-              .from("price_tables")
-              .select("*, items:price_table_items(*)")
-              .eq("clinic_id", profile.clinic_id)
-              .eq("active", true)
-          );
-
-          if (ptError) console.error("Error fetching price tables:", ptError);
-          else if (ptData) {
-            setPriceTables(ptData.map(pt => ({
-              id: pt.id,
-              name: pt.name,
-              type: pt.type as any,
-              external_code: pt.external_code,
-              active: pt.active,
-              items: pt.items.map((i: any) => ({
-                procedureId: i.procedure_id,
-                price: i.price
-              }))
-            })));
-          }
-        }, 800);
-
-
-
-        // --- FINANCIAL DATA IS NOW HANDLED BY FINANCIAL CONTEXT ---
-        // Removed duplicate fetching logic for expenses, settings, and cash registers
-
-
-        // Removed duplicate fetching logic for expenses and registers
-
-
-
-
-        // Fetch budgets, treatments, and financials for all patients
-        const patientIds = patientsData?.map((p) => p.id) || [];
-        if (patientIds.length > 0) {
-          // Fetch budgets
-          const { data: budgetsData, error: budgetsError } = await supabase
-            .from("budgets")
-            .select(
-              `
-              id,
-              patient_id,
-              created_at,
-              doctor_id,
-              status,
-              total_value,
-              discount,
-              final_value,
-              payment_config,
-              price_table_id,
-              doctor:users!doctor_id (
-                id,
-                professional_id,
-                professionals (
-                  name
-                )
-              ),
-              seller:users!sales_rep_id (
-                id,
-                professional_id,
-                professionals (
-                  name
-                )
-              ),
-              budget_items (
-                id,
-                procedure_name,
-                region,
-                quantity,
-                unit_value,
-                total_value
-              )
-            `
-            )
-            .eq("clinic_id", profile.clinic_id)
-            .order("created_at", { ascending: false });
-
-          if (budgetsError) {
-            console.error("Error fetching budgets:", budgetsError);
-          }
-
-          // Fetch treatments
-          const { data: treatmentsData, error: treatmentsError } =
-            await supabase
-              .from("treatment_items")
-              .select(`
-            *,
-            doctor: users!doctor_id (
-              id,
-              professional_id,
-              professionals(
-                name
-              )
-            )
-              `)
-              .in("patient_id", patientIds);
-
-          if (treatmentsError) {
-            console.error("Error fetching treatments:", treatmentsError);
-          }
-
-          // Fetch financials
-          const { data: financialsData, error: financialsError } =
-            await supabase
-              .from("financial_installments")
-              .select("*")
-              .in("patient_id", patientIds);
-
-          if (financialsError) {
-            console.error("Error fetching financials:", financialsError);
-          }
-
-          // Map data to patients
-          const patientsWithData =
-            patientsData?.map((patient) => ({
-              ...patient,
-              budgets:
-                budgetsData
-                  ?.filter((b) => b.patient_id === patient.id)
-                  .map((b) => {
-                    // Get professional name from the joined data
-                    // users is an array when using !inner join
-                    // Get professional name from the joined data (aliased as 'doctor')
-                    const user = Array.isArray(b.doctor) ? b.doctor[0] : b.doctor;
-                    const professional = Array.isArray(user?.professionals) ? user.professionals[0] : user?.professionals;
-                    const professionalName = professional?.name || 'Profissional não informado';
-                    return {
-                      id: b.id,
-                      createdAt: new Date(b.created_at).toLocaleDateString(
-                        "pt-BR"
-                      ),
-                      doctorName: `Dr.${professionalName} `,
-                      doctorId: b.doctor_id,
-                      status:
-                        b.status === "DRAFT"
-                          ? "Em Análise"
-                          : b.status === "APPROVED"
-                            ? "Aprovado"
-                            : b.status,
-                      items: b.budget_items.map((item) => ({
-                        id: item.id,
-                        procedure: item.procedure_name,
-                        region: item.region,
-                        quantity: item.quantity,
-                        unitValue: item.unit_value,
-                        total: item.total_value,
-                      })),
-                      totalValue: b.total_value,
-                      discount: b.discount,
-                      finalValue: b.final_value,
-                      paymentConfig: b.payment_config,
-                      priceTableId: b.price_table_id,
-                    };
-                  }) || [],
-              treatments:
-                treatmentsData
-                  ?.filter((t) => t.patient_id === patient.id)
-                  .map((t: any) => {
-                    // Get professional name from the joined data
-                    const user = Array.isArray(t.doctor) ? t.doctor[0] : t.doctor;
-                    const professional = Array.isArray(user?.professionals) ? user.professionals[0] : user?.professionals;
-                    const professionalName = professional?.name || 'Profissional não informado';
-                    return {
-                      id: t.id,
-                      procedure: t.procedure_name,
-                      region: t.region,
-                      status:
-                        t.status === "NOT_STARTED"
-                          ? "Não Iniciado"
-                          : t.status === "IN_PROGRESS"
-                            ? "Em Andamento"
-                            : t.status === "COMPLETED"
-                              ? "Concluído"
-                              : t.status,
-                      budgetId: t.budget_id,
-                      doctorName: `Dr.${professionalName} `,
-                      executionDate: t.execution_date ? new Date(t.execution_date).toLocaleDateString("pt-BR") : undefined,
-                    };
-                  }) || [],
-              financials:
-                financialsData
-                  ?.filter((f) => f.patient_id === patient.id)
-                  .map((f: any) => ({
-                    id: f.id,
-                    description: f.description,
-                    dueDate: new Date(f.due_date).toLocaleDateString("pt-BR"),
-                    amount: f.amount,
-                    amountPaid: f.amount_paid || 0,
-                    status:
-                      f.status === "PENDING"
-                        ? "Pendente"
-                        : f.status === "PAID"
-                          ? "Pago"
-                          : f.status === "OVERDUE"
-                            ? "Atrasado"
-                            : f.status === "PARTIAL"
-                              ? "Pago Parcial"
-                              : f.status,
-                    paymentMethod: f.payment_method,
-                    paymentHistory: [],
-                  })) || [],
-            })) || [];
-
-          setPatients(patientsWithData);
-        } else {
-          setPatients(patientsData || []);
-        }
-      };
-
-      // 🌊 ONDA 1: Dados Críticos (Imediato)
-      // Função Mestre de Inicialização (Waterfall)
-      // 🛡️ Variável Global Anti-Saturação (Singleton)
-      let isInitializing = false;
-      let retryCount = 0;
-
-      // ... inside initializeSystem ...
-      const initializeSystem = async () => {
-        if (!profile?.clinic_id) {
-          console.error("⛔ [DATA] Acesso Negado: Clinic ID não identificado (Zero Guest Protocol). Abortando carga.");
-          return;
-        }
-
-        if (isInitializing) {
-          console.log("🛡️ [DATA] Inicialização já em andamento. Ignorando chamada duplicada.");
-          return;
-        }
-        isInitializing = true;
-
-        // 🌊 SINGLETON DE CONEXÃO: Batch Loading com Backoff
-        const fetchBatch = async (attempt = 1) => {
-          try {
-            console.log(`🌊 [DATA] Iniciando BATCH LOADING (Tentativa ${attempt})...`);
-
-            // ONDA 1: Pacientes (Vital)
-            console.log("🌊 [DATA] Wave 1: Pacientes (CRÍTICO)");
-            const { data: patientsData, error: patientsError } = await withRetry(
-              () => supabase
-                .from("patients")
-                .select("*")
-                .eq("clinic_id", profile.clinic_id)
-                .order("name", { ascending: true })
-                .limit(50)
-            ) as any;
-
-            if (patientsError) throw new Error("Falha na Onda 1 (Pacientes): " + patientsError.message);
-            setPatients(patientsData || []);
-            console.log("✅ [DATA] Wave 1 concluída com sucesso.");
-
-            // 🕒 PAUSA CIRÚRGICA (1s)
-            await new Promise(r => setTimeout(r, 1000));
-
-            // ONDA 2: Procedimentos & Profissionais
-            console.log("🌊 [DATA] Wave 2: Procedimentos e Profissionais");
-
-            // Promise.all aqui é seguro pois são apenas 2 requests leves após a pausa
-            const [procRes, profRes] = await Promise.all([
-              withRetry(() => supabase.from("procedure").select("*").eq("clinic_id", profile.clinic_id).order("name")),
-              withRetry(() => supabase.from("professionals").select("id, name, specialty, color, users!inner(id, active, clinic_id)").eq("users.clinic_id", profile.clinic_id).eq("users.active", true))
-            ]);
-
-            if (procRes.data) setProcedures(procRes.data.map((proc: any) => ({
-              id: proc.id, name: proc.name, category: proc.category, price: proc.base_price, duration: proc.duration_min || proc.duration || 30
-            })));
-
-            if (profRes.data) setProfessionals(profRes.data.map((prof: any) => ({
-              id: prof.users[0]?.id || prof.id, name: prof.name, role: prof.specialty || 'Dentista', color: prof.color || 'blue', active: true, email: ''
-            })));
-            console.log("✅ [DATA] Wave 2 concluída com sucesso.");
-
-            // 🕒 PAUSA CIRÚRGICA (1s)
-            await new Promise(r => setTimeout(r, 1000));
-
-            // ONDA 3: Financeiro / Preços
-            console.log("🌊 [DATA] Wave 3: Tabelas de Preço");
-            const { data: ptData } = await withRetry(() =>
-              supabase.from("price_tables")
-                .select("*, items:price_table_items(*)")
-                .eq("clinic_id", profile.clinic_id)
-                .eq("active", true)
-            );
-            if (ptData) setPriceTables(ptData.map(pt => ({
-              id: pt.id, name: pt.name, type: pt.type as any, external_code: pt.external_code, active: pt.active, items: pt.items.map((i: any) => ({ procedureId: i.procedure_id, price: i.price }))
-            })));
-            console.log("✅ [DATA] Wave 3 concluída. Sistema ONLINE.");
-
-          } catch (err: any) {
-            console.error(`🔥 [DATA] Falha no Batch (Tentativa ${attempt}):`, err.message);
-            isInitializing = false; // Libera trava em caso de erro para permitir retry
-
-            // BACKOFF EXPONENCIAL: 1s, 2s, 4s, 8s...
-            const delay = Math.pow(2, attempt) * 1000;
-            console.log(`🔄 [DATA] Agendando nova tentativa em ${delay}ms...`);
-
-            setTimeout(() => {
-              isInitializing = true; // Retrava
-              fetchBatch(attempt + 1);
-            }, delay);
-          } finally {
-            // Só libera a trava se tudo der certo no final do fluxo ou se falhar (já tratado acima)
-            if (attempt > 4) isInitializing = false; // Desiste após 4 tentativas
-          }
-        };
-
-        fetchBatch();
-      };
-
-      initializeSystem();
-
-    } else if (!profile?.clinic_id) {
-      // Fallback to mock data apenas se não temos clinic_id
-      lastClinicIdRef.current = null;
+    if (profile?.clinic_id) {
+      fetchCoreData();
+    } else {
+      // Mock fallback
       setPatients(MOCK_PATIENTS);
     }
   }, [profile?.clinic_id]);
+
+  const refreshData = async () => {
+    await fetchCoreData(true);
+  };
 
   const toggleTheme = () => {
     setTheme((prev) => (prev === "light" ? "dark" : "light"));

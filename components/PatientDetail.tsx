@@ -20,6 +20,7 @@ import { useSheetStore } from "../stores/useSheetStore";
 import { PatientMenuList } from "./patient/PatientMenuList";
 import { PatientNavigationDrawers } from "./patient/PatientNavigationDrawers";
 import { PatientSkeleton } from "./patient/PatientSkeleton";
+import { FloatingActionButton } from "./FloatingActionButton";
 
 // --- Subcomponentes Visuais (Badges) ---
 
@@ -230,18 +231,18 @@ export const PatientDetailSheet: React.FC<PatientDetailProps> = ({
     );
 
     const renderHeader = () => (
-        <div className="flex-none bg-card border-b border-slate-200 dark:border-slate-800 p-6 z-50 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-                <button onClick={onClose} className="flex items-center gap-2 text-slate-600 hover:text-slate-900 transition-colors">
-                    <ArrowLeft size={20} /> <span className="font-medium">Voltar</span>
-                </button>
+        <div className="flex-none bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-800/50 p-6 z-50 shadow-sm">
+            <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-semibold text-slate-900 dark:text-white">
+                    {isCreateMode ? 'Novo Paciente' : patient?.name || 'Carregando...'}
+                </h2>
                 {!isCreateMode && (
-                    <button onClick={handleDeletePatient} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground px-3 py-2 rounded-lg">
+                    <button onClick={handleDeletePatient} className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl font-semibold transition-all flex items-center gap-2">
                         <Trash2 size={16} />
+                        Excluir
                     </button>
                 )}
             </div>
-
             {isCreateMode ? (
                 <div className="mb-4">
                     <h1 className="text-2xl font-black text-slate-900 dark:text-white mb-1">Novo Paciente</h1>
@@ -347,18 +348,30 @@ export const PatientDetailSheet: React.FC<PatientDetailProps> = ({
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             <div className="bg-card p-5 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow">
                                 <h3 className="font-bold text-slate-700 dark:text-slate-200 mb-2 flex items-center gap-2"><User size={16} /> Origem & Perfil</h3>
-                                <p className="text-sm">Origem: <span className="font-semibold">{patient.origin || 'N/A'}</span></p>
-                                <p className="text-sm">Profissão: <span className="font-semibold">{patient.occupation || 'N/A'}</span></p>
+                                <p className="text-sm">Origem: <span className="font-semibold">{patient.origin || 'Não informado'}</span></p>
+                                <p className="text-sm">Profissão: <span className="font-semibold">{patient.occupation || 'Não informada'}</span></p>
+                                {patient.instagram_handle && (
+                                    <p className="text-sm">Instagram: <span className="font-semibold text-pink-600">@{patient.instagram_handle}</span></p>
+                                )}
+                                {patient.birth_date && (
+                                    <p className="text-sm">Idade: <span className="font-semibold">{Math.floor((new Date().getTime() - new Date(patient.birth_date).getTime()) / (365.25 * 24 * 60 * 60 * 1000))} anos</span></p>
+                                )}
                             </div>
                             <div className="bg-card p-5 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow">
                                 <h3 className="font-bold text-slate-700 dark:text-slate-200 mb-2 flex items-center gap-2"><Activity size={16} /> Produção</h3>
                                 <p className="text-sm text-green-600 font-bold">{clinicalTreatments.length} tratamentos ativos</p>
                                 <p className="text-xs text-slate-500">Última vinda: {patient.last_attendance ? new Date(patient.last_attendance).toLocaleDateString() : '-'}</p>
                             </div>
-                            <div className="bg-card p-5 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow">
+                            <div className={`p-5 rounded-lg border shadow-sm hover:shadow-md transition-shadow ${(patient.balance_due || 0) > 0
+                                ? 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800'
+                                : 'bg-emerald-50 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800'
+                                }`}>
                                 <h3 className="font-bold text-slate-700 dark:text-slate-200 mb-2 flex items-center gap-2"><DollarSign size={16} /> Financeiro</h3>
-                                <p className="text-sm text-emerald-600 font-bold">LTV: R$ {patient.total_paid?.toLocaleString()}</p>
-                                <p className="text-xs text-slate-500">Ticket Médio: R$ {((patient.total_paid || 0) / (clinicalTreatments.length || 1)).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}</p>
+                                <p className="text-sm text-emerald-600 font-bold">Total Aprovado: R$ {(patient.total_approved || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                                {(patient.balance_due || 0) > 0 && (
+                                    <p className="text-sm text-red-600 font-bold mt-1">Saldo Devedor: R$ {(patient.balance_due || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                                )}
+                                <p className="text-xs text-slate-500 mt-1">Ticket Médio: R$ {((patient.total_paid || 0) / (clinicalTreatments.length || 1)).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}</p>
                             </div>
                         </div>
                     </div>

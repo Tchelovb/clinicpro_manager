@@ -100,13 +100,41 @@ export const WeekViewDesktop: React.FC<WeekViewDesktopProps> = ({
 
                                     const topPos = gridStartIndex * 100;
                                     const height = (apt.duration / 60) * 100;
-                                    const config = STATUS_CONFIG[apt.status] || STATUS_CONFIG.PENDING;
+
+
+                                    // GHL COLOR LOGIC
+                                    let colorClass = 'bg-slate-100 border-l-4 border-slate-400 text-slate-700'; // Default
+
+                                    // 1. By Type (Primary Hierarchy)
+                                    switch (apt.type) {
+                                        case 'URGENCY':
+                                            colorClass = 'bg-red-50 border-l-4 border-red-500 text-red-700 dark:bg-red-900/20 dark:text-red-300';
+                                            break;
+                                        case 'EVALUATION':
+                                            colorClass = 'bg-amber-50 border-l-4 border-amber-500 text-amber-900 dark:bg-amber-900/20 dark:text-amber-100';
+                                            break;
+                                        case 'TREATMENT':
+                                            colorClass = 'bg-blue-50 border-l-4 border-blue-500 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300';
+                                            break;
+                                        case 'RETURN':
+                                            colorClass = 'bg-emerald-50 border-l-4 border-emerald-500 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300';
+                                            break;
+                                        default:
+                                            // Fallback to Status if Type is generic 'CLINICA' or unknown
+                                            const statusConfig = STATUS_CONFIG[apt.status] || STATUS_CONFIG.PENDING;
+                                            colorClass = statusConfig.color;
+                                            break;
+                                    }
+
+                                    // 2. Status Overrides (Dimming/Icons)
+                                    if (apt.status === 'CANCELLED') colorClass += ' opacity-50 grayscale';
+                                    if (apt.status === 'ARRIVED') colorClass += ' ring-2 ring-green-400 ring-offset-1 animate-pulse';
 
                                     return (
                                         <div
                                             key={apt.id}
                                             onClick={(e) => { e.stopPropagation(); onAppointmentClick(apt); }}
-                                            className={`absolute left-1 right-1 p-1.5 rounded text-[10px] cursor-pointer shadow-sm transition-all hover:scale-[1.02] bg-opacity-90 hover:z-20 ${config.color}`}
+                                            className={`absolute left-1 right-1 p-1.5 rounded text-[10px] cursor-pointer shadow-sm transition-all hover:scale-[1.02] bg-opacity-90 hover:z-20 ${colorClass}`}
                                             style={{
                                                 top: `${topPos + 2}px`,
                                                 height: `${height - 4}px`,

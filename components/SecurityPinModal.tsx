@@ -96,6 +96,25 @@ const SecurityPinModal: React.FC<SecurityPinModalProps> = ({
         setError('');
 
         try {
+            // 🔓 Default PIN '0000' Logic
+            if (pin === '0000' && (!profile.transaction_pin_hash)) {
+                // Allow default if no PIN set
+                await securityService.logAction({
+                    action_type: actionType,
+                    entity_type: entityType || 'UNKNOWN',
+                    entity_id: entityId,
+                    entity_name: entityName,
+                    changes_summary: `Ação autorizada via PIN Padrão (0000): ${title}`
+                });
+
+                setShowSuccess(true);
+                setTimeout(() => {
+                    onSuccess();
+                    onClose();
+                }, 1000);
+                return;
+            }
+
             const result = await securityService.validatePin(profile.id, pin);
 
             if (result.success) {

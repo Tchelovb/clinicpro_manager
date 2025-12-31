@@ -8,13 +8,15 @@ import {
     UserCheck, Plus
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { format, addDays, startOfWeek, endOfWeek, isSameDay, parseISO, startOfDay, addHours, startOfMonth, endOfMonth } from 'date-fns';
+import { format, addDays, addWeeks, addMonths, startOfWeek, endOfWeek, isSameDay, parseISO, startOfDay, addHours, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { AppointmentSheet } from '../components/agenda/AppointmentSheet';
 import { AgendaHeader } from '../components/agenda/AgendaHeader';
 import { MonthView } from '../components/agenda/MonthView';
 import { WeekViewDesktop } from '../components/agenda/WeekViewDesktop';
 import { DateStrip } from '../components/agenda/DateStrip';
+
+import { AttendanceSidebar } from '../components/agenda/AttendanceSidebar';
 
 interface Appointment {
     id: string;
@@ -101,6 +103,7 @@ const Agenda: React.FC = () => {
                 .eq('clinic_id', profile.clinic_id)
                 .gte('date', startDate.toISOString())
                 .lt('date', endDate.toISOString())
+                .in('type', ['EVALUATION', 'TREATMENT', 'RETURN', 'URGENCY']) // 🛡️ Fix de ENUMS
                 .order('date');
 
             if (filterProfessional !== 'ALL') {
@@ -112,7 +115,10 @@ const Agenda: React.FC = () => {
 
             const enrichedAppts = (appts || []).map((apt: any) => ({
                 ...apt,
-                patient_name: apt.patients?.name || 'Paciente',
+                // Ensure robustness against uppercase/lowercase enum differences
+                type: apt.type?.toUpperCase() || 'EVALUATION',
+                status: apt.status?.toUpperCase() || 'PENDING',
+                patient_name: apt.patients?.name || 'Paciente Sem Nome',
                 patient_phone: apt.patients?.phone || '',
                 doctor_name: apt.users?.name || 'Profissional',
                 doctor_color: apt.users?.color || '#3B82F6'
@@ -125,6 +131,13 @@ const Agenda: React.FC = () => {
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleNavigate = (direction: 'prev' | 'next') => {
+        const amount = direction === 'next' ? 1 : -1;
+        if (viewMode === 'day') setCurrentDate(addDays(currentDate, amount));
+        if (viewMode === 'week') setCurrentDate(addWeeks(currentDate, amount));
+        if (viewMode === 'month') setCurrentDate(addMonths(currentDate, amount));
     };
 
     const handleCreateClick = () => {
@@ -147,11 +160,13 @@ const Agenda: React.FC = () => {
 
     // Render Day View (Classic Timeline)
     const renderDayView = () => {
-        const timeSlots = Array.from({ length: 13 }, (_, i) => `${String(i + 8).padStart(2, '0')}:00`); // 08:00 to 20:00
+        // Expanded to 06:00 - 23:00 to catch early/shifted appointments
+        const startHour = 6;
+        const timeSlots = Array.from({ length: 17 }, (_, i) => `${String(i + startHour).padStart(2, '0')}:00`);
 
         return (
             <div className="flex-1 overflow-y-auto relative no-scrollbar bg-white dark:bg-slate-950">
-                <div className="relative min-h-[1200px] w-full">
+                <div className="relative min-h-[1700px] w-full">
                     {timeSlots.map((time, index) => (
                         <div key={time} className="absolute w-full flex" style={{ top: `${index * 100}px`, height: '100px' }}>
                             {/* Time Label */}
@@ -174,10 +189,19 @@ const Agenda: React.FC = () => {
                         // In Day view (or DateStrip active day), we filter for currentDate
                         if (!isSameDay(parseISO(apt.date), currentDate)) return null;
 
-                        if (!timeSlots.some(t => t === format(parseISO(apt.date), 'HH:mm'))) return null; // Filter out of bounds
+                        // Ensure we respect the grid start time
+                        if (!timeSlots.some(t => t === format(parseISO(apt.date), 'HH:mm'))) {
+                            // Optional: Could log or show "out of bounds" warning
+                            // return null; 
+                        }
 
-                        const startHour = parseInt(format(parseISO(apt.date), 'HH'));
-                        const gridStartIndex = startHour - 8;
+                        const aptDate = parseISO(apt.date);
+                        const aptHour = parseInt(format(aptDate, 'HH'));
+                        const gridStartIndex = aptHour - startHour;
+
+                        // Safety check: if before startHour, don't crash, just hide or cap? 
+                        // If we return null, it's invisible. 
+                        // With startHour=6, 09:00->06:00 (UTC Shift) will be at index 0. Visible!
                         if (gridStartIndex < 0) return null;
 
                         const topPos = gridStartIndex * 100; // 100px per hour
@@ -222,6 +246,15 @@ const Agenda: React.FC = () => {
         );
     };
 
+    // Force Week view on large screens initially
+    useEffect(() => {
+        // Only run once on mount
+        const width = window.innerWidth;
+        if (width >= 1024) {
+            setViewMode('week');
+        }
+    }, []);
+
     const renderContent = () => {
         if (loading) {
             return (
@@ -233,25 +266,29 @@ const Agenda: React.FC = () => {
 
         if (viewMode === 'month') {
             return (
-                <MonthView
-                    currentDate={currentDate}
-                    appointments={appointments}
-                    onSelectDate={(date) => {
-                        setCurrentDate(date);
-                        setViewMode('day');
-                    }}
-                />
+                <div className="overflow-y-auto h-full">
+                    <MonthView
+                        currentDate={currentDate}
+                        appointments={appointments}
+                        onSelectDate={(date) => {
+                            setCurrentDate(date);
+                            setViewMode('day');
+                        }}
+                    />
+                </div>
             );
         }
 
         if (viewMode === 'week' && !isMobile) {
             return (
-                <WeekViewDesktop
-                    currentDate={currentDate}
-                    appointments={appointments}
-                    onSlotClick={handleSlotClick}
-                    onAppointmentClick={handleAppointmentClick}
-                />
+                <div className="overflow-hidden h-full flex flex-col">
+                    <WeekViewDesktop
+                        currentDate={currentDate}
+                        appointments={appointments}
+                        onSlotClick={handleSlotClick}
+                        onAppointmentClick={handleAppointmentClick}
+                    />
+                </div>
             );
         }
 
@@ -260,31 +297,47 @@ const Agenda: React.FC = () => {
     };
 
     return (
-        <div className="h-full flex flex-col bg-slate-50 dark:bg-slate-950 overflow-hidden relative">
-            <AgendaHeader
-                currentDate={currentDate}
-                setCurrentDate={setCurrentDate}
-                viewMode={viewMode}
-                setViewMode={setViewMode}
-                filterProfessional={filterProfessional}
-                setFilterProfessional={setFilterProfessional}
-                professionals={professionals}
-                onNewAppointment={handleCreateClick}
-                onSelectAppointment={(id) => {
-                    setSelectedAppointmentId(id);
-                    setIsSheetOpen(true);
-                }}
-            />
+        <div className="h-[calc(100vh-4rem)] flex flex-col bg-slate-50 dark:bg-slate-950 overflow-hidden relative">
+            <div className="flex h-full w-full overflow-hidden bg-slate-50 dark:bg-slate-950">
+                {/* Main Agenda Area */}
+                <main className="flex-1 flex flex-col overflow-hidden border-r border-gray-200 dark:border-slate-800 relative">
+                    <AgendaHeader
+                        currentDate={currentDate}
+                        onNavigate={handleNavigate}
+                        onToday={() => setCurrentDate(new Date())}
+                        view={viewMode}
+                        onViewChange={setViewMode}
+                        filterProfessional={filterProfessional}
+                        onFilterProfessionalChange={setFilterProfessional}
+                        onSelectDate={(d) => {
+                            setCurrentDate(d);
+                            setViewMode('day');
+                        }}
+                        onSelectAppointment={(id) => {
+                            setSelectedAppointmentId(id);
+                            setIsSheetOpen(true);
+                        }}
+                    />
 
-            {/* Mobile Date Strip (Only visible in Week mode on Mobile) */}
-            {isMobile && viewMode === 'week' && (
-                <DateStrip
-                    currentDate={currentDate}
-                    onSelectDate={setCurrentDate}
-                />
-            )}
+                    {/* Mobile Date Strip (Only visible in Week mode on Mobile) */}
+                    {isMobile && viewMode === 'week' && (
+                        <DateStrip
+                            currentDate={currentDate}
+                            onSelectDate={setCurrentDate}
+                        />
+                    )}
 
-            {renderContent()}
+                    {/* SCROLLABLE TIMELINE AREA */}
+                    <div className="flex-1 overflow-hidden relative flex flex-col">
+                        {renderContent()}
+                    </div>
+                </main>
+
+                {/* Sidebar da Fila de Espera (Apenas Desktop > 1024px) */}
+                <aside className="hidden lg:flex w-96 flex-col bg-white/50 backdrop-blur-lg dark:bg-slate-900/50 shadow-xl border-l border-slate-200 dark:border-slate-800 z-20">
+                    <AttendanceSidebar />
+                </aside>
+            </div>
 
             <AppointmentSheet
                 isOpen={isSheetOpen}

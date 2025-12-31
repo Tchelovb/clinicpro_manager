@@ -242,11 +242,18 @@ export interface Appointment {
   id: string;
   patientId: string;
   patientName: string;
+  doctorId?: string; // Standardized CamelCase
+  doctor_id?: string; // Database snake_case compatibility
   doctorName: string;
   date: string;
   time: string;
-  type: "Avaliação" | "Procedimento" | "Retorno" | "Urgência";
-  status: "Confirmado" | "Pendente" | "Concluído" | "Cancelado" | "Faltou";
+  type: "Avaliação" | "Procedimento" | "Retorno" | "Urgência" | "EVALUATION" | "TREATMENT" | "RETURN" | "URGENCY"; // Added database enums
+  status: "Confirmado" | "Pendente" | "Concluído" | "Cancelado" | "Faltou" | "CONFIRMED" | "PENDING" | "COMPLETED" | "CANCELLED" | "NO_SHOW"; // Added database enums
+  notes?: string;
+  duration?: number;
+  clinic_id?: string;
+  budget_id?: string; // Link to Financial
+  budgetId?: string; // Frontend Alias
 }
 
 // --- NEW FINANCIAL MODULE TYPES ---

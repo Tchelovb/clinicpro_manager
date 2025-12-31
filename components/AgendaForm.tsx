@@ -31,7 +31,7 @@ export const AgendaForm: React.FC = () => {
     time: "09:00",
     type: "EVALUATION" as any,
     status: "PENDING" as any,
-    doctor_id: profile?.id || professionals[0]?.id || "",
+    doctorId: profile?.id || professionals[0]?.id || "",
     patientName: "",
   });
 
@@ -50,20 +50,51 @@ export const AgendaForm: React.FC = () => {
         (p) => p.name.toLowerCase() === formData.patientName?.toLowerCase()
       );
 
+      // STRICT ENUM MAPPING
+      const validTypes = ['EVALUATION', 'TREATMENT', 'RETURN', 'URGENCY'];
+      const typeToSend = validTypes.includes(formData.type) ? formData.type : 'EVALUATION';
+
+      // Ensure date format is ISO8601 compatible for Postgres
       const newApt = {
         clinic_id: profile.clinic_id,
         patient_id: patient?.id || null,
-        doctor_id: formData.doctor_id || profile.id,
-        date: `${formData.date}T${formData.time}:00Z`,
+        doctor_id: formData.doctorId || profile.id,
+        date: `${formData.date}T${formData.time}:00`, // Removed 'Z' to avoid timezone double-shift unless handling strictly
         duration: 60,
-        type: formData.type,
-        status: "Pendente",
+        type: typeToSend,
+        status: "PENDING", // Correct ENUM
         notes: `Agendado via Painel Dr. Marcelo`,
       };
 
-      const { error } = await supabase.from("appointments").insert([newApt]);
+      const { data, error } = await supabase.from("appointments").insert([newApt]).select().single();
 
       if (error) throw error;
+
+      // 🤖 WHATSAPP AUTOMATION
+      try {
+        if (patient?.id) {
+          // A. WhatsApp History
+          await supabase.from('whatsapp_chat_history').insert({
+            clinic_id: profile.clinic_id,
+            patient_id: patient.id,
+            agent_name: 'guardian',
+            direction: 'OUTBOUND',
+            message_type: 'TEXT',
+            message_content: `Olá ${patient.name.split(' ')[0]}, seu agendamento com o Dr. Marcelo foi confirmado para ${formData.date} às ${formData.time}. Esperamos por você!`,
+            is_read: true
+          });
+
+          // B. Confirmation Tracker
+          await supabase.from('appointment_confirmations').upsert({
+            clinic_id: profile.clinic_id,
+            appointment_id: data.id,
+            confirmation_status: 'PENDING',
+            created_at: new Date().toISOString()
+          }, { onConflict: 'appointment_id' });
+        }
+      } catch (waErr) {
+        console.error("WhatsApp trigger failed", waErr);
+      }
 
       toast.success("Agendamento realizado com sucesso!");
       await refreshData(); // Atualiza o Dashboard e a Grade
@@ -165,11 +196,10 @@ export const AgendaForm: React.FC = () => {
                 onClick={() =>
                   setFormData({ ...formData, type: option.value as any })
                 }
-                className={`py-3 text-xs font-bold rounded-lg border transition-all ${
-                  formData.type === option.value
-                    ? "bg-primary-600 border-primary-600 text-white shadow-md"
-                    : "bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-600 text-gray-500 hover:bg-gray-50"
-                }`}
+                className={`py-3 text-xs font-bold rounded-lg border transition-all ${formData.type === option.value
+                  ? "bg-primary-600 border-primary-600 text-white shadow-md"
+                  : "bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-600 text-gray-500 hover:bg-gray-50"
+                  }`}
               >
                 {option.label}
               </button>

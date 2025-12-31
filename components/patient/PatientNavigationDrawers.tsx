@@ -1,6 +1,9 @@
 import React from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } from '../ui/drawer';
+import PatientForm from '../PatientForm';
+import BudgetForm from '../BudgetForm';
+import { PatientInstallments } from '../PatientInstallments';
 
 interface NavigationLevel {
     type: 'menu' | 'section' | 'detail';
@@ -41,7 +44,7 @@ export const PatientNavigationDrawers: React.FC<PatientNavigationDrawersProps> =
         switch (sectionId) {
             case 'budgets':
                 return (
-                    <div className="space-y-3">
+                    <div className="space-y-3 pb-20">
                         {budgets.length === 0 ? (
                             <p className="text-center text-slate-500 py-8">Nenhuma proposta cadastrada</p>
                         ) : (
@@ -53,7 +56,7 @@ export const PatientNavigationDrawers: React.FC<PatientNavigationDrawersProps> =
                                 >
                                     <div className="flex items-center justify-between mb-2">
                                         <span className="font-bold text-slate-900 dark:text-white">
-                                            Orçamento #{budget.id.slice(0, 8)}
+                                            Proposta #{budget.id.slice(0, 8)}
                                         </span>
                                         <span className={`px-2 py-1 rounded text-xs font-bold ${budget.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-700' :
                                             budget.status === 'PENDING' ? 'bg-amber-100 text-amber-700' :
@@ -63,8 +66,8 @@ export const PatientNavigationDrawers: React.FC<PatientNavigationDrawersProps> =
                                                 budget.status === 'PENDING' ? 'Pendente' : 'Rejeitado'}
                                         </span>
                                     </div>
-                                    <p className="text-2xl font-black text-blue-600 dark:text-blue-400 mb-1">
-                                        R$ {(budget.total_value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                    <p className="text-xl font-black text-blue-600 dark:text-blue-400 mb-1">
+                                        R$ {(budget.final_value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                     </p>
                                     <p className="text-xs text-slate-500">
                                         {new Date(budget.created_at).toLocaleDateString('pt-BR')}
@@ -81,7 +84,7 @@ export const PatientNavigationDrawers: React.FC<PatientNavigationDrawersProps> =
                 const treatments = sectionId === 'clinical' ? clinicalTreatments :
                     sectionId === 'ortho' ? orthoTreatments : hofTreatments;
                 return (
-                    <div className="space-y-3">
+                    <div className="space-y-3 pb-20">
                         {treatments.length === 0 ? (
                             <p className="text-center text-slate-500 py-8">Nenhum tratamento cadastrado</p>
                         ) : (
@@ -91,9 +94,14 @@ export const PatientNavigationDrawers: React.FC<PatientNavigationDrawersProps> =
                                     className="p-4 bg-card rounded-xl border border-slate-200 dark:border-slate-800"
                                 >
                                     <p className="font-bold text-slate-900 dark:text-white mb-1">{treatment.procedure_name}</p>
-                                    <p className="text-sm text-slate-600 dark:text-slate-400">
-                                        Status: {treatment.status}
-                                    </p>
+                                    <div className="flex justify-between items-center mt-2">
+                                        <p className="text-sm text-slate-600 dark:text-slate-400">
+                                            Status: <span className="font-medium">{treatment.status}</span>
+                                        </p>
+                                        <p className="text-sm font-bold text-blue-600 dark:text-blue-400">
+                                            R$ {treatment.price?.toLocaleString('pt-BR')}
+                                        </p>
+                                    </div>
                                 </div>
                             ))
                         )}
@@ -102,7 +110,7 @@ export const PatientNavigationDrawers: React.FC<PatientNavigationDrawersProps> =
 
             case 'gallery':
                 return (
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 gap-3 pb-20">
                         {clinicalImages.length === 0 ? (
                             <p className="col-span-2 text-center text-slate-500 py-8">Nenhuma imagem cadastrada</p>
                         ) : (
@@ -117,48 +125,42 @@ export const PatientNavigationDrawers: React.FC<PatientNavigationDrawersProps> =
 
             case 'registration':
                 return (
-                    <div className="space-y-4">
-                        <div>
-                            <p className="text-xs text-slate-500 mb-1">CPF</p>
-                            <p className="font-semibold text-slate-900 dark:text-white">{patient?.cpf || 'N/A'}</p>
-                        </div>
-                        <div>
-                            <p className="text-xs text-slate-500 mb-1">Data de Nascimento</p>
-                            <p className="font-semibold text-slate-900 dark:text-white">
-                                {patient?.birth_date ? new Date(patient.birth_date).toLocaleDateString('pt-BR') : 'N/A'}
-                            </p>
-                        </div>
-                        <div>
-                            <p className="text-xs text-slate-500 mb-1">Profissão</p>
-                            <p className="font-semibold text-slate-900 dark:text-white">{patient?.occupation || 'N/A'}</p>
-                        </div>
-                        <div>
-                            <p className="text-xs text-slate-500 mb-1">Instagram</p>
-                            <p className="font-semibold text-slate-900 dark:text-white">{patient?.instagram_handle || 'N/A'}</p>
-                        </div>
+                    <div className="pb-20">
+                        <PatientForm
+                            initialData={patient}
+                            patientId={patient?.id}
+                            readonly={true}
+                        />
                     </div>
                 );
 
             case 'financial':
                 return (
-                    <div className="space-y-4">
-                        <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl">
-                            <p className="text-xs text-blue-600 dark:text-blue-400 mb-1">Total Aprovado</p>
-                            <p className="text-2xl font-black text-blue-600 dark:text-blue-400">
-                                R$ {(patient?.total_approved || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                            </p>
+                    <div className="space-y-4 pb-20">
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl col-span-2">
+                                <p className="text-xs text-blue-600 dark:text-blue-400 mb-1">Total Aprovado</p>
+                                <p className="text-2xl font-black text-blue-600 dark:text-blue-400">
+                                    R$ {(patient?.total_approved || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                </p>
+                            </div>
+                            <div className="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-xl">
+                                <p className="text-xs text-emerald-600 dark:text-emerald-400 mb-1">Total Pago</p>
+                                <p className="text-xl font-black text-emerald-600 dark:text-emerald-400">
+                                    R$ {(patient?.total_paid || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                </p>
+                            </div>
+                            <div className="bg-rose-50 dark:bg-rose-900/20 p-4 rounded-xl">
+                                <p className="text-xs text-rose-600 dark:text-rose-400 mb-1">Saldo Devedor</p>
+                                <p className="text-xl font-black text-rose-600 dark:text-rose-400">
+                                    R$ {(patient?.balance_due || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                </p>
+                            </div>
                         </div>
-                        <div className="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-xl">
-                            <p className="text-xs text-emerald-600 dark:text-emerald-400 mb-1">Total Pago</p>
-                            <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
-                                R$ {(patient?.total_paid || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                            </p>
-                        </div>
-                        <div className="bg-rose-50 dark:bg-rose-900/20 p-4 rounded-xl">
-                            <p className="text-xs text-rose-600 dark:text-rose-400 mb-1">Saldo Devedor</p>
-                            <p className="text-2xl font-black text-rose-600 dark:text-rose-400">
-                                R$ {(patient?.balance_due || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                            </p>
+
+                        <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-800">
+                            <h3 className="font-bold mb-4 text-slate-900 dark:text-white px-1">Histórico Financeiro</h3>
+                            <PatientInstallments patientId={patient?.id} />
                         </div>
                     </div>
                 );
@@ -168,34 +170,95 @@ export const PatientNavigationDrawers: React.FC<PatientNavigationDrawersProps> =
         }
     };
 
+    // Renderiza o CONTEÚDO DETALHADO (Nível 2)
+    const renderDetailContent = () => {
+        const itemId = currentLevel.itemId;
+        if (!itemId) return <p>Item não identificado</p>;
+
+        // 1. Tentar achar em Orçamentos
+        const budget = budgets.find(b => b.id === itemId);
+        if (budget) {
+            return (
+                <div className="pb-20">
+                    <BudgetForm
+                        isInline
+                        patientId={patient?.id}
+                        initialBudget={budget}
+                        onCancel={onGoBack}
+                        onSaveSuccess={() => {
+                            onGoBack();
+                        }}
+                    />
+                </div>
+            );
+        }
+
+        // 2. Tentar achar em Tratamentos Clínicos
+        const clinical = clinicalTreatments.find(t => t.id === itemId);
+        if (clinical) return renderTreatmentDetail(clinical);
+
+        // 3. Tentar achar em Ortho
+        const ortho = orthoTreatments.find(t => t.id === itemId);
+        if (ortho) return renderTreatmentDetail(ortho);
+
+        return <p className="text-center text-slate-500 mt-10">Item não encontrado nos registros do paciente.</p>;
+    };
+
+    const renderTreatmentDetail = (treatment: any) => (
+        <div className="p-4 space-y-4">
+            <div className="bg-card p-6 rounded-xl border border-slate-200 dark:border-slate-800">
+                <h3 className="text-xl font-bold mb-2">{treatment.procedure_name}</h3>
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <p className="text-xs text-slate-500">Status</p>
+                        <p className="font-semibold">{treatment.status}</p>
+                    </div>
+                    <div>
+                        <p className="text-xs text-slate-500">Valor</p>
+                        <p className="font-semibold">R$ {treatment.price?.toLocaleString('pt-BR')}</p>
+                    </div>
+                    <div>
+                        <p className="text-xs text-slate-500">Dente/Região</p>
+                        <p className="font-semibold">{treatment.tooth_region || '-'}</p>
+                    </div>
+                    <div>
+                        <p className="text-xs text-slate-500">Data</p>
+                        <p className="font-semibold">{new Date(treatment.created_at).toLocaleDateString()}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+
     return (
         <Drawer open={navigationStack.length > 0} onOpenChange={() => onGoBack()}>
-            <DrawerContent className="h-[95vh] rounded-t-[10px] flex flex-col bg-background">
+            <DrawerContent className="h-[95vh] rounded-t-[10px] flex flex-col bg-background outline-none">
                 <DrawerHeader className="sr-only">
                     <DrawerTitle>{currentLevel.title}</DrawerTitle>
                     <DrawerDescription>Detalhes da seção {currentLevel.sectionId || currentLevel.type}</DrawerDescription>
                 </DrawerHeader>
-                {/* Header */}
-                <div className="flex items-center gap-3 p-4 border-b border-slate-200 dark:border-slate-800 shrink-0">
+                {/* Header Actions */}
+                <div className="flex items-center gap-3 p-4 border-b border-slate-200 dark:border-slate-800 shrink-0 bg-background z-10">
                     <button
                         onClick={onGoBack}
                         className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
                     >
                         <ArrowLeft size={20} className="text-slate-600 dark:text-slate-400" />
                     </button>
-                    <h2 className="text-lg font-bold text-slate-900 dark:text-white">{currentLevel.title}</h2>
+                    <h2 className="text-lg font-bold text-slate-900 dark:text-white truncate pr-4">
+                        {currentLevel.title}
+                    </h2>
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 overflow-y-auto p-4">
+                <div className="flex-1 overflow-y-auto bg-background">
                     {currentLevel.type === 'section' && currentLevel.sectionId && (
-                        renderSectionContent(currentLevel.sectionId)
+                        <div className="p-4">
+                            {renderSectionContent(currentLevel.sectionId)}
+                        </div>
                     )}
                     {currentLevel.type === 'detail' && (
-                        <div className="space-y-4">
-                            <p className="text-center text-slate-500">Detalhes do item {currentLevel.itemId}</p>
-                            {/* TODO: Render detail content based on itemId */}
-                        </div>
+                        renderDetailContent()
                     )}
                 </div>
             </DrawerContent>

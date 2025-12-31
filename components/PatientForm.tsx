@@ -40,7 +40,7 @@ const PatientForm: React.FC<PatientFormProps> = ({
   const navigate = useNavigate();
   const { id: paramId } = useParams<{ id: string }>();
   const { createPatientAsync, updatePatientAsync } = usePatients();
-  const { clinicId } = useAuth();
+  const { profile } = useAuth();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(!initialReadonly);
@@ -140,7 +140,7 @@ const PatientForm: React.FC<PatientFormProps> = ({
     e.preventDefault();
 
     // 🛡️ SESSÃO BLINDADA: Validação Crítica de Segurança
-    if (!clinicId) {
+    if (!profile?.clinic_id) {
       toast.error("Erro Crítico de Segurança: Identificação da clínica não encontrada. Por favor, faça login novamente.");
       setError("Erro de Sessão: clinic_id ausente. Recarregue a página.");
       return;
@@ -244,11 +244,11 @@ const PatientForm: React.FC<PatientFormProps> = ({
   };
 
   // Estilos profissionais
-  const inputClass = "w-full bg-card text-foreground border border-slate-200 dark:border-slate-800 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all";
+  const inputClass = "w-full bg-card text-foreground border border-slate-200 dark:border-slate-800 rounded-md px-3 py-2 text-base focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all";
   const labelClass = "block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wide";
-  const valueClass = "text-sm font-medium text-foreground";
+  const valueClass = "text-base font-medium text-foreground";
   const sectionClass = "bg-card rounded-lg border border-slate-200 dark:border-slate-800 p-6 shadow-sm";
-  const sectionTitleClass = "text-sm font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider mb-4 flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2";
+  const sectionTitleClass = "text-base font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider mb-4 flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2";
 
   if (loading) {
     return (
@@ -336,7 +336,7 @@ const PatientForm: React.FC<PatientFormProps> = ({
   );
 
   return (
-    <div className="max-w-6xl mx-auto pb-24">
+    <div className="flex flex-col h-full max-w-6xl mx-auto">
       {/* Security Pin Modal */}
       <SecurityPinModal
         isOpen={showPinModal}
@@ -364,7 +364,7 @@ const PatientForm: React.FC<PatientFormProps> = ({
               <h1 className="text-2xl font-bold text-foreground">
                 {isEditMode ? "Editar Paciente" : "Novo Paciente"}
               </h1>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-base text-muted-foreground">
                 {isEditMode ? "Atualize os dados cadastrais" : "Preencha os campos obrigatórios (*)"}
               </p>
             </div>
@@ -422,322 +422,350 @@ const PatientForm: React.FC<PatientFormProps> = ({
         </div>
       )}
 
-      <form className="space-y-6" onSubmit={handleSubmit}>
-        {/* 1. IDENTIFICAÇÃO CIVIL */}
-        <div className={sectionClass}>
-          <h3 className={sectionTitleClass}>
-            <User size={16} className="text-blue-600" />
-            Identificação Civil
-          </h3>
-          <div className="grid grid-cols-12 gap-4">
-            {/* Nome Completo - 12 cols */}
-            <div className="col-span-12">
-              <label className={labelClass}>
-                Nome Completo <span className="text-red-500">*</span>
-              </label>
-              {isEditing ? (
-                <>
-                  <input
-                    name="name"
-                    value={formData.name || ""}
-                    className={inputClass}
-                    placeholder="Nome completo do paciente"
-                    onChange={handleChange}
-                    required
-                  />
-                  {/* RADAR DE DUPLICIDADE */}
-                  {possibleDuplicates.length > 0 && !isOverrideAuthorized && (
-                    <div className="mt-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg">
-                      <div className="flex items-center gap-2 text-amber-800 dark:text-amber-200 font-bold text-xs uppercase mb-2">
-                        <AlertTriangle size={14} />
-                        Possíveis Duplicidades ({possibleDuplicates.length})
-                      </div>
-                      <div className="space-y-2 max-h-32 overflow-y-auto">
-                        {possibleDuplicates.map(dup => (
-                          <div
-                            key={dup.id}
-                            onClick={() => handleSelectDuplicate(dup)}
-                            className="text-xs text-amber-900 dark:text-amber-100 bg-amber-100/50 dark:bg-amber-800/30 p-2 rounded flex justify-between items-center cursor-pointer hover:bg-amber-200 dark:hover:bg-amber-700/50 transition-colors"
-                          >
-                            <span className="font-medium">{dup.name}</span>
-                            <span className="opacity-75">{dup.phone || dup.cpf || 'Sem contato'}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <p className={valueClass}>{formData.name || 'Não informado'}</p>
-              )}
-            </div>
-
-            {/* CPF - 3 cols */}
-            <div className="col-span-12 md:col-span-3">
-              <Field label="CPF" value={formData.cpf} name="cpf" />
-            </div>
-
-            {/* RG - 3 cols */}
-            <div className="col-span-12 md:col-span-3">
-              <Field label="RG / Identidade" value={formData.rg} name="rg" />
-            </div>
-
-            {/* Data de Nascimento - 3 cols */}
-            <div className="col-span-12 md:col-span-3">
-              <Field label="Data de Nascimento" value={formData.birth_date} name="birth_date" type="date" />
-            </div>
-
-            {/* Gênero - 3 cols */}
-            <div className="col-span-12 md:col-span-3">
-              <Field
-                label="Gênero"
-                value={formData.gender}
-                name="gender"
-                options={[
-                  { value: "Masculino", label: "Masculino" },
-                  { value: "Feminino", label: "Feminino" },
-                  { value: "Outro", label: "Outro" },
-                  { value: "Não Informado", label: "Não Informado" }
-                ]}
-              />
-            </div>
-
-            {/* Estado Civil - 6 cols */}
-            <div className="col-span-12 md:col-span-6">
-              <Field
-                label="Estado Civil"
-                value={formData.marital_status}
-                name="marital_status"
-                options={[
-                  { value: "SINGLE", label: "Solteiro(a)" },
-                  { value: "MARRIED", label: "Casado(a)" },
-                  { value: "DIVORCED", label: "Divorciado(a)" },
-                  { value: "WIDOWED", label: "Viúvo(a)" },
-                  { value: "OTHER", label: "Outro" }
-                ]}
-              />
-            </div>
-
-            {/* Profissão - 6 cols */}
-            <div className="col-span-12 md:col-span-6">
-              <Field label="Profissão" value={formData.occupation} name="occupation" />
-            </div>
-          </div>
-        </div>
-
-        {/* 2. CONTATO */}
-        <div className={sectionClass}>
-          <h3 className={sectionTitleClass}>
-            <Phone size={16} className="text-green-600" />
-            Informações de Contato
-          </h3>
-          <div className="grid grid-cols-12 gap-4">
-            {/* Telefone/WhatsApp - 6 cols */}
-            <div className="col-span-12 md:col-span-6">
-              <Field
-                label="Celular / WhatsApp"
-                value={formData.phone}
-                name="phone"
-                type="tel"
-                required
-              />
-            </div>
-
-            {/* Email - 6 cols */}
-            <div className="col-span-12 md:col-span-6">
-              <Field label="Email" value={formData.email} name="email" type="email" />
-            </div>
-
-            {/* Preferência de Contato - 6 cols */}
-            <div className="col-span-12 md:col-span-6">
-              <Field
-                label="Preferência de Contato"
-                value={formData.contact_preference}
-                name="contact_preference"
-                options={[
-                  { value: "WHATSAPP", label: "WhatsApp" },
-                  { value: "PHONE", label: "Ligação" },
-                  { value: "EMAIL", label: "Email" },
-                  { value: "SMS", label: "SMS" }
-                ]}
-              />
-            </div>
-
-            {/* Origem/Marketing - 6 cols */}
-            <div className="col-span-12 md:col-span-6">
-              <Field
-                label="Como Conheceu a Clínica"
-                value={formData.origin}
-                name="origin"
-                options={[
-                  { value: "Instagram", label: "Instagram" },
-                  { value: "Google Ads", label: "Google Ads" },
-                  { value: "Indicação", label: "Indicação" },
-                  { value: "Facebook", label: "Facebook" },
-                  { value: "Orgânico", label: "Orgânico" },
-                  { value: "WhatsApp", label: "WhatsApp" },
-                  { value: "Outro", label: "Outro" }
-                ]}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* 3. LOGRADOURO (ENDEREÇO) */}
-        <div className={sectionClass}>
-          <h3 className={sectionTitleClass}>
-            <MapPin size={16} className="text-purple-600" />
-            Logradouro
-          </h3>
-          <div className="grid grid-cols-12 gap-4">
-            {/* CEP - 3 cols */}
-            <div className="col-span-12 md:col-span-3">
-              <Field label="CEP" value={formData.zip_code} name="zip_code" />
-            </div>
-
-            {/* Logradouro - 7 cols */}
-            <div className="col-span-12 md:col-span-7">
-              <Field label="Rua / Avenida" value={formData.street} name="street" />
-            </div>
-
-            {/* Número - 2 cols */}
-            <div className="col-span-12 md:col-span-2">
-              <Field label="Número" value={formData.number} name="number" />
-            </div>
-
-            {/* Complemento - 4 cols */}
-            <div className="col-span-12 md:col-span-4">
-              <Field label="Complemento" value={formData.complement} name="complement" />
-            </div>
-
-            {/* Bairro - 4 cols */}
-            <div className="col-span-12 md:col-span-4">
-              <Field label="Bairro" value={formData.neighborhood} name="neighborhood" />
-            </div>
-
-            {/* Cidade - 3 cols */}
-            <div className="col-span-12 md:col-span-3">
-              <Field label="Cidade" value={formData.city} name="city" />
-            </div>
-
-            {/* UF - 1 col */}
-            <div className="col-span-12 md:col-span-1">
-              <Field label="UF" value={formData.state} name="state" />
-            </div>
-          </div>
-        </div>
-
-        {/* 4. PERFIL PROFISSIONAL E SOCIAL */}
-        <div className={sectionClass}>
-          <h3 className={sectionTitleClass}>
-            <FileText size={16} className="text-indigo-600" />
-            Perfil Profissional e Social
-          </h3>
-          <div className="grid grid-cols-12 gap-4">
-            {/* Apelido - 6 cols */}
-            <div className="col-span-12 md:col-span-6">
-              <Field label="Apelido / Como Chamar" value={formData.nickname} name="nickname" />
-            </div>
-
-            {/* Instagram - 6 cols */}
-            <div className="col-span-12 md:col-span-6">
-              <Field label="Instagram" value={formData.instagram_handle} name="instagram_handle" />
-            </div>
-
-            {/* Observações Gerais - 12 cols */}
-            <div className="col-span-12">
-              <Field
-                label="Observações Gerais"
-                value={formData.vip_notes}
-                name="vip_notes"
-                type="textarea"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* 5. CLASSIFICAÇÃO (Apenas em Edição) */}
-        {isEditMode && (
+      {/* Scrollable Form Container */}
+      <div className="flex-1 overflow-y-auto">
+        <form className="space-y-6 p-6" onSubmit={handleSubmit}>
+          {/* 1. IDENTIFICAÇÃO CIVIL */}
           <div className={sectionClass}>
             <h3 className={sectionTitleClass}>
-              <Shield size={16} className="text-orange-600" />
-              Classificação e Status
+              <User size={16} className="text-blue-600" />
+              Identificação Civil
             </h3>
             <div className="grid grid-cols-12 gap-4">
-              {/* Score - 3 cols */}
+              {/* Nome Completo - 12 cols */}
+              <div className="col-span-12">
+                <label className={labelClass}>
+                  Nome Completo <span className="text-red-500">*</span>
+                </label>
+                {isEditing ? (
+                  <>
+                    <input
+                      name="name"
+                      value={formData.name || ""}
+                      className={inputClass}
+                      placeholder="Nome completo do paciente"
+                      onChange={handleChange}
+                      required
+                    />
+                    {/* RADAR DE DUPLICIDADE */}
+                    {possibleDuplicates.length > 0 && !isOverrideAuthorized && (
+                      <div className="mt-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg">
+                        <div className="flex items-center gap-2 text-amber-800 dark:text-amber-200 font-bold text-xs uppercase mb-2">
+                          <AlertTriangle size={14} />
+                          Possíveis Duplicidades ({possibleDuplicates.length})
+                        </div>
+                        <div className="space-y-2 max-h-32 overflow-y-auto">
+                          {possibleDuplicates.map(dup => (
+                            <div
+                              key={dup.id}
+                              onClick={() => handleSelectDuplicate(dup)}
+                              className="text-xs text-amber-900 dark:text-amber-100 bg-amber-100/50 dark:bg-amber-800/30 p-2 rounded flex justify-between items-center cursor-pointer hover:bg-amber-200 dark:hover:bg-amber-700/50 transition-colors"
+                            >
+                              <span className="font-medium">{dup.name}</span>
+                              <span className="opacity-75">{dup.phone || dup.cpf || 'Sem contato'}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <p className={valueClass}>{formData.name || 'Não informado'}</p>
+                )}
+              </div>
+
+              {/* CPF - 3 cols */}
+              <div className="col-span-12 md:col-span-3">
+                <Field label="CPF" value={formData.cpf} name="cpf" />
+              </div>
+
+              {/* RG - 3 cols */}
+              <div className="col-span-12 md:col-span-3">
+                <Field label="RG / Identidade" value={formData.rg} name="rg" />
+              </div>
+
+              {/* Data de Nascimento - 3 cols */}
+              <div className="col-span-12 md:col-span-3">
+                <Field label="Data de Nascimento" value={formData.birth_date} name="birth_date" type="date" />
+              </div>
+
+              {/* Gênero - 3 cols */}
               <div className="col-span-12 md:col-span-3">
                 <Field
-                  label="Classificação"
-                  value={formData.patient_score}
-                  name="patient_score"
+                  label="Gênero"
+                  value={formData.gender}
+                  name="gender"
                   options={[
-                    { value: "DIAMOND", label: "💎 DIAMOND" },
-                    { value: "GOLD", label: "🥇 GOLD" },
-                    { value: "STANDARD", label: "⭐ STANDARD" },
-                    { value: "RISK", label: "⚠️ RISK" },
-                    { value: "BLACKLIST", label: "🚫 BLACKLIST" }
+                    { value: "Masculino", label: "Masculino" },
+                    { value: "Feminino", label: "Feminino" },
+                    { value: "Outro", label: "Outro" },
+                    { value: "Não Informado", label: "Não Informado" }
                   ]}
                 />
               </div>
 
-              {/* Sentimento - 3 cols */}
-              <div className="col-span-12 md:col-span-3">
+              {/* Estado Civil - 6 cols */}
+              <div className="col-span-12 md:col-span-6">
                 <Field
-                  label="Status de Sentimento"
-                  value={formData.sentiment_status}
-                  name="sentiment_status"
+                  label="Estado Civil"
+                  value={formData.marital_status}
+                  name="marital_status"
                   options={[
-                    { value: "VERY_HAPPY", label: "😄 Muito Satisfeito" },
-                    { value: "HAPPY", label: "😊 Satisfeito" },
-                    { value: "NEUTRAL", label: "😐 Neutro" },
-                    { value: "UNHAPPY", label: "😟 Insatisfeito" },
-                    { value: "COMPLAINING", label: "😡 Reclamando" }
+                    { value: "SINGLE", label: "Solteiro(a)" },
+                    { value: "MARRIED", label: "Casado(a)" },
+                    { value: "DIVORCED", label: "Divorciado(a)" },
+                    { value: "WIDOWED", label: "Viúvo(a)" },
+                    { value: "OTHER", label: "Outro" }
                   ]}
                 />
               </div>
 
-              {/* Ativo - 3 cols */}
-              <div className="col-span-12 md:col-span-3">
+              {/* Profissão - 6 cols */}
+              <div className="col-span-12 md:col-span-6">
+                <Field label="Profissão" value={formData.occupation} name="occupation" />
+              </div>
+            </div>
+          </div>
+
+          {/* 2. CONTATO */}
+          <div className={sectionClass}>
+            <h3 className={sectionTitleClass}>
+              <Phone size={16} className="text-green-600" />
+              Informações de Contato
+            </h3>
+            <div className="grid grid-cols-12 gap-4">
+              {/* Telefone/WhatsApp - 6 cols */}
+              <div className="col-span-12 md:col-span-6">
                 <Field
-                  label="Status"
-                  value={String(formData.is_active !== undefined ? formData.is_active : true)}
-                  name="is_active"
+                  label="Celular / WhatsApp"
+                  value={formData.phone}
+                  name="phone"
+                  type="tel"
+                  required
+                />
+              </div>
+
+              {/* Email - 6 cols */}
+              <div className="col-span-12 md:col-span-6">
+                <Field label="Email" value={formData.email} name="email" type="email" />
+              </div>
+
+              {/* Preferência de Contato - 6 cols */}
+              <div className="col-span-12 md:col-span-6">
+                <Field
+                  label="Preferência de Contato"
+                  value={formData.contact_preference}
+                  name="contact_preference"
                   options={[
-                    { value: "true", label: "✅ Ativo" },
-                    { value: "false", label: "❌ Inativo" }
+                    { value: "WHATSAPP", label: "WhatsApp" },
+                    { value: "PHONE", label: "Ligação" },
+                    { value: "EMAIL", label: "Email" },
+                    { value: "SMS", label: "SMS" }
                   ]}
                 />
               </div>
 
-              {/* Inadimplente - 3 cols */}
-              <div className="col-span-12 md:col-span-3">
+              {/* Origem/Marketing - 6 cols */}
+              <div className="col-span-12 md:col-span-6">
                 <Field
-                  label="Inadimplente"
-                  value={String(formData.bad_debtor || false)}
-                  name="bad_debtor"
+                  label="Como Conheceu a Clínica"
+                  value={formData.origin}
+                  name="origin"
                   options={[
-                    { value: "false", label: "Não" },
-                    { value: "true", label: "Sim" }
+                    { value: "Instagram", label: "Instagram" },
+                    { value: "Google Ads", label: "Google Ads" },
+                    { value: "Indicação", label: "Indicação" },
+                    { value: "Facebook", label: "Facebook" },
+                    { value: "Orgânico", label: "Orgânico" },
+                    { value: "WhatsApp", label: "WhatsApp" },
+                    { value: "Outro", label: "Outro" }
                   ]}
                 />
               </div>
             </div>
           </div>
-        )}
-      </form>
 
-      {/* Sticky Footer com Botão de Salvar (apenas mobile e se não for readonly) */}
-      {!initialReadonly && (
-        <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-slate-200 dark:border-slate-800 p-4 pb-[max(16px,env(safe-area-inset-bottom))] shadow-lg z-30 md:hidden">
+          {/* 3. LOGRADOURO (ENDEREÇO) */}
+          <div className={sectionClass}>
+            <h3 className={sectionTitleClass}>
+              <MapPin size={16} className="text-purple-600" />
+              Logradouro
+            </h3>
+            <div className="grid grid-cols-12 gap-4">
+              {/* CEP - 3 cols */}
+              <div className="col-span-12 md:col-span-3">
+                <Field label="CEP" value={formData.zip_code} name="zip_code" />
+              </div>
+
+              {/* Logradouro - 7 cols */}
+              <div className="col-span-12 md:col-span-7">
+                <Field label="Rua / Avenida" value={formData.street} name="street" />
+              </div>
+
+              {/* Número - 2 cols */}
+              <div className="col-span-12 md:col-span-2">
+                <Field label="Número" value={formData.number} name="number" />
+              </div>
+
+              {/* Complemento - 4 cols */}
+              <div className="col-span-12 md:col-span-4">
+                <Field label="Complemento" value={formData.complement} name="complement" />
+              </div>
+
+              {/* Bairro - 4 cols */}
+              <div className="col-span-12 md:col-span-4">
+                <Field label="Bairro" value={formData.neighborhood} name="neighborhood" />
+              </div>
+
+              {/* Cidade - 3 cols */}
+              <div className="col-span-12 md:col-span-3">
+                <Field label="Cidade" value={formData.city} name="city" />
+              </div>
+
+              {/* UF - 1 col */}
+              <div className="col-span-12 md:col-span-1">
+                <Field label="UF" value={formData.state} name="state" />
+              </div>
+            </div>
+          </div>
+
+          {/* 4. PERFIL PROFISSIONAL E SOCIAL */}
+          <div className={sectionClass}>
+            <h3 className={sectionTitleClass}>
+              <FileText size={16} className="text-indigo-600" />
+              Perfil Profissional e Social
+            </h3>
+            <div className="grid grid-cols-12 gap-4">
+              {/* Apelido - 6 cols */}
+              <div className="col-span-12 md:col-span-6">
+                <Field label="Apelido / Como Chamar" value={formData.nickname} name="nickname" />
+              </div>
+
+              {/* Instagram - 6 cols */}
+              <div className="col-span-12 md:col-span-6">
+                <Field label="Instagram" value={formData.instagram_handle} name="instagram_handle" />
+              </div>
+
+              {/* Observações Gerais - 12 cols */}
+              <div className="col-span-12">
+                <Field
+                  label="Observações Gerais"
+                  value={formData.vip_notes}
+                  name="vip_notes"
+                  type="textarea"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* 5. CLASSIFICAÇÃO (Apenas em Edição) */}
+          {isEditMode && (
+            <div className={sectionClass}>
+              <h3 className={sectionTitleClass}>
+                <Shield size={16} className="text-orange-600" />
+                Classificação e Status
+              </h3>
+              <div className="grid grid-cols-12 gap-4">
+                {/* Score - 3 cols */}
+                <div className="col-span-12 md:col-span-3">
+                  <Field
+                    label="Classificação"
+                    value={formData.patient_score}
+                    name="patient_score"
+                    options={[
+                      { value: "DIAMOND", label: "💎 DIAMOND" },
+                      { value: "GOLD", label: "🥇 GOLD" },
+                      { value: "STANDARD", label: "⭐ STANDARD" },
+                      { value: "RISK", label: "⚠️ RISK" },
+                      { value: "BLACKLIST", label: "🚫 BLACKLIST" }
+                    ]}
+                  />
+                </div>
+
+                {/* Sentimento - 3 cols */}
+                <div className="col-span-12 md:col-span-3">
+                  <Field
+                    label="Status de Sentimento"
+                    value={formData.sentiment_status}
+                    name="sentiment_status"
+                    options={[
+                      { value: "VERY_HAPPY", label: "😄 Muito Satisfeito" },
+                      { value: "HAPPY", label: "😊 Satisfeito" },
+                      { value: "NEUTRAL", label: "😐 Neutro" },
+                      { value: "UNHAPPY", label: "😟 Insatisfeito" },
+                      { value: "COMPLAINING", label: "😡 Reclamando" }
+                    ]}
+                  />
+                </div>
+
+                {/* Ativo - 3 cols */}
+                <div className="col-span-12 md:col-span-3">
+                  <Field
+                    label="Status"
+                    value={String(formData.is_active !== undefined ? formData.is_active : true)}
+                    name="is_active"
+                    options={[
+                      { value: "true", label: "✅ Ativo" },
+                      { value: "false", label: "❌ Inativo" }
+                    ]}
+                  />
+                </div>
+
+                {/* Inadimplente - 3 cols */}
+                <div className="col-span-12 md:col-span-3">
+                  <Field
+                    label="Inadimplente"
+                    value={String(formData.bad_debtor || false)}
+                    name="bad_debtor"
+                    options={[
+                      { value: "false", label: "Não" },
+                      { value: "true", label: "Sim" }
+                    ]}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </form>
+      </div>
+
+      {/* Sticky Footer with Side-by-Side Buttons */}
+      <div className="sticky bottom-0 left-0 right-0 p-4 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 flex gap-3 z-30">
+        {!isEditing ? (
           <button
-            onClick={handleSubmit}
-            className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold shadow-md transition-all active:scale-95"
+            type="button"
+            onClick={() => setIsEditing(true)}
+            className="w-full py-3 px-4 bg-violet-600 hover:bg-violet-700 text-white rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-lg"
           >
-            <Save size={20} />
-            Salvar Cadastro
+            <Edit2 size={18} />
+            Editar Ficha
           </button>
-        </div>
-      )}
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={() => {
+                if (initialReadonly) {
+                  setIsEditing(false);
+                } else {
+                  if (confirm('Deseja cancelar?')) {
+                    onCancel ? onCancel() : navigate(-1);
+                  }
+                }
+              }}
+              className="flex-[2] py-3 px-4 border-2 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-xl font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleSubmit}
+              className="flex-[3] py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-all shadow-lg"
+            >
+              {isEditMode ? 'Salvar Alterações' : 'Cadastrar Paciente'}
+            </button>
+          </>
+        )}
+      </div>
     </div>
   );
 };

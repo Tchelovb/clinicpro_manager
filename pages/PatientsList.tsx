@@ -28,6 +28,7 @@ import {
     DialogFooter
 } from '../components/ui/dialog';
 import { PatientQuickActions } from '../components/patients/PatientQuickActions';
+import { FloatingActionButton } from '../components/FloatingActionButton';
 
 // Definindo a interface Patient de forma robusta
 interface Patient {
@@ -333,7 +334,7 @@ const PatientsList: React.FC = () => {
             {/* ========================================================================= */}
             {/* PERSISTENT HEADER (AGILE DASHBOARD)                                       */}
             {/* ========================================================================= */}
-            <div className="sticky top-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 p-4 shadow-sm z-30">
+            <div className="sticky top-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-800/50 p-4 shadow-sm z-30">
                 <div className="max-w-7xl mx-auto flex flex-col md:flex-row gap-4 items-center justify-between">
 
                     {/* 1. TITLE & COUNT */}
@@ -515,6 +516,12 @@ const PatientsList: React.FC = () => {
             >
                 <Plus size={28} />
             </button>
+
+            {/* Floating Action Button */}
+            <FloatingActionButton
+                mode="list"
+                onClick={() => setSheetState({ open: true, mode: 'create' })}
+            />
         </div >
     );
 };

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Check, X, Calendar, DollarSign, CreditCard } from 'lucide-react';
-import { ReceivePaymentSheet } from './finance/ReceivePaymentSheet';
+import { AdvancedPaymentModal } from './finance/AdvancedPaymentModal';
 import toast from 'react-hot-toast';
 
 interface Installment {
@@ -234,15 +234,16 @@ export const PatientInstallments: React.FC<PatientInstallmentsProps> = ({ patien
                                     {(installment.status === 'PENDING' || installment.status === 'PARTIAL') && (
                                         <button
                                             onClick={() => {
-                                                // Preparar dados para a sheet
+                                                // Preparar dados para o modal
                                                 const installmentData = {
                                                     id: installment.id,
+                                                    patient_id: installment.patient_id || patientId,
                                                     amount: installment.amount,
                                                     amount_paid: installment.amount_paid || 0,
                                                     due_date: installment.due_date,
                                                     status: installment.status,
-                                                    patient_id: installment.patient_id || patientId,
-                                                    clinic_id: installment.clinic_id || '',
+                                                    installment_number: installment.installment_number,
+                                                    total_installments: installment.total_installments,
                                                     description: installment.description || `Parcela ${installment.installment_number}/${installment.total_installments}`
                                                 };
                                                 setSelectedInstallment(installmentData);
@@ -261,15 +262,18 @@ export const PatientInstallments: React.FC<PatientInstallmentsProps> = ({ patien
                 })}
             </div>
 
-            {/* ReceivePaymentSheet */}
+            {/* AdvancedPaymentModal */}
             {selectedInstallment && (
-                <ReceivePaymentSheet
-                    isOpen={showReceiveSheet}
-                    onClose={() => {
-                        setShowReceiveSheet(false);
-                        setSelectedInstallment(null);
+                <AdvancedPaymentModal
+                    open={showReceiveSheet}
+                    onOpenChange={(open) => {
+                        setShowReceiveSheet(open);
+                        if (!open) setSelectedInstallment(null);
                     }}
-                    installment={selectedInstallment}
+                    installment={{
+                        ...selectedInstallment,
+                        patient_name: selectedInstallment.description || `Parcela ${selectedInstallment.installment_number || 1}/${selectedInstallment.total_installments || 1}`
+                    }}
                     onSuccess={() => {
                         setShowReceiveSheet(false);
                         setSelectedInstallment(null);

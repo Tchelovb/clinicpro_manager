@@ -1,464 +1,309 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { useAttendanceNotifications } from '../hooks/useAttendanceNotifications';
+import { useAttendanceQueue, QueueItem } from '../hooks/useAttendanceQueue';
 import {
-    UserCheck, Stethoscope, DollarSign, Clock, FileText, ChevronRight,
-    Loader2, Phone, AlertCircle, CheckCircle2, Play, X
+    Clock, Play, CheckCircle2, AlertTriangle, DollarSign, User, Stethoscope
 } from 'lucide-react';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '../components/ui/sheet';
 import toast from 'react-hot-toast';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, differenceInMinutes } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import SecurityPinModal from '../components/SecurityPinModal';
 
-interface QueueItem {
-    id: string;
-    patient_id: string;
-    // Relations
-    patients?: {
-        name: string;
-        phone: string;
-        profile_photo_url?: string;
-    };
-    professional?: {
-        name: string;
-    };
-    // Fields
-    status: 'WAITING' | 'IN_PROGRESS' | 'COMPLETED';
-    arrival_time: string;
-    type: 'ORCAMENTO' | 'CLINICA';
-    risk_level?: 'A' | 'B' | 'C' | 'D';
-    notes?: string;
-}
+// Helper: GHL Color Logic
+const getGHLClass = (type: string) => {
+    switch (type) {
+        case 'URGENCY': return 'border-l-4 border-red-500 bg-red-50 dark:bg-red-900/10 hover:bg-red-100';
+        case 'EVALUATION':
+        case 'ORCAMENTO': return 'border-l-4 border-amber-500 bg-amber-50 dark:bg-amber-900/10 hover:bg-amber-100';
+        case 'TREATMENT': return 'border-l-4 border-blue-500 bg-blue-50 dark:bg-blue-900/10 hover:bg-blue-100';
+        case 'RETURN': return 'border-l-4 border-emerald-500 bg-emerald-50 dark:bg-emerald-900/10 hover:bg-emerald-100';
+        default: return 'border-l-4 border-slate-300 bg-white dark:bg-slate-800 hover:bg-slate-50';
+    }
+};
 
-const AttendanceQueue: React.FC = () => {
+const FluxoAtendimento: React.FC = () => {
     const { profile } = useAuth();
-    const [queue, setQueue] = useState<QueueItem[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [selectedItem, setSelectedItem] = useState<QueueItem | null>(null);
-    const [sheetOpen, setSheetOpen] = useState(false);
-    const [autoRefresh, setAutoRefresh] = useState(true);
+    const { queue, loading, refresh } = useAttendanceQueue(profile?.clinic_id);
+    const [isPinModalOpen, setIsPinModalOpen] = useState(false);
+    const [pendingAction, setPendingAction] = useState<(() => Promise<void>) | null>(null);
 
-    // Enable real-time notifications
-    useAttendanceNotifications(profile?.clinic_id, profile?.id);
+    // Columns Data
+    const waiting = queue.filter(i => i.status === 'WAITING');
+    const inProgress = queue.filter(i => i.status === 'IN_PROGRESS');
+    const finished = queue.filter(i => i.status === 'FINISHED' || i.status === 'COMPLETED');
 
-    useEffect(() => {
-        loadQueue(false); // Initial load: show spinner
-        const interval = autoRefresh ? setInterval(() => loadQueue(true), 15000) : null; // Background: silent
-        return () => { if (interval) clearInterval(interval); };
-    }, [profile?.clinic_id, autoRefresh]);
+    // --- ACTIONS ---
 
-    const loadQueue = async (isBackground = false) => {
-        if (!profile?.clinic_id) return;
-
+    const handleStartAttendance = async (item: QueueItem) => {
         try {
-            // SILENT REFRESH: Only show spinner on initial load or manual refresh
-            if (!isBackground) setLoading(true);
+            // Block if bad debtor
+            if (item.patients?.bad_debtor) {
+                toast.error('Paciente com pendências financeiras! Regularize antes de atender.', { icon: '🚫' });
+                return;
+            }
 
-            // CORRECT TABLE: attendance_queue
-            const { data, error } = await supabase
-                .from('attendance_queue')
-                .select(`
-                    *,
-                    patients (name, phone, profile_photo_url),
-                    professional: users!professional_id (name)
-                `)
-                .eq('clinic_id', profile.clinic_id)
-                .in('status', ['WAITING', 'IN_PROGRESS'])
-                .order('arrival_time', { ascending: true });
-
-            if (error) throw error;
-
-            // Transform to strict QueueItem structure
-            const queueItems: QueueItem[] = (data || []).map((item: any) => ({
-                id: item.id,
-                patient_id: item.patient_id,
-                patients: item.patients, // Safe access in render
-                professional: item.professional,
-                status: item.status,
-                arrival_time: item.arrival_time || item.created_at, // Fallback
-                type: item.type || 'CLINICA', // Fallback
-                risk_level: item.risk_level,
-                notes: item.notes
-            }));
-
-            setQueue(queueItems);
-        } catch (error) {
-            console.error('Error loading queue:', error);
-            // Don't toast on silent refresh errors to avoid spamming the user
-            if (!isBackground) toast.error('Erro ao carregar fila');
-        } finally {
-            if (!isBackground) setLoading(false);
-        }
-    };
-
-    const handleCallPatient = async (item: QueueItem) => {
-        try {
             const { error } = await supabase
                 .from('attendance_queue')
-                .update({ status: 'IN_PROGRESS' })
+                .update({
+                    status: 'IN_PROGRESS',
+                    start_time: new Date().toISOString()
+                })
                 .eq('id', item.id);
 
             if (error) throw error;
-
-            setQueue(prev => prev.map(q =>
-                q.id === item.id ? { ...q, status: 'IN_PROGRESS' } : q
-            ));
-
-            const patientName = item.patients?.name || 'Paciente';
-            toast.success(`${patientName} foi chamado!`, { icon: '📢' });
-        } catch (error) {
-            console.error('Error calling patient:', error);
-            toast.error('Erro ao chamar paciente');
+            toast.success(`${item.patients?.name} em atendimento!`);
+            refresh();
+        } catch (e) {
+            toast.error('Erro ao iniciar atendimento');
         }
     };
 
-    const handleCompleteAttendance = async (item: QueueItem) => {
-        try {
-            const { error } = await supabase
+    const handleFinishAttendance = (item: QueueItem) => {
+        const finishAction = async () => {
+            // 1. Update attendance_queue status
+            const { error: queueError } = await supabase
                 .from('attendance_queue')
-                .update({ status: 'COMPLETED' })
+                .update({
+                    status: 'FINISHED',
+                    end_time: new Date().toISOString()
+                })
                 .eq('id', item.id);
 
-            if (error) throw error;
+            if (queueError) throw queueError;
 
-            setQueue(prev => prev.filter(q => q.id !== item.id));
-            toast.success('Atendimento finalizado!', { icon: '✅' });
-        } catch (error) {
-            console.error('Error completing attendance:', error);
-            toast.error('Erro ao finalizar atendimento');
-        }
+            // 2. Digital Signature: Call RPC to sign treatment_items
+            if (item.appointment_id && profile?.id) {
+                try {
+                    // Query treatment_items for this appointment
+                    const { data: treatmentItems } = await supabase
+                        .from('treatment_items')
+                        .select('id')
+                        .eq('appointment_id', item.appointment_id)
+                        .eq('status', 'IN_PROGRESS');
+
+                    // Sign each treatment item
+                    if (treatmentItems && treatmentItems.length > 0) {
+                        for (const ti of treatmentItems) {
+                            await supabase.rpc('sign_treatment_item', {
+                                p_item_id: ti.id,
+                                p_user_id: profile.id
+                            });
+                        }
+                        toast.success('✅ Assinatura digital registrada!', { icon: '🔐' });
+                    }
+                } catch (signError) {
+                    console.error('Error signing treatment items:', signError);
+                    // Don't block the flow, just log the error
+                }
+            }
+
+            toast.success(`Procedimento concluído!`);
+            refresh();
+        };
+
+        // Trigger PIN flow (MANDATORY for finishing)
+        setPendingAction(() => finishAction);
+        setIsPinModalOpen(true);
     };
 
-    const getWaitingTime = (arrivedAt: string) => {
-        if (!arrivedAt) return 'N/A';
-        return formatDistanceToNow(new Date(arrivedAt), {
-            addSuffix: false,
-            locale: ptBR
-        });
+    const handleFinancialCheck = async (item: QueueItem) => {
+        toast('💰 Abrir modal de recebimento...', { icon: '💳' });
+        // TODO: Implement Transaction Modal
+        // After transaction is created, update:
+        // await supabase.from('attendance_queue').update({ transaction_id: newTransactionId, billing_verified: true }).eq('id', item.id);
     };
 
-    const budgetQueue = queue.filter(q => q.type === 'ORCAMENTO');
-    const clinicalQueue = queue.filter(q => q.type === 'CLINICA');
+    // --- RENDER CARD ---
+    const renderCard = (item: QueueItem, column: string) => {
+        const ghlClass = getGHLClass(item.type);
+        const duration = item.start_time ? differenceInMinutes(new Date(), new Date(item.start_time)) : 0;
 
-    if (loading) {
         return (
-            <div className="flex items-center justify-center h-screen bg-slate-50 dark:bg-slate-950">
-                <Loader2 className="w-12 h-12 animate-spin text-blue-600" />
+            <div
+                key={item.id}
+                className={`relative p-4 mb-3 rounded-xl border bg-white dark:bg-slate-800 shadow-sm transition-all hover:shadow-md ${ghlClass}`}
+            >
+                <div className="flex justify-between items-start mb-2">
+                    <div>
+                        <h3 className="font-bold text-slate-900 dark:text-white leading-tight text-sm">
+                            {item.patients?.name || 'Paciente'}
+                        </h3>
+                        <div className="flex gap-2 items-center mt-1">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                {item.patients?.patient_score || 'STANDARD'}
+                            </span>
+                            {item.patients?.bad_debtor && (
+                                <span className="text-[10px] bg-red-100 text-red-600 px-1 rounded font-bold">DEVEDOR</span>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="flex items-center justify-between mt-3">
+                    <div className="text-xs text-slate-500">
+                        {column === 'WAITING' && (
+                            <span className="flex items-center gap-1">
+                                <Clock size={12} />
+                                {formatDistanceToNow(new Date(item.arrival_time), { locale: ptBR, addSuffix: false })}
+                            </span>
+                        )}
+                        {column === 'IN_PROGRESS' && (
+                            <span className="flex items-center gap-1 text-blue-600 font-medium">
+                                <Stethoscope size={12} />
+                                {duration} min
+                            </span>
+                        )}
+                        {column === 'FINISHED' && (
+                            <span className="flex items-center gap-1 text-green-600 font-medium">
+                                <CheckCircle2 size={12} />
+                                Finalizado
+                            </span>
+                        )}
+                    </div>
+
+                    {/* ACTIONS */}
+                    <div className="flex gap-2">
+                        {column === 'WAITING' && (
+                            <button
+                                onClick={() => handleStartAttendance(item)}
+                                className="p-1.5 bg-slate-900 text-white rounded-full hover:scale-110 transition-transform"
+                                title="Iniciar"
+                            >
+                                <Play size={14} fill="currentColor" />
+                            </button>
+                        )}
+                        {column === 'IN_PROGRESS' && (
+                            <button
+                                onClick={() => handleFinishAttendance(item)}
+                                className="p-1.5 bg-green-600 text-white rounded-full hover:scale-110 transition-transform"
+                                title="Concluir (Requer PIN)"
+                            >
+                                <CheckCircle2 size={14} />
+                            </button>
+                        )}
+                        {column === 'FINISHED' && (
+                            !item.transaction_id ? (
+                                <button
+                                    onClick={() => handleFinancialCheck(item)}
+                                    className="px-2 py-1 bg-red-100 text-red-600 rounded-md text-xs font-bold flex items-center gap-1 hover:bg-red-200 animate-pulse"
+                                    title="Pendente Financeiro"
+                                >
+                                    <AlertTriangle size={12} />
+                                    Receber
+                                </button>
+                            ) : (
+                                <span className="px-2 py-1 bg-green-100 text-green-700 rounded-md text-xs font-bold flex items-center gap-1">
+                                    <DollarSign size={12} />
+                                    Pago
+                                </span>
+                            )
+                        )}
+                    </div>
+                </div>
             </div>
         );
-    }
+    };
+
+    if (loading) return <div className="p-10 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900"></div></div>;
 
     return (
-        <div className="h-full flex flex-col overflow-hidden bg-slate-50 dark:bg-slate-950">
-            {/* FIXED HEADER SECTION (Title + KPIs) */}
-            <div className="flex-none p-6 space-y-6 z-10">
-                {/* HEADER */}
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                            <UserCheck className="text-green-600" size={28} />
-                            Fila de Atendimento
-                        </h1>
-                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                            Pacientes que chegaram hoje • Atualização automática
-                        </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
-                            <input
-                                type="checkbox"
-                                checked={autoRefresh}
-                                onChange={(e) => setAutoRefresh(e.target.checked)}
-                                className="rounded"
-                            />
-                            Auto-refresh
-                        </label>
-                        <button
-                            onClick={() => loadQueue(false)}
-                            className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                        >
-                            <Loader2 size={16} className={loading ? 'animate-spin' : ''} />
-                        </button>
-                    </div>
-                </div>
-
-                {/* KPI CARDS */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-blue-100 dark:border-blue-900 shadow-sm flex items-center gap-4">
-                        <div className="p-3 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg">
-                            <DollarSign size={24} />
-                        </div>
-                        <div>
-                            <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase">Fila de Orçamentos</p>
-                            <p className="text-2xl font-black text-slate-900 dark:text-white">
-                                {budgetQueue.length} {budgetQueue.length === 1 ? 'Paciente' : 'Pacientes'}
-                            </p>
-                        </div>
-                    </div>
-                    <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-purple-100 dark:border-purple-900 shadow-sm flex items-center gap-4">
-                        <div className="p-3 bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-lg">
-                            <Stethoscope size={24} />
-                        </div>
-                        <div>
-                            <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase">Em Atendimento Clínico</p>
-                            <p className="text-2xl font-black text-slate-900 dark:text-white">
-                                {clinicalQueue.filter(q => q.status === 'IN_PROGRESS').length} {clinicalQueue.filter(q => q.status === 'IN_PROGRESS').length === 1 ? 'Paciente' : 'Pacientes'}
-                            </p>
-                        </div>
-                    </div>
-                    <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-green-100 dark:border-green-900 shadow-sm flex items-center gap-4">
-                        <div className="p-3 bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-lg">
-                            <Clock size={24} />
-                        </div>
-                        <div>
-                            <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase">Total na Fila</p>
-                            <p className="text-2xl font-black text-slate-900 dark:text-white">
-                                {queue.length} {queue.length === 1 ? 'Paciente' : 'Pacientes'}
-                            </p>
-                        </div>
-                    </div>
-                </div>
+        <div className="p-6 max-w-[1800px] mx-auto">
+            {/* HEADER */}
+            <div className="mb-6">
+                <h1 className="text-3xl font-black text-slate-900 dark:text-white">
+                    Fluxo de Atendimento
+                </h1>
+                <p className="text-sm text-slate-500 font-medium">
+                    Command Center • Blindado
+                </p>
             </div>
 
-            {/* SCROLLABLE LISTS */}
-            <div className="flex-1 overflow-y-auto px-6 pb-6">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* ORCAMENTISTA */}
-                    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col overflow-hidden">
-                        <div className="p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 rounded-t-2xl flex justify-between items-center">
-                            <h2 className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
-                                <DollarSign size={18} className="text-green-600 dark:text-green-400" />
-                                Lista de Orçamentos (Prioridade)
-                            </h2>
-                            <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-2 py-1 rounded-full font-black">
-                                HIGH TICKET
-                            </span>
-                        </div>
-                        <div className="p-4 space-y-3 overflow-y-auto flex-1">
-                            {budgetQueue.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center h-full text-slate-400 dark:text-slate-600">
-                                    <AlertCircle size={48} className="mb-4 opacity-50" />
-                                    <p className="text-sm font-medium">Nenhum orçamento na fila</p>
-                                </div>
-                            ) : (
-                                budgetQueue.map(item => (
-                                    <div
-                                        key={item.id}
-                                        className={`group p-4 border rounded-xl transition-all cursor-pointer ${item.status === 'IN_PROGRESS'
-                                            ? 'border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20 shadow-md'
-                                            : 'border-slate-100 dark:border-slate-800 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-md bg-white dark:bg-slate-800'
-                                            }`}
-                                    >
-                                        <div className="flex justify-between items-start">
-                                            <div className="flex-1">
-                                                <h3 className="font-bold text-slate-900 dark:text-white">{item.patients?.name || 'Paciente'}</h3>
-                                                <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-1">
-                                                    <Clock size={12} />
-                                                    Espera: <span className="text-orange-600 dark:text-orange-400 font-bold">
-                                                        {getWaitingTime(item.arrival_time)}
-                                                    </span>
-                                                </p>
-                                                {item.risk_level && (
-                                                    <span className={`inline-block mt-2 text-xs font-bold px-2 py-0.5 rounded ${item.risk_level === 'A'
-                                                        ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
-                                                        : item.risk_level === 'B'
-                                                            ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
-                                                            : 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300'
-                                                        }`}>
-                                                        Risco {item.risk_level}
-                                                    </span>
-                                                )}
-                                            </div>
-                                            {item.status === 'IN_PROGRESS' && (
-                                                <div className="flex items-center gap-1 text-green-600 dark:text-green-400">
-                                                    <Play size={16} className="animate-pulse" />
-                                                    <span className="text-xs font-bold">EM ATENDIMENTO</span>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {/* Ações Rápidas */}
-                                        <div className="mt-4 flex gap-2">
-                                            <button
-                                                onClick={() => { setSelectedItem(item); setSheetOpen(true); }}
-                                                className="text-xs font-bold uppercase tracking-wider px-3 py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded text-slate-600 dark:text-slate-300 flex items-center gap-1 transition-colors"
-                                            >
-                                                <FileText size={12} /> Abrir Ficha
-                                            </button>
-                                            {item.status === 'WAITING' ? (
-                                                <button
-                                                    onClick={() => handleCallPatient(item)}
-                                                    className="text-xs font-bold uppercase tracking-wider px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded flex items-center gap-1 transition-colors"
-                                                >
-                                                    <UserCheck size={12} /> Chamar Agora
-                                                </button>
-                                            ) : (
-                                                <button
-                                                    onClick={() => handleCompleteAttendance(item)}
-                                                    className="text-xs font-bold uppercase tracking-wider px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded flex items-center gap-1 transition-colors"
-                                                >
-                                                    <CheckCircle2 size={12} /> Finalizar
-                                                </button>
-                                            )}
-                                        </div>
-                                    </div>
-                                ))
-                            )}
-                        </div>
+            {/* 3-COLUMN LAYOUT */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* COLUMN 1: WAITING */}
+                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+                    <div className="p-4 border-b border-slate-100 dark:border-slate-800 bg-amber-50 dark:bg-amber-900/20">
+                        <h2 className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                            <Clock size={18} className="text-amber-600" />
+                            Aguardando
+                        </h2>
+                        <span className="text-xs bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-2 py-1 rounded-full font-black">
+                            {waiting.length}
+                        </span>
                     </div>
+                    <div className="p-4 space-y-3 max-h-[calc(100vh-300px)] overflow-y-auto">
+                        {waiting.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center p-8 text-slate-400">
+                                <User size={48} className="mb-4 opacity-30" />
+                                <p className="text-sm font-medium">Nenhum paciente aguardando</p>
+                            </div>
+                        ) : (
+                            waiting.map(item => renderCard(item, 'WAITING'))
+                        )}
+                    </div>
+                </div>
 
-                    {/* CLINICA */}
-                    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col overflow-hidden">
-                        <div className="p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 rounded-t-2xl">
-                            <h2 className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
-                                <Stethoscope size={18} className="text-purple-600 dark:text-purple-400" />
-                                Lista de Atendimento Clínico
-                            </h2>
-                        </div>
+                {/* COLUMN 2: IN_PROGRESS */}
+                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+                    <div className="p-4 border-b border-slate-100 dark:border-slate-800 bg-blue-50 dark:bg-blue-900/20">
+                        <h2 className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                            <Stethoscope size={18} className="text-blue-600" />
+                            Em Atendimento
+                        </h2>
+                        <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-full font-black">
+                            {inProgress.length}
+                        </span>
+                    </div>
+                    <div className="p-4 space-y-3 max-h-[calc(100vh-300px)] overflow-y-auto">
+                        {inProgress.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center p-8 text-slate-400">
+                                <Stethoscope size={48} className="mb-4 opacity-30" />
+                                <p className="text-sm font-medium">Nenhum atendimento em andamento</p>
+                            </div>
+                        ) : (
+                            inProgress.map(item => renderCard(item, 'IN_PROGRESS'))
+                        )}
+                    </div>
+                </div>
 
-                        <div className="p-4 space-y-3 overflow-y-auto flex-1">
-                            {clinicalQueue.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center h-full text-slate-400 dark:text-slate-600">
-                                    <AlertCircle size={48} className="mb-4 opacity-50" />
-                                    <p className="text-sm font-medium">Nenhum paciente clínico na fila</p>
-                                </div>
-                            ) : (
-                                clinicalQueue.map(item => (
-                                    <div
-                                        key={item.id}
-                                        className={`p-4 rounded-xl border transition-all ${item.status === 'IN_PROGRESS'
-                                            ? 'border-l-4 border-l-purple-500 dark:border-l-purple-400 bg-purple-50/30 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800'
-                                            : 'border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-800'
-                                            }`}
-                                    >
-                                        <div className="flex justify-between items-start">
-                                            <div className="flex-1">
-                                                <h3 className="font-bold text-slate-900 dark:text-white">{item.patients?.name || 'Paciente'}</h3>
-                                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                                                    {item.professional?.name || 'Sem profissional'}
-                                                </p>
-                                                <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-1">
-                                                    <Clock size={12} />
-                                                    Espera: <span className="text-orange-600 dark:text-orange-400 font-bold">
-                                                        {getWaitingTime(item.arrival_time)}
-                                                    </span>
-                                                </p>
-                                            </div>
-                                            {item.status === 'IN_PROGRESS' && (
-                                                <span className="text-xs font-bold text-purple-600 dark:text-purple-400">
-                                                    EM ATENDIMENTO
-                                                </span>
-                                            )}
-                                        </div>
-
-                                        <div className="mt-3 flex gap-2">
-                                            {item.status === 'WAITING' ? (
-                                                <button
-                                                    onClick={() => handleCallPatient(item)}
-                                                    className="text-xs font-bold text-purple-700 dark:text-purple-300 underline hover:no-underline"
-                                                >
-                                                    Chamar Paciente
-                                                </button>
-                                            ) : (
-                                                <>
-                                                    <button
-                                                        onClick={() => { setSelectedItem(item); setSheetOpen(true); }}
-                                                        className="text-xs font-bold text-purple-700 dark:text-purple-300 underline hover:no-underline"
-                                                    >
-                                                        Acessar Prontuário
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleCompleteAttendance(item)}
-                                                        className="text-xs font-bold text-green-700 dark:text-green-300 underline hover:no-underline"
-                                                    >
-                                                        Finalizar Atendimento
-                                                    </button>
-                                                </>
-                                            )}
-                                        </div>
-                                    </div>
-                                ))
-                            )}
-                        </div>
+                {/* COLUMN 3: FINISHED */}
+                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+                    <div className="p-4 border-b border-slate-100 dark:border-slate-800 bg-green-50 dark:bg-green-900/20">
+                        <h2 className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                            <CheckCircle2 size={18} className="text-green-600" />
+                            Finalizados
+                        </h2>
+                        <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-2 py-1 rounded-full font-black">
+                            {finished.length}
+                        </span>
+                    </div>
+                    <div className="p-4 space-y-3 max-h-[calc(100vh-300px)] overflow-y-auto">
+                        {finished.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center p-8 text-slate-400">
+                                <CheckCircle2 size={48} className="mb-4 opacity-30" />
+                                <p className="text-sm font-medium">Nenhum atendimento finalizado</p>
+                            </div>
+                        ) : (
+                            finished.map(item => renderCard(item, 'FINISHED'))
+                        )}
                     </div>
                 </div>
             </div>
 
-            <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-                <SheetContent className="w-full sm:max-w-lg overflow-auto">
-                    <SheetHeader>
-                        <SheetTitle>Detalhes do Paciente</SheetTitle>
-                    </SheetHeader>
-                    {selectedItem && (
-                        <div className="mt-6 space-y-6">
-                            <div>
-                                <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2">Paciente</p>
-                                <p className="text-lg font-bold text-slate-900 dark:text-white">{selectedItem.patients?.name || 'N/A'}</p>
-                                <p className="text-sm text-slate-600 dark:text-slate-400 flex items-center gap-2 mt-1">
-                                    <Phone size={14} />
-                                    {selectedItem.patients?.phone || 'N/A'}
-                                </p>
-                            </div>
-
-                            <div>
-                                <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Tipo de Atendimento</p>
-                                <span className={`inline-block px-3 py-1 rounded-full text-sm font-bold ${selectedItem.type === 'ORCAMENTO'
-                                    ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
-                                    : 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
-                                    }`}>
-                                    {selectedItem.type === 'ORCAMENTO' ? 'Orçamento/Avaliação' : 'Atendimento Clínico'}
-                                </span>
-                            </div>
-
-                            <div>
-                                <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Profissional Responsável</p>
-                                <p className="text-sm font-medium text-slate-900 dark:text-white">{selectedItem.professional?.name || 'Não definido'}</p>
-                            </div>
-
-                            <div>
-                                <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Tempo de Espera</p>
-                                <p className="text-sm font-medium text-slate-900 dark:text-white">
-                                    {getWaitingTime(selectedItem.arrival_time)}
-                                </p>
-                            </div>
-
-                            {selectedItem.notes && (
-                                <div>
-                                    <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Observações</p>
-                                    <p className="text-sm text-slate-700 dark:text-slate-300">{selectedItem.notes}</p>
-                                </div>
-                            )}
-
-                            <div className="flex gap-2 pt-4 border-t border-slate-200 dark:border-slate-800">
-                                {selectedItem.status === 'WAITING' ? (
-                                    <button
-                                        onClick={() => { handleCallPatient(selectedItem); setSheetOpen(false); }}
-                                        className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-bold text-sm"
-                                    >
-                                        <UserCheck size={16} />
-                                        Chamar Paciente
-                                    </button>
-                                ) : (
-                                    <button
-                                        onClick={() => { handleCompleteAttendance(selectedItem); setSheetOpen(false); }}
-                                        className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold text-sm"
-                                    >
-                                        <CheckCircle2 size={16} />
-                                        Finalizar Atendimento
-                                    </button>
-                                )}
-                            </div>
-                        </div>
-                    )}
-                </SheetContent>
-            </Sheet>
-
-            <div className="hidden print:block">
-                <h1 className="text-xl font-bold">Mapa de Fluxo de Pacientes - {new Date().toLocaleDateString('pt-BR')}</h1>
-            </div>
+            {/* PIN MODAL */}
+            <SecurityPinModal
+                isOpen={isPinModalOpen}
+                onClose={() => setIsPinModalOpen(false)}
+                onSuccess={async () => {
+                    if (pendingAction) await pendingAction();
+                    setIsPinModalOpen(false);
+                }}
+                title="Autorização Necessária"
+                description="Confirme sua identidade para concluir este procedimento."
+            />
         </div>
     );
 };
 
-export default AttendanceQueue;
+export default FluxoAtendimento;
