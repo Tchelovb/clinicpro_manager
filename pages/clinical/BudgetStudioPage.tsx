@@ -1,3 +1,4 @@
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useBudgetStudio } from '../../hooks/useBudgetStudio';
 import { useUserPermissions } from '../../hooks/useUserPermissions';
@@ -5,20 +6,22 @@ import { ProcedureCatalog } from '../../components/budget-studio/ProcedureCatalo
 import { BudgetCanvas } from '../../components/budget-studio/BudgetCanvas';
 import { DealConfigurator } from '../../components/budget-studio/DealConfigurator';
 import { SalesBosFloating } from '../../components/budget-studio/SalesBosFloating';
-import { TransactionGuard } from '../../components/TransactionGuard';
-import { SaleProgressModal } from '../../components/SaleProgressModal';
 import { Eye, EyeOff, Save, Send, ChevronLeft, Plus, FileText, DollarSign, Users } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { formatCurrency } from '../../utils/format';
-import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
+import { MobileBudgetHeader } from '../../components/budget-studio/mobile/MobileBudgetHeader';
+import { MobileProcedureList } from '../../components/budget-studio/mobile/MobileProcedureList';
+import { MobileCartSummary } from '../../components/budget-studio/mobile/MobileCartSummary';
 
 export const BudgetStudioPage: React.FC = () => {
     const { id, budgetId } = useParams<{ id: string; budgetId?: string }>();
     const navigate = useNavigate();
     const { user } = useAuth();
+    const isMobile = useMediaQuery('(max-width: 768px)');
 
     const {
         items,
@@ -46,9 +49,6 @@ export const BudgetStudioPage: React.FC = () => {
     // Fix ReferenceError: Derive status for UI logic (Priority: DB Budget -> Deal Config -> Default)
     const budgetStatus = budget?.status || dealConfig?.status || 'DRAFT';
 
-    const [showSecurityGuard, setShowSecurityGuard] = useState(false);
-    const [showProgressModal, setShowProgressModal] = useState(false);
-    const [progressSteps, setProgressSteps] = useState<any[]>([]);
     const [professionals, setProfessionals] = useState<any[]>([]);
     const [priceTables, setPriceTables] = useState<any[]>([]);
 
@@ -80,7 +80,6 @@ export const BudgetStudioPage: React.FC = () => {
     }, [user?.clinic_id]);
 
     // CRITICAL FIX: useCallback prevents infinite re-render loop
-    // CRITICAL FIX: useCallback prevents infinite re-render loop
     // Updated logic per user request: explicitly check JSON equality
     const handleDealUpdate = useCallback((newData: any) => {
         setDealConfig((prev: any) => {
@@ -93,192 +92,66 @@ export const BudgetStudioPage: React.FC = () => {
         });
     }, []); // Empty deps - function is stable
 
-    // Inicia o processo de aprovação (abre o modal de segurança)
-    const handleInitiateApproval = async (dealData: any) => {
-        // Salva os dados da negociação para usar depois
-        setDealConfig(dealData);
-        // Abre o modal de segurança
-        setShowSecurityGuard(true);
-    };
+    // --- CHECKOUT FLOW ---
+    // Single Truth: We just save and redirect to Checkout.
+    const handleProceedToCheckout = async (dealData: any) => {
+        const toastId = toast.loading("Preparando checkout...");
 
-    // Finaliza a transação após validação do PIN
-    const handleFinalizeTransaction = async (pin: string) => {
         try {
-            // Fechar modal de PIN e abrir modal de progresso
-            setShowSecurityGuard(false);
-            setShowProgressModal(true);
-
-            // Definir etapas iniciais
-            const steps = [
-                { label: 'Validando PIN de segurança', status: 'processing', icon: <FileText size={24} /> },
-                { label: 'Gerando lançamento financeiro', status: 'pending', icon: <DollarSign size={24} /> },
-                { label: 'Criando contrato digital', status: 'pending', icon: <FileText size={24} /> },
-                { label: 'Calculando comissões da equipe', status: 'pending', icon: <Users size={24} /> },
-            ];
-            setProgressSteps(steps);
-
-            // ETAPA 1: Validar PIN
-            await new Promise(resolve => setTimeout(resolve, 800));
-            const { error: pinError } = await supabase.rpc('verify_user_pin', {
-                pin_attempt: pin
-            });
-
-            if (pinError) {
-                steps[0].status = 'error';
-                setProgressSteps([...steps]);
-                toast.error(pinError.message || "PIN incorreto. Transação negada.");
-                throw pinError;
-            }
-
-            steps[0].status = 'completed';
-            steps[1].status = 'processing';
-            setProgressSteps([...steps]);
-
-            // Sanitize dealConfig to ensure no empty strings for UUIDs
+            // 1. Sanitize Deal Data
             const sanitizedDealConfig = {
-                ...dealConfig,
-                sales_rep_id: dealConfig.sales_rep_id || null,
-                price_table_id: dealConfig.price_table_id || null,
-                card_machine_profile_id: dealConfig.card_machine_profile_id || null,
-                created_by_id: dealConfig.created_by_id || null,
-                assigned_to_id: dealConfig.assigned_to_id || null
+                ...dealData,
+                sales_rep_id: dealData.sales_rep_id || null,
+                price_table_id: dealData.price_table_id || null,
+                card_machine_profile_id: dealData.card_machine_profile_id || null,
+                discount_type: dealData.discount_type || 'PERCENTAGE',
+                discount_value: dealData.discount_value || 0,
+                down_payment_value: dealData.down_payment_value || 0,
+                installments_count: dealData.installments_count || 1,
+                final_value: dealData.final_value,
             };
 
-            // CRITICAL FIX: Ensure Budget ID is present
-            // If it's a new budget (no ID yet), we MUST save it first to get an ID.
-            let currentBudgetId = budgetId || dealConfig.id;
-
-            if (!currentBudgetId) {
-                console.log("Budget ID not found, attempting to save new budget first...");
-
-                // Attempt to save as DRAFT first to generate ID
-                // The actual APPROVED save happens in Step 2, but we need an ID now.
-                const tempSavedBudget = await saveBudget('DRAFT', {
-                    ...sanitizedDealConfig,
-                    status: 'DRAFT'
-                });
-
-                if (tempSavedBudget && tempSavedBudget.id) {
-                    currentBudgetId = tempSavedBudget.id;
-                    console.log("New Budget created with ID:", currentBudgetId);
-                } else {
-                    console.error("Erro: Falha ao criar orçamento inicial.", { dealConfig });
-                    toast.error("Erro interno: Não foi possível criar o orçamento. Tente novamente.");
-                    steps[0].status = 'pending';
-                    setProgressSteps([...steps]);
-                    throw new Error("Failed to create initial budget");
-                }
-            }
-
-            console.log("Iniciando finalização para o ID:", currentBudgetId);
-
-            // ETAPA 2: Gerar Financeiro (Save as APPROVED)
-            await new Promise(resolve => setTimeout(resolve, 1000));
-
-            // Use saveBudget from hook which handles complex saving and returning data
-            const savedBudget = await saveBudget('APPROVED', {
-                sales_rep_id: sanitizedDealConfig.sales_rep_id,
-                price_table_id: sanitizedDealConfig.price_table_id,
-                discount_type: sanitizedDealConfig.discount_type,
-                discount_value: sanitizedDealConfig.discount_value,
-                down_payment_value: sanitizedDealConfig.down_payment_value,
-                installments_count: sanitizedDealConfig.installments_count,
-                final_value: sanitizedDealConfig.final_value,
-                payment_config: sanitizedDealConfig
-            });
-
-            if (!savedBudget) {
-                throw new Error("Erro ao salvar orçamento aprovado.");
-            }
-
-            steps[1].status = 'completed';
-            steps[2].status = 'processing';
-            setProgressSteps([...steps]);
-
-            // ETAPA 3: Contrato Digital
-            await new Promise(resolve => setTimeout(resolve, 800));
-            // TODO: Integrar com sistema de contratos
-            steps[2].status = 'completed';
-            steps[3].status = 'processing';
-            setProgressSteps([...steps]);
-
-            // ETAPA 4: Comissões (Calculated automatically by backend triggers)
-            await new Promise(resolve => setTimeout(resolve, 800));
-            steps[3].status = 'completed';
-            setProgressSteps([...steps]);
-
-            // Final Success
-            await new Promise(resolve => setTimeout(resolve, 500));
-            toast.success("Venda realizada com sucesso!");
-
-            // Close modal and navigate
-            setTimeout(() => {
-                setShowProgressModal(false);
-                navigate('/sales');
-            }, 1000);
-
-        } catch (error: any) {
-            console.error('Transaction error:', error);
-            const errorStepIndex = steps.findIndex(s => s.status === 'processing');
-            if (errorStepIndex >= 0) {
-                steps[errorStepIndex].status = 'error';
-                setProgressSteps([...steps]);
-            }
-            toast.error("Erro ao processar venda: " + (error.message || "Erro desconhecido"));
-            // Allow user to close/retry
-            setTimeout(() => setShowProgressModal(false), 3000);
-        }
-    };
-
-
-    const handleReleaseToReception = async (dealData: any, notes: string) => {
-        const toastId = toast.loading("Enviando para o time comercial...");
-
-        try {
-            // 1. Atualizar o Orçamento para 'Aguardando Fechamento'
-            const { error: budgetError } = await supabase
+            // 2. Update Budget Status & Data
+            // We use 'WAITING_CLOSING' so it appears on the receptionist's radar
+            const { error: saveError } = await supabase
                 .from('budgets')
                 .update({
+                    ...sanitizedDealConfig,
                     status: 'WAITING_CLOSING',
-                    final_value: dealData.final_value,
-                    discount_value: dealData.discount_value,
-                    down_payment_value: dealData.down_payment_value,
-                    installments_count: dealData.installments_count,
-                    payment_config: dealData,
-                    created_by_id: user?.id,
-                    handoff_notes: notes,
-                    handoff_at: new Date().toISOString()
+                    updated_at: new Date().toISOString()
                 })
                 .eq('id', budgetId);
 
-            if (budgetError) throw budgetError;
+            if (saveError) throw saveError;
 
-            // 2. Inserir na Fila de Vendas (Sales Queue)
-            const { error: queueError } = await supabase
-                .from('sales_queue')
-                .insert({
-                    clinic_id: user?.clinic_id,
-                    budget_id: budgetId,
-                    patient_id: id,
-                    created_by_id: user?.id,
-                    total_value: dealData.final_value,
-                    dentist_notes: notes,
-                    urgency_level: dealData.final_value > 10000 ? 'HIGH' : 'MEDIUM',
-                    status: 'PENDING'
-                });
+            toast.success("Enviado para o Terminal de Vendas!", { id: toastId });
 
-            if (queueError) throw queueError;
-
-            toast.success("Paciente liberado! Recepção notificada.", { id: toastId });
-
-            // 3. Volta para a lista de pacientes
-            setTimeout(() => navigate('/patients'), 1500);
+            // 3. Redirect to Checkout
+            // Small delay to let toast be seen
+            setTimeout(() => {
+                navigate(`/sales/checkout/${budgetId}`);
+            }, 500);
 
         } catch (error: any) {
-            console.error('Release error:', error);
-            toast.error("Erro ao liberar paciente: " + (error.message || 'Erro desconhecido'), { id: toastId });
+            console.error("Erro ao encaminhar para checkout:", error);
+            toast.error("Erro ao encaminhar proposta: " + error.message, { id: toastId });
         }
     };
+
+    // Helper for Mobile Checkout
+    const handleMobileProceedToCheckout = (paymentData: any) => {
+        // Construct dealData from mobile payment selection
+        const mobileDealData = {
+            ...dealConfig,
+            final_value: paymentData.finalValue,
+            discount_value: paymentData.discountApplied,
+            installments_count: paymentData.installments,
+            chosen_payment_method: paymentData.paymentMethod,
+            chosen_installments: paymentData.installments,
+        };
+        handleProceedToCheckout(mobileDealData);
+    };
+
 
     // Ensure we always have at least one professional and price table
     const safeProfessionals = useMemo(() => {
@@ -304,6 +177,31 @@ export const BudgetStudioPage: React.FC = () => {
         );
     }
 
+    // --- MOBILE LAYOUT (Steve Jobs Mode) ---
+    if (isMobile) {
+        return (
+            <div className="bg-slate-50 min-h-screen pb-32 animate-in fade-in duration-500">
+                <MobileBudgetHeader
+                    patient={patient}
+                    onBack={() => navigate(-1)}
+                />
+
+                <MobileProcedureList
+                    procedures={procedures}
+                    itemsInCart={items}
+                    onAdd={addItem}
+                />
+
+                <MobileCartSummary
+                    items={items}
+                    onProceed={handleMobileProceedToCheckout}
+                    onRemoveItem={removeItem}
+                />
+            </div>
+        );
+    }
+
+    // --- DESKTOP LAYOUT (Pro Mode) ---
     return (
         <div className="flex h-screen bg-white overflow-hidden font-sans">
             {/* 1. LATERAL ESQUERDA: CATÁLOGO (20%) */}
@@ -432,18 +330,7 @@ export const BudgetStudioPage: React.FC = () => {
                     professionals={safeProfessionals}
                     priceTables={safePriceTables}
                     onUpdateDeal={handleDealUpdate}
-                    onApproveNegotiation={
-                        ['DRAFT', 'WAITING_CLOSING', 'PENDING'].includes(budgetStatus) && permissions?.can_approve_budget
-                            ? handleInitiateApproval
-                            : undefined
-                    }
-                    onReleaseToReception={
-                        ['DRAFT', 'PENDING'].includes(budgetStatus) && !permissions?.can_approve_budget
-                            ? handleReleaseToReception
-                            : undefined
-                    }
-                    userCanApprove={permissions?.can_approve_budget || false}
-                    readOnly={!['DRAFT', 'WAITING_CLOSING', 'PENDING'].includes(budgetStatus)}
+                    onProceedToCheckout={handleProceedToCheckout}
                 />
             </div>
 
@@ -457,30 +344,7 @@ export const BudgetStudioPage: React.FC = () => {
                 />
             )}
 
-            {/* Transaction Security Guard */}
-            <TransactionGuard
-                isOpen={showSecurityGuard}
-                onClose={() => setShowSecurityGuard(false)}
-                onConfirm={handleFinalizeTransaction}
-                summary={{
-                    patientName: patient?.name || 'Paciente',
-                    totalValue: dealConfig.final_value || financials.revenue,
-                    installments: dealConfig.installments_count || 1,
-                    downPayment: dealConfig.down_payment_value || 0
-                }}
-            />
-
-            {/* Sale Progress Modal */}
-            <SaleProgressModal
-                isOpen={showProgressModal}
-                steps={progressSteps}
-                patientName={patient?.name || 'Paciente'}
-                totalValue={dealConfig.final_value || financials.revenue}
-                onClose={() => {
-                    setShowProgressModal(false);
-                    navigate('/sales');
-                }}
-            />
+            {/* Sale Progress Modal removed as per single truth refactor */}
         </div>
     );
 };

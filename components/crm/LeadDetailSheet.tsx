@@ -405,6 +405,56 @@ export function LeadDetailSheet({ leadId, pipelineId, initialStageId, open, onOp
     const activeOpportunity = opportunities.find(o => o.id === selectedOpportunityId);
 
 
+    const handleWinLead = async () => {
+        if (!lead) return;
+
+        const toastId = toast.loading("Transformando lead em paciente...");
+
+        try {
+            // 1. Criar o registro do Paciente com os dados do Lead
+            const { data: newPatient, error: patientError } = await supabase
+                .from('patients')
+                .insert({
+                    name: lead.name,
+                    phone: lead.phone,
+                    email: lead.email,
+                    clinic_id: lead.clinic_id || profile?.clinic_id,
+                    clinical_status: 'Avaliação', // Status inicial padrão
+                    origin: lead.source || 'CRM'
+                })
+                .select()
+                .single();
+
+            if (patientError) throw patientError;
+
+            // 2. Marcar o Lead como Ganho (WON) e vincular o novo ID de paciente
+            const { error: leadUpdateError } = await supabase
+                .from('leads')
+                .update({
+                    status: 'WON',
+                    patient_id: newPatient.id,
+                    last_interaction: new Date().toISOString()
+                })
+                .eq('id', lead.id);
+
+            if (leadUpdateError) throw leadUpdateError;
+
+            toast.success(`${lead.name} agora é um paciente!`, { id: toastId });
+
+            // 3. Fechar a sheet e navegar para o prontuário
+            onOpenChange(false);
+
+            // Allow time for toast to be seen
+            setTimeout(() => {
+                window.location.href = `/patients/${newPatient.id}`;
+            }, 500);
+
+        } catch (error: any) {
+            console.error("Erro na conversão:", error);
+            toast.error("Erro ao converter lead: " + error.message, { id: toastId });
+        }
+    };
+
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
             <SheetContent side="right" className="w-[100%] sm:w-[85%] md:w-[80%] lg:w-[75%] xl:w-[1200px] sm:max-w-none p-0 flex flex-col bg-background border-l border-slate-200 dark:border-slate-800 shadow-2xl transition-all duration-300 ease-in-out">
@@ -460,6 +510,12 @@ export function LeadDetailSheet({ leadId, pipelineId, initialStageId, open, onOp
                                             <Instagram size={10} />
                                             {lead?.source || 'Manual'}
                                         </span>
+                                        {!isNewLead && lead?.patient_id && (
+                                            <span className="ml-2 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold border border-emerald-200 flex items-center gap-1">
+                                                <CheckCircle className="w-3 h-3" />
+                                                Paciente
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -608,7 +664,7 @@ export function LeadDetailSheet({ leadId, pipelineId, initialStageId, open, onOp
 
                                                     <div className="h-4 w-px bg-slate-300 mx-1"></div>
 
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700" title="Ganhar">
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700" title="Ganhar" onClick={handleWinLead}>
                                                         <CheckCircle className="w-5 h-5" />
                                                     </Button>
                                                     <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:bg-red-50 hover:text-red-600" title="Perder">
