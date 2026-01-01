@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 
 interface AuthContextType {
@@ -36,7 +36,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     // 🔧 HARDCODED DEV IDENTITY (Zero Guest Protocol)
     if (!clinicId && (currentSession.user.email?.includes('marcelo') || currentSession.user.email?.includes('admin'))) {
-      console.log("🔧 [AUTH] Zero Guest Protocol: Injetando Identidade MASTER manualmente...");
       clinicId = '550e8400-e29b-41d4-a716-446655440000';
       role = 'MASTER';
 
@@ -54,14 +53,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       .maybeSingle();
 
     if (dbProfile) {
-      console.log("✅ [AUTH] Dados do perfil recuperados do banco:", dbProfile.name);
       clinicId = dbProfile.clinic_id || clinicId;
       role = dbProfile.role || role;
     }
 
     // Conclusão da Identidade
     if (clinicId) {
-      console.log(`🔓 [AUTH] Acesso liberado para a Clínica: ${clinicId} (Role: ${role})`);
       setSession(currentSession);
       // Funde os dados da sessão com a identidade descoberta
       setUser({
@@ -76,9 +73,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setIsAdmin(role === 'ADMIN' || role === 'MASTER');
       setIsMaster(role === 'MASTER');
       setLoading(false);
-      console.log("👤 [UI] Perfil MASTER/ADMIN injetado na interface.");
     } else {
-      console.error("⛔ [AUTH] FALHA DE IDENTIDADE: clinic_id não encontrado em nenhuma camada.");
       setLoading(false);
     }
   };
@@ -96,13 +91,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     // 3. Ouvinte de Mudanças (Com Trava de Segurança)
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
-      console.log(`🔄 [AUTH EVENT]: ${event}`);
+      // 🚨 REMOVIDO CONSOLE.LOG QUE CAUSAVA RE-RENDER
 
       const token = currentSession?.access_token ?? null;
 
       // Impede reprocessar a mesma sessão (Causa do Loop)
       if (token && lastTokenRef.current === token && event !== 'SIGNED_OUT') {
-        console.log("🛡️ [LOOP GUARD] Evento duplicado ignorado.");
+        // 🚨 REMOVIDO CONSOLE.LOG QUE CAUSAVA RE-RENDER
         return;
       }
 
@@ -166,13 +161,28 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   // 4. Função Pública para Recarregar Perfil (Ex: após edição)
   const refreshProfile = async () => {
     if (session) {
-      console.log("🔄 [AUTH] Recarregando perfil sob demanda...");
       await initializeUser(session);
     }
   };
 
+  // Memoização do contexto para prevenir re-renders desnecessários
+  const contextValue = useMemo(
+    () => ({
+      user,
+      session,
+      loading,
+      isAdmin,
+      isMaster,
+      signIn,
+      signOut,
+      profile: user,
+      refreshProfile
+    }),
+    [user, session, loading, isAdmin, isMaster]
+  );
+
   return (
-    <AuthContext.Provider value={{ user, session, loading, isAdmin, isMaster, signIn, signOut, profile: user, refreshProfile }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );

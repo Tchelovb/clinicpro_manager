@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { usePatients } from "../hooks/usePatients";
 import { useAuth } from "../contexts/AuthContext";
 import { Patient } from "../types";
 import { supabase } from "../lib/supabase";
+import { StableInput } from "./StableInput";
 import {
   ArrowLeft,
   Save,
@@ -21,9 +22,9 @@ import {
 } from "lucide-react";
 import SecurityPinModal from "./SecurityPinModal";
 import toast from "react-hot-toast";
-import InputMask from "react-input-mask";
 import { format, parse, isValid } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { PatientField } from "./PatientField";
 
 interface PatientFormProps {
   onSuccess?: (newId: string) => void;
@@ -43,7 +44,8 @@ const PatientForm: React.FC<PatientFormProps> = ({
   const navigate = useNavigate();
   const { id: paramId } = useParams<{ id: string }>();
   const { createPatientAsync, updatePatientAsync } = usePatients();
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
+  const safeClinicId = profile?.clinic_id || user?.user_metadata?.clinic_id;
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(!initialReadonly);
@@ -92,31 +94,43 @@ const PatientForm: React.FC<PatientFormProps> = ({
     }
   }, [activeId, isEditMode, initialData]);
 
-  // Radar de Duplicidade: Monitoramento em Tempo Real
+  // ✅ RADAR DE DUPLICIDADE (Debounce Seguro com useRef)
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   useEffect(() => {
+    // 1. Limpeza (Cleanup) imediata do timer anterior para evitar execução tardia
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+
+    // 2. Condições de Saída Antecipada (Performance)
     if (!formData.name || formData.name.length < 3 || isOverrideAuthorized || isEditMode || !isEditing) {
       setPossibleDuplicates([]);
       return;
     }
 
-    const delayDebounceFn = setTimeout(async () => {
-      const { data, error } = await supabase
-        .from("patients")
-        .select("id, name, cpf, phone")
-        .ilike("name", `%${formData.name}%`)
-        .limit(5);
+    // 3. Debounce (Atraso na execução)
+    timeoutRef.current = setTimeout(async () => {
+      try {
+        const { data, error } = await supabase
+          .from("patients")
+          .select("id, name, cpf, phone")
+          .ilike("name", `%${formData.name}%`)
+          .limit(5);
 
-      if (data && data.length > 0) {
-        setPossibleDuplicates(data);
-      } else {
-        setPossibleDuplicates([]);
+        if (!error && data) {
+          setPossibleDuplicates(data);
+        }
+      } catch (err) {
+        console.error('Erro silent no Radar:', err);
       }
-    }, 500);
+    }, 800); // 800ms de espera após parar de digitar
 
-    return () => clearTimeout(delayDebounceFn);
+    // 4. Cleanup function do useEffect
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
   }, [formData.name, isOverrideAuthorized, isEditMode, isEditing]);
 
-  const handleSelectDuplicate = (patient: Partial<Patient>) => {
+  const handleSelectDuplicate = useCallback((patient: Partial<Patient>) => {
     if (confirm(`Deseja carregar os dados de ${patient.name}?`)) {
       setFormData(prev => ({
         ...prev,
@@ -125,29 +139,39 @@ const PatientForm: React.FC<PatientFormProps> = ({
       setPossibleDuplicates([]);
       toast.success('Dados carregados!');
     }
-  };
+  }, []);
 
-  const handleChange = (
+  // HOT-FIX #5: useCallback previne re-criação da função e perda de foco
+  const handleChange = useCallback((
     e: React.ChangeEvent<
       HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
     >
   ) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    setFormData(prev => ({ ...prev, [name]: value }));
     if (error && (name === "name" || name === "phone")) {
       setError("");
     }
-  };
+  }, [error]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // 🛡️ SESSÃO BLINDADA: Validação Crítica de Segurança
-    if (!profile?.clinic_id) {
-      toast.error("Erro Crítico de Segurança: Identificação da clínica não encontrada. Por favor, faça login novamente.");
-      setError("Erro de Sessão: clinic_id ausente. Recarregue a página.");
+    // 🛡️ SESSÃO BLINDADA: Validação Crítica de Segurança (HOT-FIX #4 - Reforçado)
+    if (!safeClinicId) {
+      console.error('❌ [PATIENT FORM] ERRO CRÍTICO: clinic_id não encontrado!');
+      console.error('Profile/User:', { profile, user });
+
+      toast.error(
+        "Erro Crítico: Identificação da clínica não encontrada. " +
+        "Por favor, recarregue a página (F5) ou faça login novamente.",
+        { duration: 6000 }
+      );
+      setError("Erro de Sessão: clinic_id ausente. Recarregue a página (F5).");
       return;
     }
+
+    console.log('✅ [PATIENT FORM] clinic_id validado:', safeClinicId);
 
     if (!formData.name || !formData.phone) {
       setError("Nome completo e Telefone são obrigatórios.");
@@ -296,102 +320,7 @@ const PatientForm: React.FC<PatientFormProps> = ({
     );
   }
 
-  // Componente auxiliar para renderizar campo
-  const Field = ({ label, value, name, type = "text", options, required = false }: any) => {
-    // Lógica para Data com Máscara
-    if (name === 'birth_date' && isEditing) {
-      // Converte YYYY-MM-DD para DD/MM/YYYY para exibição
-      const displayValue = value ? format(parse(value, 'yyyy-MM-dd', new Date()), 'dd/MM/yyyy') : '';
-
-      const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const val = e.target.value;
-        // Tenta converter DD/MM/YYYY de volta para YYYY-MM-DD
-        if (!val.includes('_') && val.length === 10) {
-          try {
-            const parsedDate = parse(val, 'dd/MM/yyyy', new Date());
-            if (isValid(parsedDate)) {
-              const isoDate = format(parsedDate, 'yyyy-MM-dd');
-              setFormData(prev => ({ ...prev, [name]: isoDate }));
-              return;
-            }
-          } catch (err) {
-            // Data inválida
-          }
-        }
-        // Se apagou tudo, limpa
-        if (val === '') {
-          setFormData(prev => ({ ...prev, [name]: '' }));
-        }
-      };
-
-      return (
-        <div>
-          <label className={labelClass}>
-            {label} {required && <span className="text-red-500">*</span>}
-          </label>
-          <div className="relative">
-            <InputMask
-              mask="99/99/9999"
-              value={displayValue}
-              onChange={handleDateChange}
-              className={inputClass}
-              placeholder="DD/MM/AAAA"
-            />
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-              <span className="mr-1">📅</span>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <div>
-        <label className={labelClass}>
-          {label} {required && <span className="text-red-500">*</span>}
-        </label>
-        {isEditing ? (
-          options ? (
-            <select
-              name={name}
-              value={value || ""}
-              className={inputClass}
-              onChange={handleChange}
-            >
-              {options.map((opt: any) => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
-          ) : type === "textarea" ? (
-            <textarea
-              name={name}
-              value={value || ""}
-              className={`${inputClass} resize-none`}
-              rows={3}
-              onChange={handleChange}
-            />
-          ) : (
-            <input
-              name={name}
-              value={value || ""}
-              type={type}
-              className={inputClass}
-              onChange={handleChange}
-              required={required}
-              // Impede zoom em inputs normais caso não pego pela classe
-              style={{ fontSize: '16px' }}
-            />
-          )
-        ) : (
-          <p className={valueClass}>
-            {name === 'birth_date' && value
-              ? format(parse(value, 'yyyy-MM-dd', new Date()), 'dd/MM/yyyy')
-              : (value || 'Não informado')}
-          </p>
-        )}
-      </div>
-    )
-  };
+  // Componente Field foi extraído para PatientField.tsx para evitar re-renders
 
   return (
     <div className="flex flex-col h-[100dvh] max-w-6xl mx-auto">
@@ -497,7 +426,7 @@ const PatientForm: React.FC<PatientFormProps> = ({
                 </label>
                 {isEditing ? (
                   <>
-                    <input
+                    <StableInput
                       name="name"
                       value={formData.name || ""}
                       className={inputClass}
@@ -534,25 +463,26 @@ const PatientForm: React.FC<PatientFormProps> = ({
 
               {/* CPF - 3 cols */}
               <div className="col-span-12 md:col-span-3">
-                <Field label="CPF" value={formData.cpf} name="cpf" />
+                <PatientField label="CPF" value={formData.cpf} name="cpf" onChange={handleChange} isEditing={isEditing} />
               </div>
 
               {/* RG - 3 cols */}
               <div className="col-span-12 md:col-span-3">
-                <Field label="RG / Identidade" value={formData.rg} name="rg" />
+                <PatientField label="RG / Identidade" value={formData.rg} name="rg" onChange={handleChange} isEditing={isEditing} />
               </div>
 
-              {/* Data de Nascimento - 3 cols */}
+              {/* Data de Nascimento - 3 cols (SAFE INPUT) */}
               <div className="col-span-12 md:col-span-3">
-                <Field label="Data de Nascimento" value={formData.birth_date} name="birth_date" type="date" />
+                <PatientField label="Data de Nascimento" value={formData.birth_date} name="birth_date" onChange={handleChange} isEditing={isEditing} />
               </div>
 
               {/* Gênero - 3 cols */}
               <div className="col-span-12 md:col-span-3">
-                <Field
+                <PatientField
                   label="Gênero"
                   value={formData.gender}
                   name="gender"
+                  onChange={handleChange} isEditing={isEditing}
                   options={[
                     { value: "Masculino", label: "Masculino" },
                     { value: "Feminino", label: "Feminino" },
@@ -564,10 +494,11 @@ const PatientForm: React.FC<PatientFormProps> = ({
 
               {/* Estado Civil - 6 cols */}
               <div className="col-span-12 md:col-span-6">
-                <Field
+                <PatientField
                   label="Estado Civil"
                   value={formData.marital_status}
                   name="marital_status"
+                  onChange={handleChange} isEditing={isEditing}
                   options={[
                     { value: "SINGLE", label: "Solteiro(a)" },
                     { value: "MARRIED", label: "Casado(a)" },
@@ -580,7 +511,7 @@ const PatientForm: React.FC<PatientFormProps> = ({
 
               {/* Profissão - 6 cols */}
               <div className="col-span-12 md:col-span-6">
-                <Field label="Profissão" value={formData.occupation} name="occupation" />
+                <PatientField label="Profissão" value={formData.occupation} name="occupation" onChange={handleChange} isEditing={isEditing} />
               </div>
             </div>
           </div>
@@ -594,26 +525,28 @@ const PatientForm: React.FC<PatientFormProps> = ({
             <div className="grid grid-cols-12 gap-4">
               {/* Telefone/WhatsApp - 6 cols */}
               <div className="col-span-12 md:col-span-6">
-                <Field
+                <PatientField
                   label="Celular / WhatsApp"
                   value={formData.phone}
                   name="phone"
                   type="tel"
                   required
+                  onChange={handleChange} isEditing={isEditing}
                 />
               </div>
 
               {/* Email - 6 cols */}
               <div className="col-span-12 md:col-span-6">
-                <Field label="Email" value={formData.email} name="email" type="email" />
+                <PatientField label="Email" value={formData.email} name="email" type="email" onChange={handleChange} isEditing={isEditing} />
               </div>
 
               {/* Preferência de Contato - 6 cols */}
               <div className="col-span-12 md:col-span-6">
-                <Field
+                <PatientField
                   label="Preferência de Contato"
                   value={formData.contact_preference}
                   name="contact_preference"
+                  onChange={handleChange} isEditing={isEditing}
                   options={[
                     { value: "WHATSAPP", label: "WhatsApp" },
                     { value: "PHONE", label: "Ligação" },
@@ -625,10 +558,11 @@ const PatientForm: React.FC<PatientFormProps> = ({
 
               {/* Origem/Marketing - 6 cols */}
               <div className="col-span-12 md:col-span-6">
-                <Field
+                <PatientField
                   label="Como Conheceu a Clínica"
                   value={formData.origin}
                   name="origin"
+                  onChange={handleChange} isEditing={isEditing}
                   options={[
                     { value: "Instagram", label: "Instagram" },
                     { value: "Google Ads", label: "Google Ads" },
@@ -651,41 +585,43 @@ const PatientForm: React.FC<PatientFormProps> = ({
             </h3>
             <div className="grid grid-cols-12 gap-4">
               {/* CEP - 3 cols */}
+
               <div className="col-span-12 md:col-span-3">
-                <Field label="CEP" value={formData.zip_code} name="zip_code" />
+                <PatientField label="CEP" value={formData.zip_code} name="zip_code" onChange={handleChange} isEditing={isEditing} />
               </div>
 
               {/* Logradouro - 7 cols */}
               <div className="col-span-12 md:col-span-7">
-                <Field label="Rua / Avenida" value={formData.street} name="street" />
+                <PatientField label="Rua / Avenida" value={formData.street} name="street" onChange={handleChange} isEditing={isEditing} />
               </div>
 
               {/* Número - 2 cols */}
               <div className="col-span-12 md:col-span-2">
-                <Field label="Número" value={formData.number} name="number" />
+                <PatientField label="Número" value={formData.number} name="number" onChange={handleChange} isEditing={isEditing} />
               </div>
 
               {/* Complemento - 4 cols */}
               <div className="col-span-12 md:col-span-4">
-                <Field label="Complemento" value={formData.complement} name="complement" />
+                <PatientField label="Complemento" value={formData.complement} name="complement" onChange={handleChange} isEditing={isEditing} />
               </div>
 
               {/* Bairro - 4 cols */}
               <div className="col-span-12 md:col-span-4">
-                <Field label="Bairro" value={formData.neighborhood} name="neighborhood" />
+                <PatientField label="Bairro" value={formData.neighborhood} name="neighborhood" onChange={handleChange} isEditing={isEditing} />
               </div>
 
               {/* Cidade - 3 cols */}
               <div className="col-span-12 md:col-span-3">
-                <Field label="Cidade" value={formData.city} name="city" />
+                <PatientField label="Cidade" value={formData.city} name="city" onChange={handleChange} isEditing={isEditing} />
               </div>
 
               {/* UF - 1 col */}
               <div className="col-span-12 md:col-span-1">
-                <Field label="UF" value={formData.state} name="state" />
+                <PatientField label="UF" value={formData.state} name="state" onChange={handleChange} isEditing={isEditing} />
               </div>
             </div>
           </div>
+
 
           {/* 4. PERFIL PROFISSIONAL E SOCIAL */}
           <div className={sectionClass}>
@@ -696,17 +632,19 @@ const PatientForm: React.FC<PatientFormProps> = ({
             <div className="grid grid-cols-12 gap-4">
               {/* Apelido - 6 cols */}
               <div className="col-span-12 md:col-span-6">
-                <Field label="Apelido / Como Chamar" value={formData.nickname} name="nickname" />
+                <PatientField label="Apelido / Como Chamar" value={formData.nickname} name="nickname" onChange={handleChange} isEditing={isEditing} />
               </div>
 
               {/* Instagram - 6 cols */}
               <div className="col-span-12 md:col-span-6">
-                <Field label="Instagram" value={formData.instagram_handle} name="instagram_handle" />
+                <PatientField label="Instagram" value={formData.instagram_handle} name="instagram_handle" onChange={handleChange} isEditing={isEditing} />
               </div>
 
               {/* Observações Gerais - 12 cols */}
               <div className="col-span-12">
-                <Field
+                <PatientField
+                  onChange={handleChange}
+                  isEditing={isEditing}
                   label="Observações Gerais"
                   value={formData.vip_notes}
                   name="vip_notes"
@@ -726,7 +664,9 @@ const PatientForm: React.FC<PatientFormProps> = ({
               <div className="grid grid-cols-12 gap-4">
                 {/* Score - 3 cols */}
                 <div className="col-span-12 md:col-span-3">
-                  <Field
+                  <PatientField
+                    onChange={handleChange}
+                    isEditing={isEditing}
                     label="Classificação"
                     value={formData.patient_score}
                     name="patient_score"
@@ -742,7 +682,9 @@ const PatientForm: React.FC<PatientFormProps> = ({
 
                 {/* Sentimento - 3 cols */}
                 <div className="col-span-12 md:col-span-3">
-                  <Field
+                  <PatientField
+                    onChange={handleChange}
+                    isEditing={isEditing}
                     label="Status de Sentimento"
                     value={formData.sentiment_status}
                     name="sentiment_status"
@@ -758,7 +700,9 @@ const PatientForm: React.FC<PatientFormProps> = ({
 
                 {/* Ativo - 3 cols */}
                 <div className="col-span-12 md:col-span-3">
-                  <Field
+                  <PatientField
+                    onChange={handleChange}
+                    isEditing={isEditing}
                     label="Status"
                     value={String(formData.is_active !== undefined ? formData.is_active : true)}
                     name="is_active"
@@ -771,7 +715,9 @@ const PatientForm: React.FC<PatientFormProps> = ({
 
                 {/* Inadimplente - 3 cols */}
                 <div className="col-span-12 md:col-span-3">
-                  <Field
+                  <PatientField
+                    onChange={handleChange}
+                    isEditing={isEditing}
                     label="Inadimplente"
                     value={String(formData.bad_debtor || false)}
                     name="bad_debtor"
@@ -785,10 +731,10 @@ const PatientForm: React.FC<PatientFormProps> = ({
             </div>
           )}
         </form>
-      </div>
+      </div >
 
       {/* Sticky Footer with Side-by-Side Buttons */}
-      <div className="sticky bottom-0 left-0 right-0 p-4 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 flex gap-3 z-50">
+      < div className="sticky bottom-0 left-0 right-0 p-4 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 flex gap-3 z-50" >
         {!isEditing ? (
           <button
             type="button"
@@ -823,8 +769,8 @@ const PatientForm: React.FC<PatientFormProps> = ({
             </button>
           </>
         )}
-      </div>
-    </div>
+      </div >
+    </div >
   );
 };
 

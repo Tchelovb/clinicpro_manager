@@ -19,7 +19,7 @@ interface RetryOptions {
  * @throws Último erro se todas as tentativas falharem
  */
 export async function withRetry<T>(
-    operation: () => Promise<T>,
+    operation: () => PromiseLike<T>,
     options: RetryOptions = {}
 ): Promise<T> {
     const {

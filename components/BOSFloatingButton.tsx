@@ -29,9 +29,10 @@ export const BOSFloatingButton: React.FC = () => {
             if (count) setAlertCount(count);
         };
         fetchAlerts();
-        // Poll every 60s
-        const interval = setInterval(fetchAlerts, 60000);
-        return () => clearInterval(interval);
+
+        // 🚨 TEMPORARIAMENTE DESABILITADO - CAUSAVA PERDA DE FOCO NOS INPUTS
+        // const interval = setInterval(fetchAlerts, 60000);
+        // return () => clearInterval(interval);
     }, [profile]);
 
     // Listen for sidebar ChatBOS button click

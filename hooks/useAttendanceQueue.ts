@@ -79,9 +79,11 @@ export const useAttendanceQueue = (clinicId: string | undefined) => {
     // Initial load and Auto-refresh setup
     useEffect(() => {
         loadQueue();
-        const interval = setInterval(() => loadQueue(true), 30000); // 30s auto-refresh
-        return () => clearInterval(interval);
-    }, [loadQueue]);
+
+        // 🚨 TEMPORARIAMENTE DESABILITADO - CAUSAVA PERDA DE FOCO NOS INPUTS
+        // const interval = setInterval(() => loadQueue(true), 30000); // 30s auto-refresh
+        // return () => clearInterval(interval);
+    }, [clinicId, loadQueue]); // Added loadQueue to dependencies as it's used inside
 
     return {
         queue,
