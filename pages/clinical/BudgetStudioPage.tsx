@@ -107,8 +107,8 @@ const StepSelection = ({
 
   const filteredProcs = searchTerm
     ? procedures.filter((p: any) =>
-        p.name.toLowerCase().includes(searchTerm.toLowerCase())
-      )
+      p.name.toLowerCase().includes(searchTerm.toLowerCase())
+    )
     : [];
 
   const handleAddItem = () => {
@@ -304,7 +304,7 @@ const StepSelection = ({
         </div>
 
         {/* Lista MOBILE (Cards) */}
-        <div className="flex-1 overflow-y-auto p-4 md:hidden space-y-3 pb-56">
+        <div className="flex-1 overflow-y-auto p-4 md:hidden space-y-3 pb-64">
           {cart.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-48 text-gray-300">
               <ShoppingBag size={48} className="mb-4 opacity-20" />
@@ -407,7 +407,7 @@ const StepSelection = ({
         </div>
       </div>{" "}
       {/* Close scrollable wrapper */}
-      <div className="p-4 border-t border-gray-200 bg-white/90 backdrop-blur-md flex justify-end fixed bottom-20 md:bottom-0 left-0 w-full md:relative md:w-auto z-50 md:bg-gray-50 md:backdrop-blur-none">
+      <div className="p-4 border-t border-gray-200 bg-white shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.2)] flex justify-end fixed bottom-0 md:bottom-0 left-0 w-full md:relative md:w-auto z-50 md:shadow-none md:bg-gray-50 md:backdrop-blur-none">
         <button
           onClick={onNext}
           disabled={cart.length === 0}
@@ -519,7 +519,7 @@ const StepNegotiation = ({
       </div>
 
       {/* Direita: Calculadora */}
-      <div className="w-full md:w-8/12 p-8 md:p-12 flex flex-col justify-center overflow-y-auto pb-56 md:overflow-visible md:pb-12">
+      <div className="w-full md:w-8/12 p-8 md:p-12 flex flex-col justify-center overflow-y-auto pb-64 md:overflow-visible md:pb-12">
         <h2 className="text-3xl font-bold text-slate-900 mb-8">
           Condições de Pagamento
         </h2>
@@ -529,11 +529,10 @@ const StepNegotiation = ({
             <button
               key={m}
               onClick={() => setNegotiation({ ...negotiation, method: m })}
-              className={`p-4 rounded-xl border-2 font-bold text-sm transition-all ${
-                negotiation.method === m
+              className={`p-4 rounded-xl border-2 font-bold text-sm transition-all ${negotiation.method === m
                   ? "border-indigo-600 bg-indigo-50 text-indigo-700"
                   : "border-gray-100 text-gray-400 hover:border-gray-300"
-              }`}
+                }`}
             >
               {m}
             </button>
@@ -623,7 +622,7 @@ const StepNegotiation = ({
         </div>
 
         {/* Footer Fixo Mobile */}
-        <div className="fixed bottom-20 md:bottom-0 left-0 w-full p-4 bg-white/95 backdrop-blur-md border-t border-gray-200 z-50 md:relative md:p-0 md:bg-transparent md:backdrop-blur-none md:border-0">
+        <div className="fixed bottom-0 md:bottom-0 left-0 w-full p-4 bg-white border-t border-gray-200 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.2)] z-50 md:shadow-none md:relative md:p-0 md:bg-transparent md:backdrop-blur-none md:border-0">
           <button
             onClick={onNext}
             className="w-full bg-slate-900 text-white py-4 md:py-5 rounded-xl font-bold text-lg hover:bg-black transition-all shadow-lg flex justify-center items-center gap-2"
@@ -908,16 +907,14 @@ export function BudgetStudioPage() {
             <React.Fragment key={s.num}>
               {/* Desktop Stepper */}
               <div
-                className={`hidden md:flex items-center gap-2 ${
-                  step === s.num ? "opacity-100" : "opacity-40"
-                }`}
+                className={`hidden md:flex items-center gap-2 ${step === s.num ? "opacity-100" : "opacity-40"
+                  }`}
               >
                 <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                    step >= s.num
+                  className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${step >= s.num
                       ? "bg-indigo-600 text-white"
                       : "bg-gray-100 text-gray-500"
-                  }`}
+                    }`}
                 >
                   {s.num}
                 </div>
@@ -926,9 +923,8 @@ export function BudgetStudioPage() {
 
               {/* Mobile Stepper (Active Step Only - Condensed Text) */}
               <div
-                className={`md:hidden flex items-center gap-2 ${
-                  step === s.num ? "block" : "hidden"
-                }`}
+                className={`md:hidden flex items-center gap-2 ${step === s.num ? "block" : "hidden"
+                  }`}
               >
                 <span className="text-sm font-bold text-slate-900">
                   Passo {s.num} de 4: {s.label}
@@ -937,9 +933,8 @@ export function BudgetStudioPage() {
 
               {i < 3 && (
                 <div
-                  className={`w-4 h-px bg-gray-300 hidden md:block ${
-                    step > s.num ? "bg-indigo-600" : ""
-                  }`}
+                  className={`w-4 h-px bg-gray-300 hidden md:block ${step > s.num ? "bg-indigo-600" : ""
+                    }`}
                 />
               )}
             </React.Fragment>

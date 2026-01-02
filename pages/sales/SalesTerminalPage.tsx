@@ -34,7 +34,7 @@ const PinModal = ({ isOpen, onClose, onConfirm, actionType, value }: any) => {
     const colorClass = actionType === 'FINISH_SALE' ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600';
 
     return (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white rounded-2xl p-8 w-full max-w-sm shadow-2xl">
                 <div className="flex flex-col items-center mb-6">
                     <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-3 ${colorClass}`}>
@@ -69,7 +69,7 @@ const StepConference = ({ items, onToggleItem, onNext, totals, patientName }: an
             </div>
             <p className="text-xs text-gray-400 mt-2 flex items-center gap-1"><ShieldAlert size={12} /> Desmarcar itens requer autorização (PIN).</p>
         </div>
-        <div className="flex-1 overflow-y-auto p-8 pb-40">
+        <div className="flex-1 overflow-y-auto p-8 pb-64">
             <div className="space-y-3">
                 {items.map((item: any) => (
                     <div key={item.id} className={`flex items-center p-4 rounded-xl border transition-all ${item.selected ? 'border-indigo-100 bg-white shadow-sm' : 'border-gray-100 bg-gray-50 opacity-60'}`}>
@@ -85,7 +85,7 @@ const StepConference = ({ items, onToggleItem, onNext, totals, patientName }: an
                 ))}
             </div>
         </div>
-        <div className="p-6 border-t border-gray-200 bg-white/90 backdrop-blur-md flex justify-end fixed bottom-0 left-0 w-full z-50 md:relative md:w-auto md:bg-gray-50 md:backdrop-blur-none">
+        <div className="p-6 border-t border-gray-200 bg-white shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.2)] flex justify-end fixed bottom-0 md:bottom-0 left-0 w-full z-50 md:relative md:w-auto md:shadow-none md:bg-gray-50 md:backdrop-blur-none">
             <button onClick={onNext} className="w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-4 rounded-xl font-bold shadow-lg shadow-indigo-200 flex items-center justify-center gap-2 transition-transform active:scale-95">
                 Confirmar e Negociar <ChevronRight size={20} />
             </button>
@@ -105,7 +105,7 @@ const StepNegotiation = ({ negotiation, setNegotiation, totals, onNext, onBack }
         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="h-full flex flex-col p-8 bg-white">
             <button onClick={onBack} className="flex items-center text-gray-400 hover:text-slate-800 gap-2 mb-6 font-bold text-sm w-fit"><ArrowLeft size={16} /> Voltar</button>
             <h2 className="text-3xl font-bold text-slate-900 mb-8">Pagamento</h2>
-            <div className="flex-1 overflow-y-auto pb-40">
+            <div className="flex-1 overflow-y-auto pb-64">
                 <div className="grid grid-cols-2 gap-4 mb-4 md:mb-8">
                     {['PIX', 'CARTÃO', 'DINHEIRO', 'BOLETO'].map(m => (
                         <button key={m} onClick={() => setNegotiation({ ...negotiation, method: m })} className={`p-6 md:p-6 rounded-2xl border-2 text-left transition-all active:scale-95 ${negotiation.method === m ? 'border-indigo-600 bg-indigo-50 ring-1 ring-indigo-500' : 'border-gray-100 hover:border-gray-200'}`}>
@@ -141,7 +141,7 @@ const StepNegotiation = ({ negotiation, setNegotiation, totals, onNext, onBack }
                     </div>
                 </div>
             </div>
-            <div className="p-4 border-t border-gray-200 bg-white/90 backdrop-blur-md fixed bottom-0 left-0 w-full z-50">
+            <div className="p-4 border-t border-gray-200 bg-white shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.2)] fixed bottom-0 md:bottom-0 left-0 w-full z-50 md:relative md:shadow-none">
                 <button onClick={onNext} className="w-full bg-slate-900 text-white py-4 rounded-xl font-bold text-lg hover:bg-black transition-all shadow-xl">
                     <FileText size={20} className="inline mr-2" />
                     Revisar Lançamento
