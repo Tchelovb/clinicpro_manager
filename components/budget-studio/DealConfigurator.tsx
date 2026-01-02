@@ -19,7 +19,7 @@ interface DealConfigProps {
     professionals: Professional[];
     priceTables: PriceTable[];
     onUpdateDeal: (dealData: any) => void;
-    onProceedToCheckout: (dealData: any) => Promise<void>;
+    onSaveBudget: () => Promise<void>;
 }
 
 export const DealConfigurator: React.FC<DealConfigProps> = ({
@@ -27,7 +27,7 @@ export const DealConfigurator: React.FC<DealConfigProps> = ({
     professionals,
     priceTables,
     onUpdateDeal,
-    onProceedToCheckout
+    onSaveBudget
 }) => {
     // --- STATE: O Coração da Negociação ---
     const [selectedProf, setSelectedProf] = useState<string>(professionals[0]?.id || '');
@@ -38,6 +38,7 @@ export const DealConfigurator: React.FC<DealConfigProps> = ({
 
     const [downPayment, setDownPayment] = useState<number>(0);
     const [installments, setInstallments] = useState<number>(1);
+    const [paymentMethod, setPaymentMethod] = useState<'PIX' | 'CREDIT_CARD' | 'DEBIT_CARD' | 'CASH' | 'BOLETO'>('PIX');
 
     // --- CÁLCULOS (Simulação em tempo real) ---
     const [calculatedState, setCalculatedState] = useState({
@@ -49,6 +50,23 @@ export const DealConfigurator: React.FC<DealConfigProps> = ({
 
     // Ref to track last emitted value to prevent infinite loops
     const lastEmittedValueRef = React.useRef<string>('');
+
+    // Auto-apply PIX discount
+    useEffect(() => {
+        if (paymentMethod === 'PIX') {
+            setDiscountType('PERCENTAGE');
+            setDiscountValue(5);
+            setInstallments(1);
+        } else if (paymentMethod === 'CASH') {
+            setInstallments(1);
+        } else if (paymentMethod === 'DEBIT_CARD') {
+            setInstallments(1);
+        }
+        // Cap installments at 18x (card machine limit)
+        if (installments > 18) {
+            setInstallments(18);
+        }
+    }, [paymentMethod, installments]);
 
     useEffect(() => {
         // 1. Aplica Desconto
@@ -98,7 +116,10 @@ export const DealConfigurator: React.FC<DealConfigProps> = ({
             discount_value: discountValue,
             down_payment_value: downPayment,
             installments_count: installments,
-            final_value: totalAfterDiscount
+            final_value: totalAfterDiscount,
+            payment_method_preference: paymentMethod,
+            suggested_installments: installments,
+            suggested_discount_percent: paymentMethod === 'PIX' ? 5 : discountValue
         };
 
         // LOOP PROTECTION: Only emit if payload actually changed
@@ -110,24 +131,17 @@ export const DealConfigurator: React.FC<DealConfigProps> = ({
 
     }, [totalValue, discountValue, discountType, downPayment, installments, selectedProf, selectedTable, onUpdateDeal]);
 
-    // Checkout Handler
-    const [isProceeding, setIsProceeding] = useState(false);
+    // Save Budget Handler
+    const [isSaving, setIsSaving] = useState(false);
 
-    const handleCheckout = async () => {
-        setIsProceeding(true);
+    const handleSave = async () => {
+        setIsSaving(true);
         try {
-            await onProceedToCheckout({
-                sales_rep_id: selectedProf,
-                price_table_id: selectedTable,
-                discount_type: discountType,
-                discount_value: discountValue,
-                down_payment_value: downPayment,
-                installments_count: installments,
-                final_value: calculatedState.finalTotal
-            });
+            await onSaveBudget();
         } catch (err) {
-            console.error('Checkout error:', err);
-            setIsProceeding(false);
+            console.error('Save error:', err);
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -177,6 +191,102 @@ export const DealConfigurator: React.FC<DealConfigProps> = ({
 
             {/* 2. MOTOR DE NEGOCIAÇÃO */}
             <div className="p-5 flex-1 space-y-6 overflow-y-auto">
+
+                {/* Forma de Pagamento (Sugestão) */}
+                <div>
+                    <label className="text-sm font-medium text-slate-600 mb-3 block">
+                        Sugestão de Pagamento
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                        {/* PIX */}
+                        <button
+                            type="button"
+                            onClick={() => setPaymentMethod('PIX')}
+                            className={`p-3 rounded-lg border-2 transition-all text-left ${paymentMethod === 'PIX'
+                                ? 'border-green-500 bg-green-50'
+                                : 'border-slate-200 hover:border-green-300 bg-white'
+                                }`}
+                        >
+                            <div className="flex items-center justify-between mb-1">
+                                <span className={`text-sm font-bold ${paymentMethod === 'PIX' ? 'text-green-700' : 'text-slate-700'}`}>
+                                    PIX
+                                </span>
+                                {paymentMethod === 'PIX' && (
+                                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                                )}
+                            </div>
+                            <span className="block text-[10px] text-green-600 font-semibold">
+                                -5% automático
+                            </span>
+                        </button>
+
+                        {/* Cartão de Crédito */}
+                        <button
+                            type="button"
+                            onClick={() => setPaymentMethod('CREDIT_CARD')}
+                            className={`p-3 rounded-lg border-2 transition-all text-left ${paymentMethod === 'CREDIT_CARD'
+                                ? 'border-blue-500 bg-blue-50'
+                                : 'border-slate-200 hover:border-blue-300 bg-white'
+                                }`}
+                        >
+                            <div className="flex items-center justify-between mb-1">
+                                <span className={`text-sm font-bold ${paymentMethod === 'CREDIT_CARD' ? 'text-blue-700' : 'text-slate-700'}`}>
+                                    Cartão
+                                </span>
+                                {paymentMethod === 'CREDIT_CARD' && (
+                                    <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                                )}
+                            </div>
+                            <span className="block text-[10px] text-slate-500">
+                                Até 18x
+                            </span>
+                        </button>
+
+                        {/* Dinheiro */}
+                        <button
+                            type="button"
+                            onClick={() => setPaymentMethod('CASH')}
+                            className={`p-3 rounded-lg border-2 transition-all text-left ${paymentMethod === 'CASH'
+                                ? 'border-emerald-500 bg-emerald-50'
+                                : 'border-slate-200 hover:border-emerald-300 bg-white'
+                                }`}
+                        >
+                            <div className="flex items-center justify-between mb-1">
+                                <span className={`text-sm font-bold ${paymentMethod === 'CASH' ? 'text-emerald-700' : 'text-slate-700'}`}>
+                                    Dinheiro
+                                </span>
+                                {paymentMethod === 'CASH' && (
+                                    <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                                )}
+                            </div>
+                            <span className="block text-[10px] text-slate-500">
+                                À vista
+                            </span>
+                        </button>
+
+                        {/* Boleto */}
+                        <button
+                            type="button"
+                            onClick={() => setPaymentMethod('BOLETO')}
+                            className={`p-3 rounded-lg border-2 transition-all text-left ${paymentMethod === 'BOLETO'
+                                ? 'border-orange-500 bg-orange-50'
+                                : 'border-slate-200 hover:border-orange-300 bg-white'
+                                }`}
+                        >
+                            <div className="flex items-center justify-between mb-1">
+                                <span className={`text-sm font-bold ${paymentMethod === 'BOLETO' ? 'text-orange-700' : 'text-slate-700'}`}>
+                                    Boleto
+                                </span>
+                                {paymentMethod === 'BOLETO' && (
+                                    <div className="w-2 h-2 rounded-full bg-orange-500"></div>
+                                )}
+                            </div>
+                            <span className="block text-[10px] text-slate-500">
+                                Até 12x
+                            </span>
+                        </button>
+                    </div>
+                </div>
 
                 {/* Descontos */}
                 <div>
@@ -268,22 +378,22 @@ export const DealConfigurator: React.FC<DealConfigProps> = ({
                     </div>
                 </div>
 
-                {/* Botão Único: Lançar Venda */}
+                {/* Botão Único: Salvar Orçamento */}
                 <div className="space-y-3">
                     <button
-                        onClick={handleCheckout}
-                        disabled={isProceeding}
+                        onClick={handleSave}
+                        disabled={isSaving}
                         className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-4 rounded-xl flex items-center justify-center transition-all shadow-lg shadow-blue-900/50 group disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        {isProceeding ? (
+                        {isSaving ? (
                             <>
                                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                                Processando...
+                                Salvando...
                             </>
                         ) : (
                             <>
-                                <CreditCard className="mr-2 group-hover:scale-110 transition-transform" size={18} />
-                                Lançar Venda / Checkout
+                                <ShieldCheck className="mr-2 group-hover:scale-110 transition-transform" size={18} />
+                                Salvar Orçamento
                                 <ChevronRight className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity" size={18} />
                             </>
                         )}

@@ -74,7 +74,7 @@ import Receivables from "./pages/Receivables";
 import ProfessionalFinancial from "./pages/ProfessionalFinancial";
 import CFO from "./pages/CFO";
 import { SalesTerminalPage } from "./pages/sales/SalesTerminalPage";
-import { SalesCheckoutPage } from "./pages/sales/SalesCheckoutPage";
+
 import { SalesReceiptPage } from "./pages/sales/SalesReceiptPage";
 import { BudgetStudioPage } from "./pages/clinical/BudgetStudioPage";
 import { BudgetPipelinePage } from "./pages/budgets/BudgetPipelinePage";
@@ -85,6 +85,7 @@ import { BudgetPipelinePage } from "./pages/budgets/BudgetPipelinePage";
 import { GeneralClinicalPage } from "./pages/clinical/GeneralClinicalPage";
 import { HofPage } from "./pages/clinical/HofPage";
 import { OrthoPage } from "./pages/clinical/OrthoPage";
+import ClinicalDashboardPage from "./pages/clinical/ClinicalDashboardPage";
 
 // Wrapper to adapt AppLayout for Router Outlet
 const LayoutWrapper = () => (
@@ -137,7 +138,7 @@ const App: React.FC = () => {
                     <Route path="/patients/new" element={<PatientForm />} />
                     {/* <Route path="/patients/:id" element={<PatientDetail />} /> */}
                     <Route path="/sales" element={<SalesTerminalPage />} />
-                    <Route path="/sales/checkout/:budgetId" element={<SalesCheckoutPage />} />
+                    {/* Checkout removed in favor of Terminal integrated flow */}
                     <Route path="/sales/receipt/:saleId" element={<SalesReceiptPage />} />
                     <Route path="/patients/:id" element={<PatientProfilePage />} />
                     <Route path="/patients/:id/edit" element={<PatientForm />} />
@@ -146,6 +147,7 @@ const App: React.FC = () => {
                     <Route path="/patients/:id/clinical/general" element={<GeneralClinicalPage />} />
                     <Route path="/patients/:id/clinical/hof" element={<HofPage />} />
                     <Route path="/patients/:id/clinical/ortho" element={<OrthoPage />} />
+                    <Route path="/clinical-production" element={<ClinicalDashboardPage />} />
 
                     {/* --- BUDGET STUDIO --- */}
                     <Route path="/patients/:id/budget-studio" element={<BudgetStudioPage />} />

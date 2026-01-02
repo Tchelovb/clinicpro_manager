@@ -302,7 +302,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
     }, [profile?.clinic_id]);
 
     const refreshData = async () => {
+        console.log('🔄 [DataContext] Iniciando refresh completo dos dados...');
+        const startTime = performance.now();
         await fetchCoreData(true);
+        const endTime = performance.now();
+        console.log(`✅ [DataContext] Refresh completo! Tempo: ${(endTime - startTime).toFixed(0)}ms`);
     };
 
     const toggleTheme = () => {

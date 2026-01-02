@@ -26,7 +26,8 @@ import {
     ShoppingCart,
     FileText,
     CreditCard,
-    Landmark
+    Landmark,
+    Activity
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -56,6 +57,14 @@ const MAIN_NAV_ITEMS: MenuItem[] = [
         icon: LayoutDashboard,
         roles: ['MASTER', 'ADMIN', 'PROFESSIONAL', 'RECEPTIONIST', 'CRC'],
         color: 'text-violet-600'
+    },
+    {
+        path: '/clinical-production',
+        label: 'Produção',
+        icon: Activity,
+        roles: ['MASTER', 'ADMIN', 'PROFESSIONAL', 'CRC'],
+        color: 'text-violet-600',
+        highlight: true
     },
     {
         path: '/agenda',

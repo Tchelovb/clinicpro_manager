@@ -95,7 +95,7 @@ export interface Budget {
   createdAt: string;
   doctorName: string;
   doctorId?: string; // UUID of the professional responsible
-  status: "Em Análise" | "Enviado" | "Aprovado" | "Reprovado" | "Em Negociação" | "DRAFT" | "NEGOTIATING" | "APPROVED" | "REJECTED";
+  status: "DRAFT" | "PENDING" | "WAITING_CLOSING" | "APPROVED" | "REJECTED" | "PAID";
   items: BudgetItem[];
   totalValue: number;
   discount?: number;

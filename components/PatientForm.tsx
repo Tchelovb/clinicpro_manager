@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { usePatients } from "../hooks/usePatients";
 import { useAuth } from "../contexts/AuthContext";
+import { useData } from "../contexts/DataContext";
 import { Patient } from "../types";
 import { supabase } from "../lib/supabase";
 import { StableInput } from "./StableInput";
@@ -45,6 +46,7 @@ const PatientForm: React.FC<PatientFormProps> = ({
   const { id: paramId } = useParams<{ id: string }>();
   const { createPatientAsync, updatePatientAsync } = usePatients();
   const { profile, user } = useAuth();
+  const { refreshData } = useData();
   const safeClinicId = profile?.clinic_id || user?.user_metadata?.clinic_id;
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -238,6 +240,7 @@ const PatientForm: React.FC<PatientFormProps> = ({
     };
 
     setError("");
+    setLoading(true);
 
     try {
       let resultId = activeId;
@@ -251,6 +254,11 @@ const PatientForm: React.FC<PatientFormProps> = ({
         const createdPatient = await createPatientAsync(newPatient);
         resultId = createdPatient?.id;
         toast.success("Paciente cadastrado com sucesso!");
+
+        // 🔄 SINCRONIZAÇÃO INSTANTÂNEA: Atualiza a lista antes de navegar
+        console.log('🔄 [PatientForm] Sincronizando lista de pacientes...');
+        await refreshData();
+        console.log('✅ [PatientForm] Sincronização completa!');
       }
 
       // Handle Success / Navigation
@@ -267,6 +275,8 @@ const PatientForm: React.FC<PatientFormProps> = ({
       console.error(e);
       setError("Erro ao salvar paciente.");
       toast.error("Erro ao salvar paciente.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -356,14 +366,6 @@ const PatientForm: React.FC<PatientFormProps> = ({
               </p>
             </div>
           </div>
-
-          <button
-            onClick={handleSubmit}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg font-semibold shadow-md transition-all active:scale-95"
-          >
-            <Save size={18} />
-            Salvar Cadastro
-          </button>
         </div>
       )}
 

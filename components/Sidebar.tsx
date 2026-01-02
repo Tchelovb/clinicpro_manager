@@ -26,7 +26,8 @@ import {
     CreditCard,
     Landmark,
     Trello,
-    ShoppingBag
+    ShoppingBag,
+    Activity
 } from "lucide-react";
 import { CreateClinicModal } from "./CreateClinicModal";
 import { ClinicSwitcher } from "./ClinicSwitcher";
@@ -69,6 +70,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar }) => {
             category: "Comercial",
             items: [
                 { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+                { path: "/clinical-production", label: "Produção", icon: Activity, highlight: true },
                 { path: "/agenda", label: "Agenda", icon: Calendar },
                 {
                     path: "/pipeline-ghl",
@@ -99,6 +101,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar }) => {
         {
             category: "Clínico",
             items: [
+                { path: "/patients", label: "Pacientes", icon: Users },
                 { path: "/patients", label: "Pacientes", icon: Users },
                 { path: "/documents", label: "Central Docs", icon: FileText },
             ]
@@ -163,6 +166,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar }) => {
             icon: Sparkles,
             highlight: true,
             desc: "Assistente IA Executivo"
+        },
+        {
+            path: "/clinical-production",
+            label: "Produção",
+            icon: Activity,
+            highlight: true,
+            desc: "Torre de Controle"
         },
         {
             path: "/dashboard/network",
