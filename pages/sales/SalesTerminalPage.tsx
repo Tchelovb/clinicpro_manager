@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
     Check, CreditCard, Calendar, ArrowLeft, ShieldAlert,
-    Lock, Wallet, ChevronRight, Search, Clock, DollarSign
+    Lock, Wallet, ChevronRight, Search, Clock, DollarSign, FileText
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatCurrency } from '../../utils/format';
@@ -69,7 +69,7 @@ const StepConference = ({ items, onToggleItem, onNext, totals, patientName }: an
             </div>
             <p className="text-xs text-gray-400 mt-2 flex items-center gap-1"><ShieldAlert size={12} /> Desmarcar itens requer autorização (PIN).</p>
         </div>
-        <div className="flex-1 overflow-y-auto p-8">
+        <div className="flex-1 overflow-y-auto p-8 pb-40">
             <div className="space-y-3">
                 {items.map((item: any) => (
                     <div key={item.id} className={`flex items-center p-4 rounded-xl border transition-all ${item.selected ? 'border-indigo-100 bg-white shadow-sm' : 'border-gray-100 bg-gray-50 opacity-60'}`}>
@@ -85,8 +85,10 @@ const StepConference = ({ items, onToggleItem, onNext, totals, patientName }: an
                 ))}
             </div>
         </div>
-        <div className="p-6 border-t border-gray-100 flex justify-end bg-gray-50">
-            <button onClick={onNext} className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-4 rounded-xl font-bold shadow-lg shadow-indigo-200 flex items-center gap-2 transition-transform active:scale-95">Confirmar e Negociar <ChevronRight size={20} /></button>
+        <div className="p-6 border-t border-gray-200 bg-white/90 backdrop-blur-md flex justify-end fixed bottom-0 left-0 w-full z-50 md:relative md:w-auto md:bg-gray-50 md:backdrop-blur-none">
+            <button onClick={onNext} className="w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-4 rounded-xl font-bold shadow-lg shadow-indigo-200 flex items-center justify-center gap-2 transition-transform active:scale-95">
+                Confirmar e Negociar <ChevronRight size={20} />
+            </button>
         </div>
     </motion.div>
 );
@@ -103,7 +105,7 @@ const StepNegotiation = ({ negotiation, setNegotiation, totals, onNext, onBack }
         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="h-full flex flex-col p-8 bg-white">
             <button onClick={onBack} className="flex items-center text-gray-400 hover:text-slate-800 gap-2 mb-6 font-bold text-sm w-fit"><ArrowLeft size={16} /> Voltar</button>
             <h2 className="text-3xl font-bold text-slate-900 mb-8">Pagamento</h2>
-            <div className="flex-1">
+            <div className="flex-1 overflow-y-auto pb-40">
                 <div className="grid grid-cols-2 gap-4 mb-4 md:mb-8">
                     {['PIX', 'CARTÃO', 'DINHEIRO', 'BOLETO'].map(m => (
                         <button key={m} onClick={() => setNegotiation({ ...negotiation, method: m })} className={`p-6 md:p-6 rounded-2xl border-2 text-left transition-all active:scale-95 ${negotiation.method === m ? 'border-indigo-600 bg-indigo-50 ring-1 ring-indigo-500' : 'border-gray-100 hover:border-gray-200'}`}>
@@ -139,7 +141,12 @@ const StepNegotiation = ({ negotiation, setNegotiation, totals, onNext, onBack }
                     </div>
                 </div>
             </div>
-            <button onClick={onNext} className="w-full bg-slate-900 text-white py-4 rounded-xl font-bold text-lg hover:bg-black transition-all shadow-xl mt-4">Revisar Lançamento</button>
+            <div className="p-4 border-t border-gray-200 bg-white/90 backdrop-blur-md fixed bottom-0 left-0 w-full z-50">
+                <button onClick={onNext} className="w-full bg-slate-900 text-white py-4 rounded-xl font-bold text-lg hover:bg-black transition-all shadow-xl">
+                    <FileText size={20} className="inline mr-2" />
+                    Revisar Lançamento
+                </button>
+            </div>
         </motion.div>
     );
 };
@@ -364,7 +371,7 @@ export function SalesTerminalPage() {
     };
 
     return (
-        <div className="flex h-screen bg-gray-50 font-sans overflow-hidden">
+        <div className="flex h-[100dvh] bg-gray-50 font-sans overflow-hidden">
             {/* COLUNA ESQUERDA: RECEPÇÃO (Mobile: Full Screen if QUEUE / Desktop: 4/12) */}
             <div className={`bg-white border-r border-gray-200 flex flex-col z-20 shadow-lg md:w-4/12 md:flex ${viewMode === 'QUEUE' ? 'w-full flex' : 'hidden'}`}>
                 <div className="p-6 border-b border-gray-100">
@@ -381,7 +388,7 @@ export function SalesTerminalPage() {
                         />
                     </div>
                 </div>
-                <div className="flex-1 overflow-y-auto">
+                <div className="flex-1 overflow-y-auto pb-32">
                     {loading && <div className="p-6 text-center text-gray-400">Carregando fila...</div>}
                     {!loading && queue.length === 0 && <div className="p-6 text-center text-gray-400">Nenhum orçamento pendente.</div>}
                     {queue.map(budget => (
@@ -426,7 +433,7 @@ export function SalesTerminalPage() {
                             </div>
                             <div className="w-20"></div>
                         </div>
-                        <div className="flex-1 relative overflow-hidden">
+                        <div className="flex-1 relative overflow-hidden pb-36">
                             <AnimatePresence mode="wait">
                                 {step === 1 && <StepConference key="conf" items={items} onToggleItem={handleToggleItem} onNext={() => setStep(2)} totals={totals} patientName={selectedBudget.patientName} />}
                                 {step === 2 && <StepNegotiation key="neg" negotiation={negotiation} setNegotiation={setNegotiation} totals={totals} onBack={() => setStep(1)} onNext={() => setStep(3)} />}

@@ -11,6 +11,7 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   profile: any;
   refreshProfile: () => Promise<void>;
+  clinicId: string | undefined;
 }
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
@@ -176,7 +177,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       signIn,
       signOut,
       profile: user,
-      refreshProfile
+      refreshProfile,
+      clinicId: user?.clinic_id
     }),
     [user, session, loading, isAdmin, isMaster]
   );

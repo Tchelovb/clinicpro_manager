@@ -127,8 +127,8 @@ export default function ClinicalDashboardPage() {
 
     // Controles de Filtro
     const [viewMode, setViewMode] = useState<'KANBAN' | 'LIST'>('KANBAN');
+    const [searchTerm, setSearchTerm] = useState('');
     const [selectedProfessional, setSelectedProfessional] = useState('ALL');
-    const [selectedPatient, setSelectedPatient] = useState('ALL');
     const [selectedProcedure, setSelectedProcedure] = useState('ALL');
 
     // Opções de Filtro (Derivadas)
@@ -188,11 +188,11 @@ export default function ClinicalDashboardPage() {
 
     // Lógica de Filtragem
     const filteredItems = items.filter(item => {
+        const matchSearch = item.patient?.name?.toLowerCase().includes(searchTerm.toLowerCase());
         const matchProf = selectedProfessional === 'ALL' || item.budget?.doctor?.name === selectedProfessional;
-        const matchPatient = selectedPatient === 'ALL' || item.patient?.name === selectedPatient;
         const matchProc = selectedProcedure === 'ALL' || item.procedure_name === selectedProcedure;
 
-        return matchProf && matchPatient && matchProc;
+        return matchSearch && matchProf && matchProc;
     });
 
     const todoItems = filteredItems.filter(i => i.status === 'NOT_STARTED');
@@ -239,6 +239,20 @@ export default function ClinicalDashboardPage() {
                 <div className="mt-6 flex flex-col xl:flex-row gap-4 justify-between items-start xl:items-center">
                     <div className="flex flex-col md:flex-row gap-3 w-full xl:w-auto">
 
+                        {/* Busca Textual (Paciente) */}
+                        <div className="relative min-w-[250px]">
+                            <Search className="absolute left-3 top-2.5 text-gray-400" size={16} />
+                            <input
+                                type="text"
+                                placeholder="Buscar Paciente..."
+                                value={searchTerm}
+                                onChange={e => setSearchTerm(e.target.value)}
+                                className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm font-medium"
+                            />
+                        </div>
+
+                        {/* Filtro Profissional */}
+
                         {/* Filtro Profissional */}
                         <div className="relative min-w-[200px]">
                             <User className="absolute left-3 top-2.5 text-gray-400" size={16} />
@@ -252,18 +266,7 @@ export default function ClinicalDashboardPage() {
                             </select>
                         </div>
 
-                        {/* Filtro Paciente */}
-                        <div className="relative min-w-[200px]">
-                            <User className="absolute left-3 top-2.5 text-gray-400" size={16} />
-                            <select
-                                value={selectedPatient}
-                                onChange={e => setSelectedPatient(e.target.value)}
-                                className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm text-slate-700 appearance-none font-medium"
-                            >
-                                <option value="ALL">Todos Pacientes</option>
-                                {filterOptions.patients.map(p => <option key={p} value={p}>{p}</option>)}
-                            </select>
-                        </div>
+
 
                         {/* Filtro Procedimento */}
                         <div className="relative min-w-[200px]">

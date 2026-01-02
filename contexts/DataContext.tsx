@@ -5,6 +5,7 @@
     useEffect,
     useRef,
     useMemo,
+    useCallback,
     ReactNode,
 } from "react";
 import {
@@ -47,6 +48,7 @@ import {
 } from "../types";
 import { supabase } from "../lib/supabase";
 import { withRetry } from "../lib/supabaseWithRetry";
+import { toast } from "react-hot-toast";
 import { useAuth } from "./AuthContext";
 import { useFinancial } from "./FinancialContext";
 
@@ -232,7 +234,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
     }, [theme]);
 
     // CORE DATA FETCHING LOGIC - Defined outside useEffect to be reusable
-    const fetchCoreData = async (force = false) => {
+    const fetchCoreData = useCallback(async (force = false) => {
         // If we don't have a clinic ID, we can't fetch real data
         if (!profile?.clinic_id) {
             if (!force) return; // Silent return if not forced
@@ -289,7 +291,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         } catch (err) {
             console.error("Error fetching core data:", err);
         }
-    };
+    }, [profile?.clinic_id]);
 
     // Initial Fetch Effect
     useEffect(() => {
@@ -299,59 +301,59 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
             // Mock fallback
             setPatients(MOCK_PATIENTS);
         }
-    }, [profile?.clinic_id]);
+    }, [profile?.clinic_id, fetchCoreData]);
 
-    const refreshData = async () => {
+    const refreshData = useCallback(async () => {
         console.log('🔄 [DataContext] Iniciando refresh completo dos dados...');
         const startTime = performance.now();
         await fetchCoreData(true);
         const endTime = performance.now();
         console.log(`✅ [DataContext] Refresh completo! Tempo: ${(endTime - startTime).toFixed(0)}ms`);
-    };
+    }, [fetchCoreData]);
 
-    const toggleTheme = () => {
+    const toggleTheme = useCallback(() => {
         setTheme((prev) => (prev === "light" ? "dark" : "light"));
-    };
+    }, []);
 
-    const addPatient = (patient: Patient) => {
-        setPatients([...patients, patient]);
-    };
+    const addPatient = useCallback((patient: Patient) => {
+        setPatients((prev) => [...prev, patient]);
+    }, []);
 
-    const updatePatient = (id: string, data: Partial<Patient>) => {
+    const updatePatient = useCallback((id: string, data: Partial<Patient>) => {
         setPatients((prev) =>
             prev.map((p) => (p.id === id ? { ...p, ...data } : p))
         );
-    };
+    }, []);
 
-    const addLead = (lead: Lead) => {
+    const addLead = useCallback((lead: Lead) => {
         setLeads((prev) => [lead, ...prev]);
-    };
+    }, []);
 
-    const updateLead = (id: string, data: Partial<Lead>) => {
+    const updateLead = useCallback((id: string, data: Partial<Lead>) => {
         setLeads((prev) => prev.map((l) => (l.id === id ? { ...l, ...data } : l)));
-    };
+    }, []);
 
     // --- AGENDA ACTIONS ---
-    const addAppointment = (appointment: Appointment) => {
+    const addAppointment = useCallback((appointment: Appointment) => {
         setAppointments((prev) => [...prev, appointment]);
-    };
+    }, []);
 
-    const updateAppointment = (id: string, data: Partial<Appointment>) => {
+    const updateAppointment = useCallback((id: string, data: Partial<Appointment>) => {
         setAppointments((prev) =>
             prev.map((a) => (a.id === id ? { ...a, ...data } : a))
         );
-    };
+    }, []);
 
-    const deleteAppointment = (id: string) => {
+    const deleteAppointment = useCallback((id: string) => {
         setAppointments((prev) => prev.filter((a) => a.id !== id));
-    };
+    }, []);
 
-    const updateAgendaConfig = (config: Partial<AgendaConfig>) => {
+    const updateAgendaConfig = useCallback((config: Partial<AgendaConfig>) => {
         setAgendaConfig((prev) => ({ ...prev, ...config }));
-    };
+    }, []);
 
     // --- SETTINGS ACTIONS ---
-    const addProcedure = async (procedure: Procedure) => {
+    const addProcedure = useCallback(async (procedure: Procedure) => {
         try {
             const { data, error } = await supabase
                 .from("procedure")
@@ -381,9 +383,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
             console.error("Error adding procedure:", error);
             alert("Erro ao adicionar procedimento: " + error.message);
         }
-    };
+    }, [profile?.clinic_id]);
 
-    const updateProcedure = async (id: string, data: Partial<Procedure>) => {
+    const updateProcedure = useCallback(async (id: string, data: Partial<Procedure>) => {
         try {
             const updateData: any = {};
             if (data.name) updateData.name = data.name;
@@ -408,9 +410,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
             console.error("Error updating procedure:", error);
             alert("Erro ao atualizar procedimento: " + error.message);
         }
-    };
+    }, []);
 
-    const deleteProcedure = async (id: string) => {
+    const deleteProcedure = useCallback(async (id: string) => {
         try {
             const { error } = await supabase
                 .from("procedure")
@@ -424,62 +426,62 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
             console.error("Error deleting procedure:", error);
             alert("Erro ao excluir procedimento: " + error.message);
         }
-    };
+    }, []);
 
-    const addProfessional = (professional: Professional) => {
+    const addProfessional = useCallback((professional: Professional) => {
         setProfessionals((prev) => [...prev, professional]);
-    };
+    }, []);
 
-    const updateProfessional = (id: string, data: Partial<Professional>) => {
+    const updateProfessional = useCallback((id: string, data: Partial<Professional>) => {
         setProfessionals((prev) =>
             prev.map((p) => (p.id === id ? { ...p, ...data } : p))
         );
-    };
+    }, []);
 
-    const updateClinicConfig = (config: Partial<ClinicConfig>) => {
+    const updateClinicConfig = useCallback((config: Partial<ClinicConfig>) => {
         setClinicConfig((prev) => ({ ...prev, ...config }));
-    };
+    }, []);
 
-    const addPriceTable = (table: PriceTable) => {
+    const addPriceTable = useCallback((table: PriceTable) => {
         setPriceTables((prev) => [...prev, table]);
-    };
+    }, []);
 
-    const updatePriceTable = (id: string, data: Partial<PriceTable>) => {
+    const updatePriceTable = useCallback((id: string, data: Partial<PriceTable>) => {
         setPriceTables((prev) =>
             prev.map((pt) => (pt.id === id ? { ...pt, ...data } : pt))
         );
-    };
+    }, []);
 
-    const addInsurancePlan = (plan: InsurancePlan) => {
+    const addInsurancePlan = useCallback((plan: InsurancePlan) => {
         setInsurancePlans((prev) => [...prev, plan]);
-    };
+    }, []);
 
-    const updateInsurancePlan = (id: string, data: Partial<InsurancePlan>) => {
+    const updateInsurancePlan = useCallback((id: string, data: Partial<InsurancePlan>) => {
         setInsurancePlans((prev) =>
             prev.map((ip) => (ip.id === id ? { ...ip, ...data } : ip))
         );
-    };
+    }, []);
 
     // --- DOCUMENT ACTIONS ---
-    const addTemplate = (template: DocumentTemplate) => {
+    const addTemplate = useCallback((template: DocumentTemplate) => {
         setTemplates((prev) => [...prev, template]);
-    };
+    }, []);
 
-    const updateTemplate = (id: string, data: Partial<DocumentTemplate>) => {
+    const updateTemplate = useCallback((id: string, data: Partial<DocumentTemplate>) => {
         setTemplates((prev) =>
             prev.map((t) => (t.id === id ? { ...t, ...data } : t))
         );
-    };
+    }, []);
 
-    const deleteTemplate = (id: string) => {
+    const deleteTemplate = useCallback((id: string) => {
         setTemplates((prev) => prev.filter((t) => t.id !== id));
-    };
+    }, []);
 
-    const createDocument = (doc: ClinicalDocument) => {
+    const createDocument = useCallback((doc: ClinicalDocument) => {
         setDocuments((prev) => [doc, ...prev]);
-    };
+    }, []);
 
-    const signDocument = (id: string) => {
+    const signDocument = useCallback((id: string) => {
         setDocuments((prev) =>
             prev.map((d) =>
                 d.id === id
@@ -487,14 +489,15 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
                     : d
             )
         );
-    };
+    }, []);
 
-    const deleteDocument = (id: string) => {
+    const deleteDocument = useCallback((id: string) => {
         setDocuments((prev) => prev.filter((d) => d.id !== id));
-    };
+    }, []);
 
     // 1. Create Budget
-    const createBudget = async (
+    // 1. Create Budget
+    const createBudget = useCallback(async (
         patientId: string,
         budgetData: Omit<Budget, "id" | "createdAt" | "status">
     ) => {
@@ -505,20 +508,20 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
                 error: authError,
             } = await supabase.auth.getUser();
             if (authError || !user) {
-                throw new Error("UsuÃ¡rio nÃ£o autenticado");
+                throw new Error("Usuário não autenticado");
             }
 
             // Calculate totals
             let totalValue = 0;
             for (const item of budgetData.items) {
                 if (item.quantity <= 0 || item.unitValue <= 0) {
-                    throw new Error("Quantidade e valor unitÃ¡rio devem ser positivos");
+                    throw new Error("Quantidade e valor unitário devem ser positivos");
                 }
                 totalValue += item.total;
             }
             const discount = budgetData.discount || 0;
             if (discount < 0 || discount > totalValue) {
-                throw new Error("Desconto invÃ¡lido");
+                throw new Error("Desconto inválido");
             }
             const finalValue = totalValue - discount;
 
@@ -564,7 +567,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
             const newBudget: Budget = {
                 id: budget.id,
                 createdAt: new Date().toLocaleDateString("pt-BR"),
-                status: "Em Análise",
+                status: "PENDING",
                 doctorName: `Dr.${profile?.name || 'Não informado'} `,
                 ...budgetData,
                 totalValue: totalValue,
@@ -579,11 +582,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
             });
         } catch (error) {
             console.error("Error creating budget:", error);
-            alert("Erro ao criar orÃ§amento: " + error.message);
+            alert("Erro ao criar orçamento: " + error.message);
         }
-    };
+    }, [patients, profile?.name, updatePatient]);
 
-    const updateBudget = async (
+    const updateBudget = useCallback(async (
         patientId: string,
         budgetId: string,
         budgetData: Partial<Budget>
@@ -609,13 +612,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
             if (budgetData.items) {
                 for (const item of budgetData.items) {
                     if (item.quantity <= 0 || item.unitValue <= 0) {
-                        throw new Error("Quantidade e valor unitÃ¡rio devem ser positivos");
+                        throw new Error("Quantidade e valor unitário devem ser positivos");
                     }
                     totalValue += item.total;
                 }
                 const discount = budgetData.discount || 0;
                 if (discount < 0 || discount > totalValue) {
-                    throw new Error("Desconto invÃ¡lido");
+                    throw new Error("Desconto inválido");
                 }
                 finalValue = totalValue - discount;
             }
@@ -632,6 +635,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
                 updateData.total_value = totalValue;
                 updateData.final_value = finalValue;
             }
+            // Map statuses correctly
+            if (budgetData.status === "APPROVED") updateData.status = "APPROVED";
+            else if (budgetData.status === "REJECTED") updateData.status = "REJECTED";
+            else if (budgetData.status === "WAITING_CLOSING") updateData.status = "WAITING_CLOSING";
+            else if (budgetData.status) updateData.status = budgetData.status; // Fallback or assume correct
 
             const { error: budgetUpdateError } = await supabase
                 .from("budgets")
@@ -668,28 +676,31 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
             }
 
             // Update local state
-            const patient = patients.find((p) => p.id === patientId);
-            if (!patient || !patient.budgets) return;
+            setPatients(prev => prev.map(p => {
+                if (p.id !== patientId) return p;
+                if (!p.budgets) return p;
 
-            const updatedBudgets = patient.budgets.map((b) =>
-                b.id === budgetId
-                    ? {
-                        ...b,
-                        ...budgetData,
-                        totalValue: totalValue || b.totalValue,
-                        finalValue: finalValue || b.finalValue,
-                    }
-                    : b
-            );
+                const updatedBudgets = p.budgets.map((b) =>
+                    b.id === budgetId
+                        ? {
+                            ...b,
+                            ...budgetData,
+                            totalValue: totalValue || b.totalValue,
+                            finalValue: finalValue || b.finalValue,
+                        }
+                        : b
+                );
 
-            updatePatient(patientId, { budgets: updatedBudgets });
+                return { ...p, budgets: updatedBudgets };
+            }));
+
         } catch (error) {
             console.error("Error updating budget:", error);
-            alert("Erro ao atualizar orÃ§amento: " + error.message);
+            alert("Erro ao atualizar orçamento: " + error.message);
         }
-    };
+    }, []);
 
-    const deleteBudget = async (patientId: string, budgetId: string) => {
+    const deleteBudget = useCallback(async (patientId: string, budgetId: string) => {
         try {
             // Get budget info before deleting
             const { data: budgetToDelete, error: budgetFetchError } = await supabase
@@ -748,12 +759,16 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
 
             // Revert patient totals if budget was approved
             if (budgetToDelete.status === "APPROVED") {
-                const patient = patients.find((p) => p.id === patientId);
-                if (patient) {
+                const patient = patients.find((p) => p.id === patientId); // Use current state or fetch?
+                // Better to fetch fresh data for totals calculation or use state if reliable.
+                // Using API for reliability
+                const { data: patientData, error: patientFetchError } = await supabase.from("patients").select("total_approved, total_paid").eq("id", patientId).single();
+
+                if (patientData) {
                     const finalValue = budgetToDelete.final_value;
-                    const newTotalApproved = (patient.total_approved || 0) - finalValue;
+                    const newTotalApproved = (patientData.total_approved || 0) - finalValue;
                     const newTotalPaid =
-                        (patient.total_paid || 0) - totalPaidOnInstallments;
+                        (patientData.total_paid || 0) - totalPaidOnInstallments;
                     const newBalanceDue = newTotalApproved - newTotalPaid;
 
                     const { error: revertPatientError } = await supabase
@@ -770,55 +785,41 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
             }
 
             // Remove from local state
-            const patient = patients.find((p) => p.id === patientId);
-            if (!patient) return;
+            setPatients(prev => prev.map(p => {
+                if (p.id !== patientId) return p;
 
-            const updatedBudgets = (patient.budgets || []).filter(
-                (b) => b.id !== budgetId
-            );
-            const updatedTreatments = (patient.treatments || []).filter(
-                (t) => t.budgetId !== budgetId
-            );
-            const updatedFinancials = (patient.financials || []).filter((f) =>
-                !f.description?.includes(`#${budgetId} `)
-            );
+                const updatedBudgets = (p.budgets || []).filter(
+                    (b) => b.id !== budgetId
+                );
+                const updatedTreatments = (p.treatments || []).filter(
+                    (t) => t.budgetId !== budgetId
+                );
+                const updatedFinancials = (p.financials || []).filter((f) =>
+                    !f.description?.includes(`#${budgetId} `)
+                );
 
-            // Revert totals locally if approved
-            let updatedTotals = {};
-            if (budgetToDelete.status === "APPROVED") {
-                const finalValue = budgetToDelete.final_value;
-                const newTotalApproved = (patient.total_approved || 0) - finalValue;
-                const newTotalPaid =
-                    (patient.total_paid || 0) - totalPaidOnInstallments;
-                const newBalanceDue = newTotalApproved - newTotalPaid;
-                updatedTotals = {
-                    total_approved: newTotalApproved,
-                    total_paid: newTotalPaid,
-                    balance_due: newBalanceDue,
+                return {
+                    ...p,
+                    budgets: updatedBudgets,
+                    treatments: updatedTreatments,
+                    financials: updatedFinancials
                 };
-            }
-
-            updatePatient(patientId, {
-                budgets: updatedBudgets,
-                treatments: updatedTreatments,
-                financials: updatedFinancials,
-                ...updatedTotals,
-            });
+            }));
         } catch (error) {
             console.error("Error deleting budget:", error);
-            alert("Erro ao excluir orÃ§amento: " + error.message);
+            alert("Erro ao excluir orçamento: " + error.message);
         }
-    };
+    }, [patients]);
 
     // 2. Approve Budget (Closes Opportunity as WON)
-    const approveBudget = async (patientId: string, budgetId: string) => {
+    const approveBudget = useCallback(async (patientId: string, budgetId: string) => {
         try {
             // Get current user
             const {
                 data: { user },
                 error: authError,
             } = await supabase.auth.getUser();
-            if (authError || !user) throw new Error("UsuÃ¡rio nÃ£o autenticado");
+            if (authError || !user) throw new Error("Usuário não autenticado");
 
             const patient = patients.find((p) => p.id === patientId);
             if (!patient || !patient.budgets) return;
@@ -829,10 +830,14 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
             // Update budget status in DB
             const { error: budgetError } = await supabase
                 .from("budgets")
-                .update({ status: "APPROVED" })
+                .update({ status: "APPROVED", approved_at: new Date().toISOString() })
                 .eq("id", budgetId);
 
             if (budgetError) throw budgetError;
+
+            // Fetch Items if not present or to be sure
+            // In this context, we rely on budget.items being present in local state or refetch?
+            // Original code used budget.items.
 
             // Create treatments in DB
             const treatmentsInsertData = budget.items.map((item) => ({
@@ -844,9 +849,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
                 doctor_id: budget.doctorId || user.id, // Use budget's doctor or fallback to current user
             }));
 
-            const { error: treatmentsError } = await supabase
+            const { data: createdTreatments, error: treatmentsError } = await supabase
                 .from("treatment_items")
-                .insert(treatmentsInsertData);
+                .insert(treatmentsInsertData)
+                .select();
 
             if (treatmentsError) throw treatmentsError;
 
@@ -862,8 +868,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
 
                 installmentsData.push({
                     patient_id: patientId,
-                    clinic_id: profile.clinic_id,
-                    description: `OrÃ§amento #${budgetId} - Parc.${i + 1
+                    clinic_id: profile?.clinic_id,
+                    description: `Orçamento #${budgetId} - Parc.${i + 1
                         }/${installmentsCount}`,
                     due_date: dueDate.toISOString().split("T")[0],
                     amount: installmentValue,
@@ -873,13 +879,15 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
                 });
             }
 
-            const { error: installmentsError } = await supabase
+            const { data: createdFinancials, error: installmentsError } = await supabase
                 .from("financial_installments")
-                .insert(installmentsData);
+                .insert(installmentsData)
+                .select();
 
             if (installmentsError) throw installmentsError;
 
             // Update patient totals
+            // Using previous totals from local state for speed + diff
             const newTotalApproved = (patient.total_approved || 0) + finalAmount;
             const newBalanceDue = (patient.balance_due || 0) + finalAmount;
 
@@ -893,166 +901,107 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
 
             if (patientError) throw patientError;
 
-            // Create local treatments and financials for state
-            const newTreatments: TreatmentItem[] = budget.items.map((item) => ({
-                id: Math.random().toString(36).substr(2, 5),
-                procedure: item.procedure,
-                region: item.region,
-                status: "Não Iniciado",
-                budgetId: budget.id,
-                doctorName: budget.doctorName,
+            // Update Local State
+            setPatients(prev => prev.map(p => {
+                if (p.id !== patientId) return p;
+
+                const updatedBudgets = (p.budgets || []).map(b =>
+                    b.id === budgetId ? { ...b, status: "APPROVED" as const } : b
+                );
+
+                const newLocalTreatments = createdTreatments?.map((t: any) => ({
+                    id: t.id,
+                    procedure: t.procedure_name,
+                    region: t.region,
+                    status: "Não Iniciado" as const,
+                    budgetId: budgetId,
+                    doctorName: `Dr.${profile?.name || ''}`,
+                    statusLabel: "Não Iniciado"
+                })) || [];
+
+                const newLocalFinancials = createdFinancials?.map((f: any) => ({
+                    id: f.id,
+                    description: f.description,
+                    dueDate: new Date(f.due_date).toLocaleDateString("pt-BR"),
+                    amount: f.amount,
+                    amountPaid: 0,
+                    status: "Pendente" as const,
+                    paymentMethod: f.payment_method
+                })) || [];
+
+                return {
+                    ...p,
+                    budgets: updatedBudgets,
+                    treatments: [...(p.treatments || []), ...newLocalTreatments],
+                    financials: [...(p.financials || []), ...newLocalFinancials],
+                    total_approved: newTotalApproved,
+                    balance_due: newBalanceDue,
+                    status: "Em Tratamento"
+                };
             }));
 
-            const newFinancials: FinancialInstallment[] = [];
-            for (let i = 0; i < installmentsCount; i++) {
-                const dueDate = new Date();
-                dueDate.setMonth(dueDate.getMonth() + i + 1);
-
-                newFinancials.push({
-                    id: Math.random().toString(36).substr(2, 5),
-                    description: `Orçamento #${budgetId} - Parc. ${i + 1
-                        }/${installmentsCount}`,
-                    dueDate: dueDate.toLocaleDateString("pt-BR"),
-                    amount: installmentValue,
-                    amountPaid: 0,
-                    status: "Pendente",
-                    paymentMethod: budget.paymentConfig?.method || "Boleto",
-                    paymentHistory: [],
-                });
-            }
-
-            // Update local state
-            const updatedBudgets = patient.budgets.map((b) =>
-                b.id === budgetId ? { ...b, status: "Aprovado" as const } : b
-            );
-
-            // For simplicity, update only budgets and status locally, treatments/financials will be fetched on next load
-            updatePatient(patientId, {
-                budgets: updatedBudgets,
-                total_approved: newTotalApproved,
-                balance_due: newBalanceDue,
-                status: "Em Tratamento",
-            });
-
             // Close associated lead
-            const linkedLead = leads.find((l) => l.budgetId === budgetId);
-            if (linkedLead) {
-                updateLead(linkedLead.id, {
-                    status: LeadStatus.WON,
-                    history: [
-                        ...linkedLead.history,
-                        {
-                            id: Math.random().toString(36).substr(2, 5),
-                            type: "System",
-                            content: `Orçamento #${budgetId} aprovado. Oportunidade ganha!`,
-                            date: new Date().toISOString(),
-                            user: "System",
-                        },
-                    ],
-                });
-            }
+            setLeads(prev => prev.map(l => {
+                if (l.budgetId === budgetId) return { ...l, status: LeadStatus.WON };
+                return l;
+            }));
 
-            // Reload treatments and financials from DB
-            const { data: treatmentsData } = await supabase
-                .from("treatment_items")
-                .select("*")
-                .eq("patient_id", patientId);
+            toast.success("Orçamento aprovado e tratamentos gerados!");
 
-            const { data: financialsData } = await supabase
-                .from("financial_installments")
-                .select("*")
-                .eq("patient_id", patientId);
-
-            updatePatient(patientId, {
-                treatments:
-                    treatmentsData?.map((t: any) => ({
-                        id: t.id,
-                        procedure: t.procedure_name,
-                        region: t.region,
-                        status:
-                            t.status === "NOT_STARTED"
-                                ? "Não Iniciado"
-                                : t.status === "IN_PROGRESS"
-                                    ? "Em Andamento"
-                                    : t.status === "COMPLETED"
-                                        ? "Concluído"
-                                        : t.status,
-                        budgetId: t.budget_id,
-                        doctorName: `Dr. ${profile?.name || 'Não informado'}`,
-                    })) || [],
-                financials:
-                    financialsData?.map((f: any) => ({
-                        id: f.id,
-                        description: f.description,
-                        dueDate: new Date(f.due_date).toLocaleDateString("pt-BR"),
-                        amount: f.amount,
-                        amountPaid: f.amount_paid || 0,
-                        status:
-                            f.status === "PENDING"
-                                ? "Pendente"
-                                : f.status === "PAID"
-                                    ? "Pago"
-                                    : f.status === "OVERDUE"
-                                        ? "Atrasado"
-                                        : f.status === "PARTIAL"
-                                            ? "Pago Parcial"
-                                            : f.status,
-                        paymentMethod: f.payment_method,
-                        paymentHistory: [], // TODO: fetch payment_history if needed
-                    })) || [],
-            });
         } catch (error) {
             console.error("Error approving budget:", error);
-            alert("Erro ao aprovar orÃ§amento: " + error.message);
+            alert("Erro ao aprovar orçamento: " + error.message);
         }
-    };
+    }, [leads, patients, profile?.clinic_id, profile?.name]);
 
     // 3. Cancel Budget (Closes Opportunity as LOST)
-    const cancelBudget = (
+    const cancelBudget = useCallback(async (
         patientId: string,
         budgetId: string,
         reason: string
     ) => {
-        const patient = patients.find((p) => p.id === patientId);
-        if (!patient || !patient.budgets) return;
+        try {
+            // Update db
+            const { error } = await supabase.from('budgets').update({ status: 'REJECTED' }).eq('id', budgetId);
+            if (error) throw error;
 
-        // Update Budget Status
-        const updatedBudgets = patient.budgets.map((b) =>
-            b.id === budgetId ? { ...b, status: "Reprovado" as const } : b
-        );
+            const patient = patients.find((p) => p.id === patientId);
+            if (!patient || !patient.budgets) return;
 
-        // Add Note to History
-        const note: ClinicalNote = {
-            id: Math.random().toString(36).substr(2, 5),
-            date: new Date().toLocaleDateString("pt-BR"),
-            doctorName: "System",
-            type: "Evolução",
-            content: `Orçamento #${budgetId} reprovado. Motivo: ${reason}`,
-        };
+            // Update Budget Status locally
+            const updatedBudgets = patient.budgets.map((b) =>
+                b.id === budgetId ? { ...b, status: "REJECTED" as const } : b
+            );
 
-        updatePatient(patientId, {
-            budgets: updatedBudgets,
-            notes: [note, ...(patient.notes || [])],
-        });
+            // Add Note to History
+            const note: ClinicalNote = {
+                id: Math.random().toString(36).substr(2, 5),
+                date: new Date().toLocaleDateString("pt-BR"),
+                doctorName: "System",
+                type: "Evolução",
+                content: `Orçamento #${budgetId} reprovado. Motivo: ${reason}`,
+            };
 
-        // Close Associated Lead (if any)
-        const linkedLead = leads.find((l) => l.budgetId === budgetId);
-        if (linkedLead) {
-            updateLead(linkedLead.id, {
-                status: LeadStatus.LOST,
-                history: [
-                    ...linkedLead.history,
-                    {
-                        id: Math.random().toString(36).substr(2, 5),
-                        type: "System",
-                        content: `Orçamento #${budgetId} reprovado. Motivo: ${reason}`,
-                        date: new Date().toISOString(),
-                        user: "System",
-                    },
-                ],
-            });
+            // Update local state
+            setPatients(prev => prev.map(p => {
+                if (p.id !== patientId) return p;
+                return {
+                    ...p,
+                    budgets: (p.budgets || []).map(b => b.id === budgetId ? { ...b, status: "REJECTED" as const } : b),
+                    notes: [note, ...(p.notes || [])]
+                }
+            }));
+
+            // Close Associated Lead (if any)
+            setLeads(prev => prev.map(l => {
+                if (l.budgetId === budgetId) return { ...l, status: LeadStatus.LOST };
+                return l;
+            }));
+
+        } catch (error) {
+            console.error("Error cancelling budget:", error);
         }
-    };
+    }, [patients]);
 
     // 4. Send to Negotiation (Creates Lead)
     const refreshPatientData = async (patientId: string) => {
@@ -1129,7 +1078,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         }
     };
 
-    const sendToNegotiation = (patientId: string, budgetId: string) => {
+    const sendToNegotiation = useCallback((patientId: string, budgetId: string) => {
         const patient = patients.find((p) => p.id === patientId);
         if (!patient || !patient.budgets) return "";
 
@@ -1146,8 +1095,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         if (existingLead) return existingLead.id;
 
         // Update Budget Status (Marks as in negotiation, but stays in list until Lost)
+        // Fire and forget backend update
+        supabase.from('budgets').update({ status: 'WAITING_CLOSING' }).eq('id', budgetId).then();
+
         const updatedBudgets = patient.budgets.map((b) =>
-            b.id === budgetId ? { ...b, status: "Em Negociação" as const } : b
+            b.id === budgetId ? { ...b, status: "WAITING_CLOSING" as const } : b
         );
         updatePatient(patientId, { budgets: updatedBudgets });
 
@@ -1185,7 +1137,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
 
         addLead(newLead);
         return newLead.id;
-    };
+    }, [leads, patients, addLead]);
 
     const startTreatment = async (patientId: string, treatmentId: string) => {
         try {
@@ -1566,6 +1518,47 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         documents,
         templates,
         financialSettings,
+        fetchCoreData,
+        toggleTheme,
+        addPatient,
+        updatePatient,
+        addLead,
+        updateLead,
+        addAppointment,
+        updateAppointment,
+        deleteAppointment,
+        updateAgendaConfig,
+        addProcedure,
+        updateProcedure,
+        deleteProcedure,
+        addProfessional,
+        updateProfessional,
+        updateClinicConfig,
+        addPriceTable,
+        updatePriceTable,
+        addInsurancePlan,
+        updateInsurancePlan,
+        addTemplate,
+        updateTemplate,
+        deleteTemplate,
+        createDocument,
+        signDocument,
+        deleteDocument,
+        createBudget,
+        updateBudget,
+        deleteBudget,
+        approveBudget,
+        cancelBudget,
+        sendToNegotiation,
+        refreshPatientData,
+        startTreatment,
+        concludeTreatment,
+        receivePayment,
+        addClinicalNote,
+        openRegister,
+        closeRegister,
+        addExpense,
+        payExpense,
     ]);
 
     return (

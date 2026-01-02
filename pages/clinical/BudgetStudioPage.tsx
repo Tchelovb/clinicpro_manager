@@ -232,7 +232,7 @@ const StepSelection = ({ onNext, onBack, cart, addItem, removeItem, procedures, 
             </div>
 
             {/* Lista MOBILE (Cards) */}
-            <div className="flex-1 overflow-y-auto p-4 md:hidden space-y-3 pb-24">
+            <div className="flex-1 overflow-y-auto p-4 md:hidden space-y-3 pb-40">
                 {cart.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-48 text-gray-300">
                         <ShoppingBag size={48} className="mb-4 opacity-20" />
@@ -309,7 +309,7 @@ const StepSelection = ({ onNext, onBack, cart, addItem, removeItem, procedures, 
                 )}
             </div>
 
-            <div className="p-4 border-t border-gray-200 bg-gray-50 flex justify-end fixed bottom-0 left-0 w-full md:relative md:w-auto z-30">
+            <div className="p-4 border-t border-gray-200 bg-white/90 backdrop-blur-md flex justify-end fixed bottom-0 left-0 w-full md:relative md:w-auto z-50 md:bg-gray-50 md:backdrop-blur-none">
                 <button
                     onClick={onNext}
                     disabled={cart.length === 0}
@@ -377,7 +377,7 @@ const StepNegotiation = ({ onNext, onBack, cart, negotiation, setNegotiation }: 
             </div>
 
             {/* Direita: Calculadora */}
-            <div className="w-full md:w-8/12 p-8 md:p-12 flex flex-col justify-center">
+            <div className="w-full md:w-8/12 p-8 md:p-12 flex flex-col justify-center overflow-y-auto pb-40 md:overflow-visible md:pb-12">
                 <h2 className="text-3xl font-bold text-slate-900 mb-8">Condições de Pagamento</h2>
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
@@ -625,7 +625,7 @@ export function BudgetStudioPage() {
     }
 
     return (
-        <div className="h-screen bg-gray-50 flex flex-col font-sans overflow-hidden">
+        <div className="h-[100dvh] bg-gray-50 flex flex-col font-sans overflow-hidden">
             <header className="h-16 bg-white border-b flex items-center justify-between px-4 md:px-8 shrink-0">
                 <div className="font-bold text-lg md:text-xl tracking-tight text-slate-900">ClinicPro <span className="text-indigo-600">Studio</span></div>
                 <div className="flex items-center gap-2 md:gap-4">
