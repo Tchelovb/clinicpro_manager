@@ -139,6 +139,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar }) => {
             category: "Inteligência",
             items: [
                 {
+                    path: "/intelligence/dashboard",
+                    label: "Analytics & BI",
+                    icon: Brain,
+                    highlight: true,
+                    desc: "Dashboard Executivo"
+                },
+                {
                     path: "/chat-bos",
                     label: "ChatBOS",
                     icon: Sparkles,

@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { HighTicketLead, highTicketService, Pipeline } from '../../services/highTicketService';
 import { useAuth } from '../../contexts/AuthContext';
-import { cn } from '../../lib/utils';
+import { cn } from '../../src/lib/utils';
 
 interface LeadDetailsSheetProps {
     isOpen: boolean;

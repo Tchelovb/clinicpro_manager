@@ -7,7 +7,7 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Slider } from '../ui/slider';
 import { creditRiskService, RiskTier } from '../../services/creditRiskService';
-import { cn } from '../../lib/utils';
+import { cn } from '../../src/lib/utils';
 
 interface PaymentSimulatorProps {
     baseValue: number;

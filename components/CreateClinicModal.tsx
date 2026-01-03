@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, Building2, Loader, CheckCircle } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../src/lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
 interface CreateClinicModalProps {

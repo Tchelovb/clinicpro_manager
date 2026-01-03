@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { CreditCard, DollarSign, Smartphone, Wallet, Lock, CheckCircle2 } from 'lucide-react';
-import { cn } from '../../lib/utils'; // Assuming cn utility exists
+import { cn } from '../../src/lib/utils'; // Assuming cn utility exists
 
 interface CheckoutPanelProps {
     subtotal: number;

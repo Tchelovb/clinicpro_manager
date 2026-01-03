@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "../../lib/supabase";
+import { supabase } from "../../src/lib/supabase";
 import { ArrowLeft, Building2, User, Mail, Lock, FileText } from "lucide-react";
 
 const NewClinicForm: React.FC = () => {

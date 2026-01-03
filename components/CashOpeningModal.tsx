@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, DollarSign, AlertCircle } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../src/lib/supabase';
 
 interface CashOpeningModalProps {
     onClose: () => void;

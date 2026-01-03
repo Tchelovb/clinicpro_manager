@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../src/lib/supabase';
 import toast from 'react-hot-toast';
 
 export interface GeneralTreatment {

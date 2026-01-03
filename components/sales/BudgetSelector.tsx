@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../src/lib/supabase';
 import { FileText, Calendar, ChevronRight, AlertCircle } from 'lucide-react';
-import { cn } from '../../lib/utils';
+import { cn } from '../../src/lib/utils';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 

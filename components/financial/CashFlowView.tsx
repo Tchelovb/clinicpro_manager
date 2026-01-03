@@ -6,7 +6,7 @@ import {
 import { SecureActionWrapper } from './SecureActionWrapper';
 import { TransactionsTable } from './TransactionsTable';
 import { useAuth } from '../../contexts/AuthContext';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../src/lib/supabase';
 import { useHaptic } from '../../utils/haptics';
 import toast from 'react-hot-toast';
 
@@ -175,8 +175,8 @@ export const CashFlowView: React.FC = () => {
         `}>
                     <div className="flex items-center justify-between mb-2">
                         <span className={`text-sm font-medium ${summary.balance >= 0
-                                ? 'text-blue-900 dark:text-blue-100'
-                                : 'text-amber-900 dark:text-amber-100'
+                            ? 'text-blue-900 dark:text-blue-100'
+                            : 'text-amber-900 dark:text-amber-100'
                             }`}>
                             Saldo
                         </span>
@@ -187,8 +187,8 @@ export const CashFlowView: React.FC = () => {
                         } size={20} />
                     </div>
                     <p className={`text-3xl font-bold ${summary.balance >= 0
-                            ? 'text-blue-600 dark:text-blue-400'
-                            : 'text-amber-600 dark:text-amber-400'
+                        ? 'text-blue-600 dark:text-blue-400'
+                        : 'text-amber-600 dark:text-amber-400'
                         }`}>
                         R$ {Math.abs(summary.balance).toLocaleString('pt-BR', {
                             minimumFractionDigits: 2,

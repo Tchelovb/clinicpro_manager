@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase, getCurrentClinicId } from '../../lib/supabase';
+import { supabase, getCurrentClinicId } from '../../src/lib/supabase';
 import { Plus, Edit, Trash2, Loader2, Tag, TrendingUp, TrendingDown } from 'lucide-react';
 import { CategorySheet } from './CategorySheet';
 import toast from 'react-hot-toast';
@@ -170,8 +170,8 @@ const CategoriesManager: React.FC = () => {
                 <button
                     onClick={() => setFilterType('ALL')}
                     className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${filterType === 'ALL'
-                            ? 'bg-white dark:bg-gray-800 text-blue-600 border-b-2 border-blue-600'
-                            : 'text-gray-500 hover:text-gray-700'
+                        ? 'bg-white dark:bg-gray-800 text-blue-600 border-b-2 border-blue-600'
+                        : 'text-gray-500 hover:text-gray-700'
                         }`}
                 >
                     Todas
@@ -179,8 +179,8 @@ const CategoriesManager: React.FC = () => {
                 <button
                     onClick={() => setFilterType('INCOME')}
                     className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${filterType === 'INCOME'
-                            ? 'bg-white dark:bg-gray-800 text-green-600 border-b-2 border-green-600'
-                            : 'text-gray-500 hover:text-gray-700'
+                        ? 'bg-white dark:bg-gray-800 text-green-600 border-b-2 border-green-600'
+                        : 'text-gray-500 hover:text-gray-700'
                         }`}
                 >
                     Receitas
@@ -188,8 +188,8 @@ const CategoriesManager: React.FC = () => {
                 <button
                     onClick={() => setFilterType('EXPENSE')}
                     className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${filterType === 'EXPENSE'
-                            ? 'bg-white dark:bg-gray-800 text-red-600 border-b-2 border-red-600'
-                            : 'text-gray-500 hover:text-gray-700'
+                        ? 'bg-white dark:bg-gray-800 text-red-600 border-b-2 border-red-600'
+                        : 'text-gray-500 hover:text-gray-700'
                         }`}
                 >
                     Despesas

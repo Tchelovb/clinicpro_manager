@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { supabase, getCurrentClinicId } from "../../lib/supabase";
+import { supabase, getCurrentClinicId } from "../../src/lib/supabase";
 import { Plus, Edit, Trash2, Loader, Save, X, Settings } from "lucide-react";
 
 interface PriceTable {

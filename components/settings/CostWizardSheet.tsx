@@ -5,7 +5,7 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Slider } from '../ui/slider';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../src/lib/supabase';
 import { costEngineService, FixedCostItem, ClinicCostStructure } from '../../services/costEngineService';
 import {
     Calculator,
@@ -148,7 +148,7 @@ export const CostWizardSheet: React.FC<CostWizardSheetProps> = ({ open, onOpenCh
                         {[1, 2, 3].map(s => (
                             <div key={s} className={`flex items-center gap-2 ${step >= s ? 'opacity-100' : 'opacity-40'}`}>
                                 <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold border-2 ${step === s ? 'bg-white text-violet-600 border-white' :
-                                        step > s ? 'bg-indigo-500 text-white border-indigo-500' : 'border-white text-white'
+                                    step > s ? 'bg-indigo-500 text-white border-indigo-500' : 'border-white text-white'
                                     }`}>
                                     {step > s ? <CheckCircle2 size={16} /> : s}
                                 </div>

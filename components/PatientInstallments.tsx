@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../src/lib/supabase';
 import { Check, X, Calendar, DollarSign, CreditCard } from 'lucide-react';
 import { AdvancedPaymentModal } from './finance/AdvancedPaymentModal';
 import toast from 'react-hot-toast';

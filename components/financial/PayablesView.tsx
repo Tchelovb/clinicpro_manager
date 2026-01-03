@@ -6,7 +6,7 @@ import {
 import { ExpensesTable } from './ExpensesTable';
 import { SecureActionWrapper } from './SecureActionWrapper';
 import { useAuth } from '../../contexts/AuthContext';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../src/lib/supabase';
 import { useHaptic } from '../../utils/haptics';
 import toast from 'react-hot-toast';
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
 import { Pencil } from 'lucide-react';
-import { cn } from '../../lib/utils';
+import { cn } from '../../src/lib/utils';
 
 interface InlineEditFieldProps {
     value: string | number;

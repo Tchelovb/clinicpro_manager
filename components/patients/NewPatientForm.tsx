@@ -8,7 +8,7 @@ import {
     Loader2
 } from "lucide-react";
 import toast from "react-hot-toast";
-import { supabase } from "../../lib/supabase";
+import { supabase } from "../../src/lib/supabase";
 
 interface NewPatientFormProps {
     initialData?: Partial<Patient>;

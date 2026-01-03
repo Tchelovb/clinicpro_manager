@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../src/lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { X, Printer, FileText, Download, Wand2, Loader } from 'lucide-react';
 import { generateDocumentContent } from '../../utils/documentEngine';

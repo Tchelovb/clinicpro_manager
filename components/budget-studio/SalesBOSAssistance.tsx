@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { TrendingUp, AlertTriangle, MessageCircle, DollarSign, PieChart, CheckCircle2, ShieldCheck, Zap } from 'lucide-react';
-import { cn } from '../../lib/utils';
+import { cn } from '../../src/lib/utils';
 import { formatCurrency } from '../../utils/format';
 
 interface SalesBOSAssistanceProps {

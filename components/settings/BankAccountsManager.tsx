@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase, getCurrentClinicId } from '../../lib/supabase';
+import { supabase, getCurrentClinicId } from '../../src/lib/supabase';
 import { Plus, Edit, Trash2, Loader2, Building, Layers } from 'lucide-react';
 import { BankAccountSheet } from './BankAccountSheet';
 import toast from 'react-hot-toast';
@@ -223,8 +223,8 @@ const BankAccountsManager: React.FC = () => {
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <span className={`text-sm font-bold ${(account.current_balance || 0) >= 0
-                                                    ? 'text-green-600 dark:text-green-400'
-                                                    : 'text-red-600 dark:text-red-400'
+                                                ? 'text-green-600 dark:text-green-400'
+                                                : 'text-red-600 dark:text-red-400'
                                                 }`}>
                                                 {formatCurrency(account.current_balance || 0)}
                                             </span>

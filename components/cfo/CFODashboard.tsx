@@ -6,7 +6,7 @@ import { Progress } from '../ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { cfoService, DREData, PDDData, CashFlowData, FinancialHealthScore } from '../../services/cfoService';
 import { useAuth } from '../../contexts/AuthContext';
-import { cn } from '../../lib/utils';
+import { cn } from '../../src/lib/utils';
 import {
     LineChart,
     Line,

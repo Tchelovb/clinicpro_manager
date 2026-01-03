@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { TrendingUp, DollarSign, AlertTriangle, Lightbulb, CreditCard, MessageSquare } from 'lucide-react';
 import { formatCurrency } from '../../utils/format';
-import { cn } from '../../lib/utils';
+import { cn } from '../../src/lib/utils';
 
 interface Props {
     totalValue: number;

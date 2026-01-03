@@ -2,7 +2,7 @@ import React from 'react';
 import { Badge } from '../ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { AlertCircle, MessageCircle, User, UserCheck } from 'lucide-react';
-import { cn } from '../../lib/utils';
+import { cn } from '../../src/lib/utils';
 import { Opportunity } from '../../types/crm';
 
 interface PipelineCardProps {

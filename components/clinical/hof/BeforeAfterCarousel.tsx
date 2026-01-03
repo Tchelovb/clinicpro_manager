@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight, Plus, Camera, X } from 'lucide-react';
-import { cn } from '../../../lib/utils';
+import { cn } from "../../../src/lib/utils";
 
 // Mock Data Types
 interface Comparison {
@@ -81,7 +81,7 @@ export const BeforeAfterCarousel: React.FC = () => {
                 {/* Image Before (Foreground, Clipped) */}
                 <div
                     className="absolute inset-0 w-full h-full overflow-hidden border-r-2 border-white/80 shadow-2xl"
-                    style={{ width: `${sliderPosition}%` }}
+                    style={{ width: `${sliderPosition}% ` }}
                 >
                     <img src={current.imgBefore} alt="Antes" className="absolute inset-0 w-full h-full object-cover max-w-none" style={{ width: '100vw' /* fix aspect to match container width effectively in clipper? No, object-cover handles this usually if container is same size. Actually we need container width. For now simple object-cover. */ }} />
                     {/* FIX: object-cover works if image is same size. If not, we need fixed dimensions. */}
@@ -92,7 +92,7 @@ export const BeforeAfterCarousel: React.FC = () => {
                 </div>
 
                 {/* Slider Handle */}
-                <div className="absolute top-0 bottom-0 w-0.5 bg-white cursor-ew-resize z-20 flex items-center justify-center shadow-[0_0_20px_rgba(0,0,0,0.5)]" style={{ left: `${sliderPosition}%` }}>
+                <div className="absolute top-0 bottom-0 w-0.5 bg-white cursor-ew-resize z-20 flex items-center justify-center shadow-[0_0_20px_rgba(0,0,0,0.5)]" style={{ left: `${sliderPosition}% ` }}>
                     <div className="w-8 h-8 rounded-full bg-white shadow-lg flex items-center justify-center">
                         <div className="flex gap-0.5">
                             <ChevronLeft size={12} className="text-slate-400" />

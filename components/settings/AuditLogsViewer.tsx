@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase, getCurrentClinicId } from '../../lib/supabase';
+import { supabase, getCurrentClinicId } from '../../src/lib/supabase';
 import { Loader2, Shield, User, Calendar, FileText, ChevronLeft, ChevronRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 

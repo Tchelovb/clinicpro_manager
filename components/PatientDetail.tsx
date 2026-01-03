@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { supabase } from "../lib/supabase";
+import { supabase } from "../src/lib/supabase";
 import {
     ArrowLeft, Trash2, Phone, Mail,
     FileText, Image, Activity,

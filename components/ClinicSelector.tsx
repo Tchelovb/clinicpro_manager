@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "../lib/supabase";
+import { supabase } from "../src/lib/supabase";
 import { Building, Plus, Building2 } from "lucide-react";
 
 interface Clinic {

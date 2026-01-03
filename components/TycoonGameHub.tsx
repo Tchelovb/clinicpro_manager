@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../src/lib/supabase';
 import { Gamepad2, Trophy, Flame, Play, Zap, Target } from 'lucide-react';
 
 export function TycoonGameHub() {

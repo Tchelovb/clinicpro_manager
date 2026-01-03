@@ -5,7 +5,7 @@ import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Progress } from '../ui/progress';
 import { receivablesService } from '../../services/receivablesService';
-import { cn } from '../../lib/utils';
+import { cn } from '../../src/lib/utils';
 
 interface LabOrderLockProps {
     patientId: string;

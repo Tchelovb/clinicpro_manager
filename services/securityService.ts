@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase';
+import { supabase } from '../src/lib/supabase';
 
 // Helper interface for RPC response
 interface PinVerificationResult {

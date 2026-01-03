@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../src/lib/supabase';
 import { ChevronDown, Plus, Building2, Globe, Check } from 'lucide-react';
 import { CreateClinicModal } from './CreateClinicModal';
 import { useAuth } from '../contexts/AuthContext';

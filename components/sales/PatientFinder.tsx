@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Loader2, Filter, User } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../src/lib/supabase';
 import { useDebounce } from '../../hooks/useDebounce';
-import { cn } from '../../lib/utils';
+import { cn } from '../../src/lib/utils';
 
 interface PatientFinderProps {
     onSelect: (patient: any) => void;

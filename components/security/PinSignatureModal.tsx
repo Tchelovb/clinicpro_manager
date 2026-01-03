@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Lock, CheckCircle, X } from 'lucide-react';
 import * as Dialog from '@radix-ui/react-dialog';
-import { cn } from '../../lib/utils';
+import { cn } from '../../src/lib/utils';
 import toast from 'react-hot-toast';
 
 interface PinSignatureModalProps {

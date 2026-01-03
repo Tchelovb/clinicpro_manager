@@ -6,7 +6,7 @@ import { useComercialMetrics, useClinicoMetrics, useFinanceiroMetrics } from '..
 import { PilaresTab } from './intelligence/PilaresTab';
 import { InsightsTab } from './intelligence/InsightsTab';
 import { WarRoomTab } from './intelligence/WarRoomTab';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../src/lib/supabase';
 import {
     Activity, Lightbulb, Target, AlertCircle, Calendar
 } from 'lucide-react';

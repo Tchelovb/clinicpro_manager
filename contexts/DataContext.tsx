@@ -1,4 +1,4 @@
-Ôªøimport React, {
+import React, {
     createContext,
     useContext,
     useState,
@@ -46,8 +46,8 @@ import {
     LeadStatus,
     ClinicFinancialSettings,
 } from "../types";
-import { supabase } from "../lib/supabase";
-import { withRetry } from "../lib/supabaseWithRetry";
+import { supabase } from "../src/lib/supabase";
+import { withRetry } from "../src/lib/supabaseWithRetry";
 import { toast } from "react-hot-toast";
 import { useAuth } from "./AuthContext";
 import { useFinancial } from "./FinancialContext";
@@ -247,7 +247,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
 
         if (profile?.clinic_id) lastClinicIdRef.current = profile.clinic_id;
 
-        console.log(`üìä [DATA] Fetching data for clinic: ${profile?.clinic_id} (Force: ${force})`);
+        console.log(`?? [DATA] Fetching data for clinic: ${profile?.clinic_id} (Force: ${force})`);
 
         try {
             // ONDA 1: Pacientes
@@ -291,24 +291,24 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         } catch (err) {
             console.error("Error fetching core data:", err);
         }
-    }, [profile?.clinic_id]);
+    }, []); // ? Sem dependÍncias - usa profile via closure
 
-    // Initial Fetch Effect
+    // Initial Fetch Effect - Only triggers when clinic_id actually changes
     useEffect(() => {
-        if (profile?.clinic_id) {
+        if (profile?.clinic_id && profile.clinic_id !== lastClinicIdRef.current) {
             fetchCoreData();
-        } else {
+        } else if (!profile?.clinic_id) {
             // Mock fallback
             setPatients(MOCK_PATIENTS);
         }
-    }, [profile?.clinic_id, fetchCoreData]);
+    }, [profile?.clinic_id]); // fetchCoreData n„o precisa estar aqui pois n„o muda
 
     const refreshData = useCallback(async () => {
-        console.log('üîÑ [DataContext] Iniciando refresh completo dos dados...');
+        console.log('?? [DataContext] Iniciando refresh completo dos dados...');
         const startTime = performance.now();
         await fetchCoreData(true);
         const endTime = performance.now();
-        console.log(`‚úÖ [DataContext] Refresh completo! Tempo: ${(endTime - startTime).toFixed(0)}ms`);
+        console.log(`? [DataContext] Refresh completo! Tempo: ${(endTime - startTime).toFixed(0)}ms`);
     }, [fetchCoreData]);
 
     const toggleTheme = useCallback(() => {
@@ -508,20 +508,20 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
                 error: authError,
             } = await supabase.auth.getUser();
             if (authError || !user) {
-                throw new Error("Usu√°rio n√£o autenticado");
+                throw new Error("Usu·rio n„o autenticado");
             }
 
             // Calculate totals
             let totalValue = 0;
             for (const item of budgetData.items) {
                 if (item.quantity <= 0 || item.unitValue <= 0) {
-                    throw new Error("Quantidade e valor unit√°rio devem ser positivos");
+                    throw new Error("Quantidade e valor unit·rio devem ser positivos");
                 }
                 totalValue += item.total;
             }
             const discount = budgetData.discount || 0;
             if (discount < 0 || discount > totalValue) {
-                throw new Error("Desconto inv√°lido");
+                throw new Error("Desconto inv·lido");
             }
             const finalValue = totalValue - discount;
 
@@ -568,7 +568,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
                 id: budget.id,
                 createdAt: new Date().toLocaleDateString("pt-BR"),
                 status: "PENDING",
-                doctorName: `Dr.${profile?.name || 'N√£o informado'} `,
+                doctorName: `Dr.${profile?.name || 'N„o informado'} `,
                 ...budgetData,
                 totalValue: totalValue,
                 finalValue: finalValue,
@@ -582,7 +582,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
             });
         } catch (error) {
             console.error("Error creating budget:", error);
-            alert("Erro ao criar or√ßamento: " + error.message);
+            alert("Erro ao criar orÁamento: " + error.message);
         }
     }, [patients, profile?.name, updatePatient]);
 
@@ -592,7 +592,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         budgetData: Partial<Budget>
     ) => {
         try {
-            if (!budgetId) throw new Error("ID do or√ßamento √© obrigat√≥rio");
+            if (!budgetId) throw new Error("ID do orÁamento È obrigatÛrio");
 
             // Check if approved
             const { data: existing, error: checkError } = await supabase
@@ -603,7 +603,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
 
             if (checkError) throw checkError;
             if (existing.status === "APPROVED") {
-                throw new Error("N√£o √© poss√≠vel editar or√ßamento aprovado");
+                throw new Error("N„o È possÌvel editar orÁamento aprovado");
             }
 
             // Calculate new totals if items provided
@@ -612,13 +612,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
             if (budgetData.items) {
                 for (const item of budgetData.items) {
                     if (item.quantity <= 0 || item.unitValue <= 0) {
-                        throw new Error("Quantidade e valor unit√°rio devem ser positivos");
+                        throw new Error("Quantidade e valor unit·rio devem ser positivos");
                     }
                     totalValue += item.total;
                 }
                 const discount = budgetData.discount || 0;
                 if (discount < 0 || discount > totalValue) {
-                    throw new Error("Desconto inv√°lido");
+                    throw new Error("Desconto inv·lido");
                 }
                 finalValue = totalValue - discount;
             }
@@ -696,7 +696,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
 
         } catch (error) {
             console.error("Error updating budget:", error);
-            alert("Erro ao atualizar or√ßamento: " + error.message);
+            alert("Erro ao atualizar orÁamento: " + error.message);
         }
     }, []);
 
@@ -807,7 +807,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
             }));
         } catch (error) {
             console.error("Error deleting budget:", error);
-            alert("Erro ao excluir or√ßamento: " + error.message);
+            alert("Erro ao excluir orÁamento: " + error.message);
         }
     }, [patients]);
 
@@ -819,7 +819,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
                 data: { user },
                 error: authError,
             } = await supabase.auth.getUser();
-            if (authError || !user) throw new Error("Usu√°rio n√£o autenticado");
+            if (authError || !user) throw new Error("Usu·rio n„o autenticado");
 
             const patient = patients.find((p) => p.id === patientId);
             if (!patient || !patient.budgets) return;
@@ -869,7 +869,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
                 installmentsData.push({
                     patient_id: patientId,
                     clinic_id: profile?.clinic_id,
-                    description: `Or√ßamento #${budgetId} - Parc.${i + 1
+                    description: `OrÁamento #${budgetId} - Parc.${i + 1
                         }/${installmentsCount}`,
                     due_date: dueDate.toISOString().split("T")[0],
                     amount: installmentValue,
@@ -913,10 +913,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
                     id: t.id,
                     procedure: t.procedure_name,
                     region: t.region,
-                    status: "N√£o Iniciado" as const,
+                    status: "N„o Iniciado" as const,
                     budgetId: budgetId,
                     doctorName: `Dr.${profile?.name || ''}`,
-                    statusLabel: "N√£o Iniciado"
+                    statusLabel: "N„o Iniciado"
                 })) || [];
 
                 const newLocalFinancials = createdFinancials?.map((f: any) => ({
@@ -946,11 +946,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
                 return l;
             }));
 
-            toast.success("Or√ßamento aprovado e tratamentos gerados!");
+            toast.success("OrÁamento aprovado e tratamentos gerados!");
 
         } catch (error) {
             console.error("Error approving budget:", error);
-            alert("Erro ao aprovar or√ßamento: " + error.message);
+            alert("Erro ao aprovar orÁamento: " + error.message);
         }
     }, [leads, patients, profile?.clinic_id, profile?.name]);
 
@@ -978,8 +978,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
                 id: Math.random().toString(36).substr(2, 5),
                 date: new Date().toLocaleDateString("pt-BR"),
                 doctorName: "System",
-                type: "Evolu√ß√£o",
-                content: `Or√ßamento #${budgetId} reprovado. Motivo: ${reason}`,
+                type: "EvoluÁ„o",
+                content: `OrÁamento #${budgetId} reprovado. Motivo: ${reason}`,
             };
 
             // Update local state
@@ -1035,14 +1035,14 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
                     region: t.region,
                     status:
                         t.status === "NOT_STARTED"
-                            ? "N√£o Iniciado"
+                            ? "N„o Iniciado"
                             : t.status === "IN_PROGRESS"
                                 ? "Em Andamento"
                                 : t.status === "COMPLETED"
-                                    ? "Conclu√≠do"
+                                    ? "ConcluÌdo"
                                     : t.status,
                     budgetId: t.budget_id,
-                    doctorName: `Dr. ${profile?.name || 'N√£o informado'}`,
+                    doctorName: `Dr. ${profile?.name || 'N„o informado'}`,
                     executionDate: t.execution_date
                         ? new Date(t.execution_date).toLocaleDateString("pt-BR")
                         : undefined,
@@ -1109,7 +1109,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
             name: patient.name,
             phone: patient.phone,
             email: patient.email,
-            source: "Or√ßamento", // Explicit source
+            source: "OrÁamento", // Explicit source
             budgetId: budget.id, // Explicit Link
             status: LeadStatus.NEGOTIATION,
             interest: "Alto",
@@ -1120,7 +1120,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
                 {
                     id: Math.random().toString(36).substr(2, 5),
                     type: "System",
-                    content: `Oportunidade gerada a partir do Or√É¬ßamento #${budgetId}.`,
+                    content: `Oportunidade gerada a partir do Or√ßamento #${budgetId}.`,
                     date: new Date().toISOString(),
                     user: "System",
                 },
@@ -1128,7 +1128,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
             tasks: [
                 {
                     id: Math.random().toString(36).substr(2, 5),
-                    title: `Negociar Or√É¬ßamento #${budgetId}`,
+                    title: `Negociar Or√ßamento #${budgetId}`,
                     dueDate: new Date().toISOString().split("T")[0], // Today
                     completed: false,
                 },
@@ -1166,14 +1166,14 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
                     region: t.region,
                     status:
                         t.status === "NOT_STARTED"
-                            ? "N√É¬£o Iniciado"
+                            ? "N√£o Iniciado"
                             : t.status === "IN_PROGRESS"
                                 ? "Em Andamento"
                                 : t.status === "COMPLETED"
-                                    ? "Conclu√É¬≠do"
+                                    ? "Conclu√≠do"
                                     : t.status,
                     budgetId: t.budget_id,
-                    doctorName: `Dr. ${profile?.name || 'N√£o informado'}`,
+                    doctorName: `Dr. ${profile?.name || 'N„o informado'}`,
                 })) || [];
 
             updatePatient(patientId, { treatments: mappedTreatments });
@@ -1194,7 +1194,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
                 data: { user },
                 error: authError,
             } = await supabase.auth.getUser();
-            if (authError || !user) throw new Error("Usu√É¬°rio n√É¬£o autenticado");
+            if (authError || !user) throw new Error("Usu√°rio n√£o autenticado");
 
             // Update treatment status in DB
             const { error: updateError } = await supabase
@@ -1229,18 +1229,18 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
                     // Get professional name from the joined data
                     const user = Array.isArray(t.doctor) ? t.doctor[0] : t.doctor;
                     const professional = Array.isArray(user?.professionals) ? user.professionals[0] : user?.professionals;
-                    const professionalName = professional?.name || 'Profissional n√£o informado';
+                    const professionalName = professional?.name || 'Profissional n„o informado';
                     return {
                         id: t.id,
                         procedure: t.procedure_name,
                         region: t.region,
                         status:
                             t.status === "NOT_STARTED"
-                                ? "N√£o Iniciado"
+                                ? "N„o Iniciado"
                                 : t.status === "IN_PROGRESS"
                                     ? "Em Andamento"
                                     : t.status === "COMPLETED"
-                                        ? "Conclu√≠do"
+                                        ? "ConcluÌdo"
                                         : t.status,
                         budgetId: t.budget_id,
                         doctorName: `Dr. ${professionalName}`,
@@ -1250,7 +1250,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
                     };
                 }) || [];
 
-            const defaultContent = `Procedimento realizado: ${treatmentId}. Paciente liberado sem intercorr√É¬™ncias.`;
+            const defaultContent = `Procedimento realizado: ${treatmentId}. Paciente liberado sem intercorr√™ncias.`;
             const finalContent = noteContent
                 ? `${noteContent} \n\n(Ref: ${treatmentId})`
                 : defaultContent;
@@ -1259,7 +1259,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
                 id: Math.random().toString(36).substr(2, 5),
                 date: new Date().toLocaleDateString("pt-BR"),
                 doctorName: "Dr. Marcelo Vilas Boas",
-                type: "Evolu√ß√£o",
+                type: "EvoluÁ„o",
                 content: finalContent,
             };
 
@@ -1269,7 +1269,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
                 .insert({
                     patient_id: patientId,
                     doctor_id: user.id,
-                    type: "Evolu√É¬ß√É¬£o",
+                    type: "Evolu√ß√£o",
                     content: finalContent,
                     date: new Date().toISOString().split("T")[0],
                 });
@@ -1438,7 +1438,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({
         await payExpenseCtx(id, amount, method, date, notes);
     };
 
-    // Memoiza√ß√£o do contexto para prevenir re-renders desnecess√°rios
+    // MemoizaÁ„o do contexto para prevenir re-renders desnecess·rios
     const contextValue = useMemo(() => ({
         theme,
         toggleTheme,

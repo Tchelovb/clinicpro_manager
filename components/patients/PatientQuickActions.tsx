@@ -5,7 +5,7 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { ResponsiveModal } from "../ui/responsive-modal";
 import { toast } from "react-hot-toast";
-import { supabase } from "../../lib/supabase";
+import { supabase } from "../../src/lib/supabase";
 import { useAuth } from "../../contexts/AuthContext";
 
 interface PatientQuickActionsProps {

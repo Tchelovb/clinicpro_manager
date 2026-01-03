@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { professionalPaymentService, PendingProductionItem } from '../../services/professionalPaymentService';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../src/lib/supabase';
 import {
     Calendar,
     User,
@@ -145,8 +145,8 @@ const ProfessionalPaymentPanel: React.FC = () => {
                     <button
                         onClick={() => setActiveTab('pending')}
                         className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${activeTab === 'pending'
-                                ? 'bg-white dark:bg-gray-700 text-emerald-600 shadow-sm'
-                                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'
+                            ? 'bg-white dark:bg-gray-700 text-emerald-600 shadow-sm'
+                            : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'
                             }`}
                     >
                         Pendente
@@ -154,8 +154,8 @@ const ProfessionalPaymentPanel: React.FC = () => {
                     <button
                         onClick={() => setActiveTab('history')}
                         className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${activeTab === 'history'
-                                ? 'bg-white dark:bg-gray-700 text-emerald-600 shadow-sm'
-                                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'
+                            ? 'bg-white dark:bg-gray-700 text-emerald-600 shadow-sm'
+                            : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'
                             }`}
                     >
                         Histórico

@@ -3,7 +3,7 @@ import { ResponsiveModal } from '../ui/responsive-modal';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { useState } from 'react';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../src/lib/supabase';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../../contexts/AuthContext';
 

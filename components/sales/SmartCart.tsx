@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Check, Lock, Percent, Trash2 } from 'lucide-react';
-import { cn } from '../../lib/utils';
+import { cn } from '../../src/lib/utils';
 
 // Define Interface for Budget Items based on Supabase structure
 interface BudgetItem {

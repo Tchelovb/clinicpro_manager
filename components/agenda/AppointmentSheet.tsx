@@ -5,7 +5,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { PatientSearch } from './PatientSearch';
 import { useAuth } from '../../contexts/AuthContext';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../src/lib/supabase';
 import { toast } from 'react-hot-toast';
 import { X, Clock, Calendar, AlertTriangle, Save, Trash2, FileText, CheckCircle, ArrowLeft, UserPlus, Phone, User } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
@@ -99,12 +99,14 @@ export const AppointmentSheet: React.FC<AppointmentSheetProps> = ({
 
     const loadProfessionals = async () => {
         if (!profile?.clinic_id) return;
+        // ✅ UNIFICAÇÃO: Busca profissionais usando is_clinical_provider
         const { data } = await supabase
             .from('users')
-            .select('id, name')
+            .select('id, name, agenda_color, specialty')
             .eq('clinic_id', profile.clinic_id)
-            .eq('is_active', true)
-            .not('professional_id', 'is', null);
+            .eq('is_clinical_provider', true)  // ✅ Filtro correto
+            .eq('active', true)
+            .order('name');
         setProfessionals(data || []);
     };
 

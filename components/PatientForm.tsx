@@ -4,7 +4,7 @@ import { usePatients } from "../hooks/usePatients";
 import { useAuth } from "../contexts/AuthContext";
 import { useData } from "../contexts/DataContext";
 import { Patient } from "../types";
-import { supabase } from "../lib/supabase";
+import { supabase } from "../src/lib/supabase";
 import { StableInput } from "./StableInput";
 import {
   ArrowLeft,

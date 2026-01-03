@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useRef, useMemo } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../src/lib/supabase';
 
 interface AuthContextType {
   user: any;
@@ -11,6 +11,7 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   profile: any;
   refreshProfile: () => Promise<void>;
+  updateProfile: (updates: any) => Promise<{ data?: any; error?: string }>;
   clinicId: string | undefined;
 }
 
@@ -31,51 +32,76 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const initializeUser = async (currentSession: any) => {
     if (!currentSession?.user) return;
 
-    const metadata = currentSession.user.user_metadata || {};
-    let clinicId = metadata.clinic_id;
-    let role = metadata.role;
-
-    // 🔧 HARDCODED DEV IDENTITY (Zero Guest Protocol)
-    if (!clinicId && (currentSession.user.email?.includes('marcelo') || currentSession.user.email?.includes('admin'))) {
-      clinicId = '550e8400-e29b-41d4-a716-446655440000';
-      role = 'MASTER';
-
-      // Persiste a injeção
-      currentSession.user.user_metadata = { ...metadata, clinic_id: clinicId, role };
-      supabase.auth.updateUser({ data: { clinic_id: clinicId, role } });
+    // 🚨 DEBOUNCE: Se já está buscando, não faz nada
+    if (fetchingRef.current) {
+      console.log('⏭️ [AUTH] Já está buscando perfil, pulando...');
+      return;
     }
 
-    // 🔍 BUSCA DE IDENTIDADE (Database Authority)
-    // Sempre busca dados atualizados do banco (Nome, Role, Avatar) para garantir consistência
-    const { data: dbProfile } = await supabase
-      .from('users')
-      .select('clinic_id, role, name, photo_url') // 🛠️ FIX: photo_url instead of avatar_url
-      .eq('id', currentSession.user.id)
-      .maybeSingle();
+    fetchingRef.current = true;
 
-    if (dbProfile) {
-      clinicId = dbProfile.clinic_id || clinicId;
-      role = dbProfile.role || role;
-    }
+    try {
+      const metadata = currentSession.user.user_metadata || {};
+      let clinicId = metadata.clinic_id;
+      let role = metadata.role;
 
-    // Conclusão da Identidade
-    if (clinicId) {
-      setSession(currentSession);
-      // Funde os dados da sessão com a identidade descoberta
-      setUser({
-        ...currentSession.user,
-        clinic_id: clinicId,
-        role: role,
-        email: currentSession.user.email,
-        name: dbProfile?.name || currentSession.user.user_metadata?.full_name || 'Usuário',
-        avatar_url: dbProfile?.photo_url || currentSession.user.user_metadata?.avatar_url // Map correctly
-      });
+      // 🔧 HARDCODED DEV IDENTITY (Zero Guest Protocol)
+      if (!clinicId && (currentSession.user.email?.includes('marcelo') || currentSession.user.email?.includes('admin'))) {
+        clinicId = '550e8400-e29b-41d4-a716-446655440000';
+        role = 'MASTER';
 
-      setIsAdmin(role === 'ADMIN' || role === 'MASTER');
-      setIsMaster(role === 'MASTER');
+        // Persiste a injeção
+        currentSession.user.user_metadata = { ...metadata, clinic_id: clinicId, role };
+        supabase.auth.updateUser({ data: { clinic_id: clinicId, role } });
+      }
+
+      // 🕐 DELAY: Pequeno delay para não engasgar a rede (500ms)
+      console.log('🔍 [AUTH] Buscando perfil do usuário...');
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // 🔍 BUSCA DE IDENTIDADE (Database Authority)
+      // ✅ UNIFICAÇÃO: Busca dados do usuário (todos os campos já estão em users)
+      const { data: dbProfile, error: profileError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', currentSession.user.id)
+        .maybeSingle();
+
+      if (profileError) {
+        console.error('❌ [AUTH] Erro ao buscar perfil:', profileError);
+        setLoading(false);
+        return;
+      }
+
+      if (dbProfile) {
+        clinicId = dbProfile.clinic_id || clinicId;
+        role = dbProfile.role || role;
+      }
+
+      // Conclusão da Identidade
+      if (clinicId) {
+        setSession(currentSession);
+        // ✅ UNIFICAÇÃO: Usa TODOS os dados do banco (fonte única da verdade)
+        setUser({
+          ...dbProfile,  // Todos os campos do banco
+          email: currentSession.user.email,  // Email sempre do auth
+          // Não inventar campos que não existem no banco
+        });
+
+        setIsAdmin(role === 'ADMIN' || role === 'MASTER');
+        setIsMaster(role === 'MASTER');
+        setLoading(false);
+        console.log('✅ [AUTH] Perfil carregado com sucesso');
+      } else {
+        setLoading(false);
+      }
+    } catch (error) {
+      console.error('❌ [AUTH] Erro ao carregar perfil:', error);
+      // Em caso de erro, mantemos pelo menos os dados básicos da sessão
+      setUser(currentSession.user);
       setLoading(false);
-    } else {
-      setLoading(false);
+    } finally {
+      fetchingRef.current = false;
     }
   };
 
@@ -166,6 +192,50 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  // 5. Função para Atualizar Perfil do Usuário
+  const updateProfile = async (updates: any) => {
+    if (!user?.id) {
+      console.error('❌ [AUTH] Usuário não logado');
+      return { error: 'Usuário não logado' };
+    }
+
+    try {
+      console.log('🔄 [AUTH] Atualizando perfil...', updates);
+
+      // Garantir que clinic_id sempre seja enviado
+      const updateData: any = {
+        ...updates,
+        clinic_id: user.clinic_id,
+        updated_at: new Date().toISOString()
+      };
+
+      // Remover campos que não existem em users
+      delete updateData.professional_id;  // Não existe em users
+
+      // Atualizar no banco
+      const { data, error } = await supabase
+        .from('users')
+        .update(updateData)
+        .eq('id', user.id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('❌ [AUTH] Erro ao atualizar perfil:', error);
+        return { error: error.message };
+      }
+
+      // Atualizar estado local
+      setUser({ ...user, ...data });
+      console.log('✅ [AUTH] Perfil atualizado com sucesso');
+
+      return { data };
+    } catch (error: any) {
+      console.error('❌ [AUTH] Erro inesperado:', error);
+      return { error: error.message || 'Erro ao atualizar perfil' };
+    }
+  };
+
   // Memoização do contexto para prevenir re-renders desnecessários
   const contextValue = useMemo(
     () => ({
@@ -178,6 +248,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       signOut,
       profile: user,
       refreshProfile,
+      updateProfile,
       clinicId: user?.clinic_id
     }),
     [user, session, loading, isAdmin, isMaster]

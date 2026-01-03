@@ -5,7 +5,7 @@ import { Input } from '../ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { creditRiskService, CreditAnalysisResult, RiskTier } from '../../services/creditRiskService';
-import { cn } from '../../lib/utils';
+import { cn } from '../../src/lib/utils';
 
 interface CreditAnalysisWidgetProps {
     patientId?: string;

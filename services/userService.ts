@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase';
+import { supabase } from '../src/lib/supabase';
 
 /**
  * Creates a new user in the system (Admin only)

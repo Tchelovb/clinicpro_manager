@@ -1,7 +1,7 @@
 import React from 'react';
 import { Badge } from '../ui/badge';
 import { Plus } from 'lucide-react';
-import { cn } from '../../lib/utils';
+import { cn } from '../../src/lib/utils';
 import { PipelineCard } from './PipelineCard';
 import { Opportunity } from '../../types/crm';
 

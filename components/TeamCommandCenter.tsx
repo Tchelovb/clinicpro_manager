@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Shield, Crown, Briefcase, UserCog, AlertCircle, CheckCircle, X } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../src/lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
 import { UserRole } from '../types';

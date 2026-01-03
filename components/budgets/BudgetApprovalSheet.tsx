@@ -5,7 +5,7 @@ import { Button } from '../ui/button';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../src/lib/supabase';
 import { receivablesService, ApprovalSimulationResult } from '../../services/receivablesService';
 import { Loader2, CreditCard, Calendar, Calculator, CheckCircle2, TrendingDown, TrendingUp, DollarSign, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';

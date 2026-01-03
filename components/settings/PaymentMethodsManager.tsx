@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../src/lib/supabase';
 import { Plus, Edit2, Trash2, CreditCard, Loader2, CheckCircle, Percent } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -255,8 +255,8 @@ const PaymentMethodsManager: React.FC = () => {
                         <div
                             key={method.id}
                             className={`bg-white dark:bg-slate-800 rounded-xl border-2 p-5 transition-all ${method.active
-                                    ? 'border-slate-200 dark:border-slate-700 hover:border-violet-300 dark:hover:border-violet-700'
-                                    : 'border-slate-100 dark:border-slate-800 opacity-60'
+                                ? 'border-slate-200 dark:border-slate-700 hover:border-violet-300 dark:hover:border-violet-700'
+                                : 'border-slate-100 dark:border-slate-800 opacity-60'
                                 }`}
                         >
                             {/* Header */}
@@ -320,8 +320,8 @@ const PaymentMethodsManager: React.FC = () => {
                                 <button
                                     onClick={() => toggleActive(method)}
                                     className={`text-xs font-medium px-3 py-1 rounded-full transition-colors ${method.active
-                                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50'
-                                            : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600'
+                                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50'
+                                        : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600'
                                         }`}
                                 >
                                     {method.active ? 'Ativo' : 'Inativo'}

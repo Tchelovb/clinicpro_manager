@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '../src/lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
 interface WarRoomData {
@@ -18,19 +18,11 @@ interface WarRoomData {
 }
 
 export const useWarRoom = () => {
-    const [data, setData] = useState<WarRoomData | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
     const { profile } = useAuth();
 
-    useEffect(() => {
-        if (!profile?.clinic_id) return;
-        loadWarRoomData();
-    }, [profile?.clinic_id]);
-
-    const loadWarRoomData = async () => {
-        try {
-            setLoading(true);
+    const query = useQuery({
+        queryKey: ['war-room', profile?.clinic_id],
+        queryFn: async (): Promise<WarRoomData> => {
             const clinicId = profile?.clinic_id;
             if (!clinicId) throw new Error('Clínica não encontrada');
 
@@ -91,7 +83,7 @@ export const useWarRoom = () => {
                 .map(([category, amount]) => ({ category, amount }))
                 .sort((a, b) => b.amount - a.amount);
 
-            setData({
+            return {
                 currentRevenue,
                 monthlyGoal,
                 progressPercent,
@@ -101,15 +93,17 @@ export const useWarRoom = () => {
                 gap,
                 status,
                 revenueByCategory
-            });
+            };
+        },
+        enabled: !!profile?.clinic_id,
+        staleTime: 5 * 60 * 1000, // 5 minutos
+        retry: 3,
+    });
 
-        } catch (err: any) {
-            console.warn('⚠️ [WARROOM] Falha ao carregar War Room:', err.message);
-            // setError(err.message); // Silent fail to protect UI
-        } finally {
-            setLoading(false);
-        }
+    return {
+        data: query.data || null,
+        loading: query.isLoading,
+        error: query.error ? String(query.error) : null,
+        refresh: query.refetch
     };
-
-    return { data, loading, error, refresh: loadWarRoomData };
 };

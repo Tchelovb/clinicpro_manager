@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase';
+import { supabase } from '../src/lib/supabase';
 
 export type LeadStatus = 'NEW' | 'CONTACT' | 'SCHEDULED' | 'PROPOSAL' | 'WON' | 'LOST';
 

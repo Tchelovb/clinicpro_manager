@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { InstallmentsTable } from './InstallmentsTable';
 import { useAuth } from '../../contexts/AuthContext';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../src/lib/supabase';
 import { useHaptic } from '../../utils/haptics';
 import toast from 'react-hot-toast';
 

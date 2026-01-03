@@ -70,7 +70,11 @@ export const HealthPillars: React.FC<{
     financialData: any;
     kpis: any;
     intelligenceMetrics?: any;
-}> = ({ financialData, kpis, intelligenceMetrics }) => {
+    readyToLoad?: boolean;
+}> = ({ financialData, kpis, intelligenceMetrics, readyToLoad = true }) => {
+
+    // Safety check - if not ready, show skeleton or null (simplified to prevent heavy calcs)
+    if (!readyToLoad) return <div className="animate-pulse h-48 bg-slate-100 dark:bg-slate-800/50 rounded-xl w-full"></div>;
 
     let marketingScore = 0;
     let salesScore = 0;

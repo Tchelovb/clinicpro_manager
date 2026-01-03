@@ -7,7 +7,7 @@ import { Clock, User, CheckCircle, UserCheck, XCircle, AlertCircle } from 'lucid
 interface Appointment {
     id: string;
     patient_id: string;
-    doctor_id: string;
+    professional_id: string;  // ✅ PADRONIZAÇÃO
     date: string;
     duration: number;
     type: string;

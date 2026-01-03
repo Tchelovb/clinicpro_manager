@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "../lib/supabase";
+import { supabase } from "../src/lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
 
 export interface ProcedureWithCost {

@@ -3,9 +3,9 @@ import React, { useState, useEffect } from 'react';
 import { Command } from 'cmdk';
 import { useData } from '../../contexts/DataContext';
 import { Check, Search, User, Phone, DollarSign } from 'lucide-react';
-import { cn } from '../../lib/utils';
+import { cn } from '../../src/lib/utils';
 import { useAuth } from '../../contexts/AuthContext';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../src/lib/supabase';
 
 interface PatientSearchProps {
     onSelect: (patient: any) => void;

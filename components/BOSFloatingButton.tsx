@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MessageCircle, Sparkles, AlertCircle } from 'lucide-react';
 import { BOSChat } from './BOSChat';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../src/lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useLocation } from 'react-router-dom';
 

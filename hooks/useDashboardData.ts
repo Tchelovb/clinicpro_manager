@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "../lib/supabase";
+import { supabase } from "../src/lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
 
 export interface DashboardAppointment {
@@ -148,31 +148,8 @@ export const useDashboardData = ({ enabled = true }: { enabled?: boolean } = {})
     retry: 2,
   });
 
-  // Query para pacientes (para orçamentos pendentes)
-  const patientsQuery = useQuery({
-    queryKey: ["dashboard-patients", clinicId],
-    queryFn: async () => {
-      if (!clinicId) return [];
-
-      const { data, error } = await supabase
-        .from("patients")
-        .select(
-          `
-          id,
-          name,
-          phone
-        `
-        )
-        .eq("clinic_id", clinicId)
-        .order("name");
-
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: enabled && !!clinicId,
-    staleTime: 5 * 60 * 1000,
-    retry: 2,
-  });
+  // REMOVED REDUNDANT PATIENTS QUERY
+  // DataContext already fetches patients. Dashboard should use DataContext or lean on KPIs.
 
   // Query para novos pacientes deste mês (KPI)
   const newPatientsQuery = useQuery({
@@ -198,7 +175,8 @@ export const useDashboardData = ({ enabled = true }: { enabled?: boolean } = {})
   // Calcular KPIs
   const appointments = appointmentsQuery.data || [];
   const leads = leadsQuery.data || [];
-  const patients = patientsQuery.data || [];
+  // Use patients from DataContext if needed, but for dashboard KPI we use atomic counts or just remove dependency
+  // const patients = patientsQuery.data || []; // REMOVED to save bandwidth
   const newPatientsCount = newPatientsQuery.data || 0;
 
   const kpis = {
@@ -231,65 +209,35 @@ export const useDashboardData = ({ enabled = true }: { enabled?: boolean } = {})
     });
   }
 
-  // Orçamentos em análise (Desativado - Migrado para Hub Comercial)
-  // const pendingBudgets = patients.flatMap((p) => ...
-
-  /*
-  const pendingBudgets = patients.flatMap((p) =>
-    (p.budgets || []).filter((b) => b.status === "DRAFT")
-  );
-  if (pendingBudgets.length > 0) {
-    const totalValue = pendingBudgets.reduce(
-      (acc, b) => acc + (b.final_value || b.total_value || 0),
-      0
-    );
-    reminders.push({
-      id: "task-budget",
-      type: "medium",
-      title: "Follow-up de Orçamentos",
-      desc: `R$ ${totalValue.toLocaleString(
-        "pt-BR"
-      )} em aberto aguardando aprovação.`,
-      actionLabel: "Ver Orçamentos",
-      iconName: "DollarSign",
-      color: "purple",
-      actionPath: "/crm",
-    });
-  }
-  */
-
   return {
     // Dados
     appointments,
     leads: leads.slice(0, 5), // Limitar a 5 para o dashboard
-    patients,
+    patients: [], // Removed redundant fetch
     kpis,
     reminders,
 
     // Estados de loading
     isLoadingAppointments: appointmentsQuery.isLoading,
     isLoadingLeads: leadsQuery.isLoading,
-    isLoadingPatients: patientsQuery.isLoading,
+    isLoadingPatients: false, // redundancy removed
     isLoading:
       appointmentsQuery.isLoading ||
-      leadsQuery.isLoading ||
-      patientsQuery.isLoading,
+      leadsQuery.isLoading,
 
     // Estados de erro
     appointmentsError: appointmentsQuery.error,
     leadsError: leadsQuery.error,
-    patientsError: patientsQuery.error,
+    patientsError: null,
     hasError: !!(
       appointmentsQuery.error ||
-      leadsQuery.error ||
-      patientsQuery.error
+      leadsQuery.error
     ),
 
     // Utilitários
     refetch: () => {
       appointmentsQuery.refetch();
       leadsQuery.refetch();
-      patientsQuery.refetch();
     },
   };
 };

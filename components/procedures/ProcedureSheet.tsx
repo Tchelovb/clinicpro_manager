@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, Loader2, Plus, RefreshCw } from 'lucide-react';
 import { profitAnalysisService } from '../../services/profitAnalysisService';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../src/lib/supabase';
 import { CategorySheet } from '../settings/CategorySheet'; // Verify path
 import toast from 'react-hot-toast';
 

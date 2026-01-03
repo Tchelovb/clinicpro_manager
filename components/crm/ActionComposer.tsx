@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
 import { StickyNote, MessageCircle, CheckSquare, Send } from 'lucide-react';
-import { cn } from '../../lib/utils';
+import { cn } from '../../src/lib/utils';
 
 type ComposerMode = 'note' | 'whatsapp' | 'task';
 

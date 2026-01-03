@@ -21,10 +21,10 @@ import {
 } from './command';
 import { Button } from './button';
 import { useSheetStore } from '../../stores/useSheetStore';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../src/lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { debounce } from 'lodash';
-import { cn } from '../../lib/utils';
+import { cn } from '../../src/lib/utils';
 
 interface Patient {
     id: string;

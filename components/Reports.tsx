@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../src/lib/supabase';
 import {
     FileText, Calendar, Users, AlertCircle, CheckCircle, DollarSign, Clock,
     Filter, Download, Search, RefreshCw, Smartphone, ArrowUpRight, BarChart2,

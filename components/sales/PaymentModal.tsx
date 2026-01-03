@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { X, CreditCard, Banknote, QrCode, AlertCircle, Lock } from 'lucide-react';
-import { cn } from '../../lib/utils';
+import { cn } from '../../src/lib/utils';
 import { formatCurrency } from '../../utils/format';
 import toast from 'react-hot-toast';
 

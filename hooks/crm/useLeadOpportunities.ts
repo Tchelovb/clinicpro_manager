@@ -1,6 +1,6 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../src/lib/supabase';
 import { Opportunity } from '../../types/crm';
 import { useAuth } from '../../contexts/AuthContext';
 

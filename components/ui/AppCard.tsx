@@ -1,5 +1,5 @@
 import React from 'react';
-import { cn } from '../../lib/utils';
+import { cn } from '../../src/lib/utils';
 
 interface AppCardProps extends React.HTMLAttributes<HTMLDivElement> {
     variant?: 'default' | 'outline' | 'ghost' | 'glass' | 'flat';

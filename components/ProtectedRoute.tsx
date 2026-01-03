@@ -20,7 +20,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       <div className="flex flex-col items-center animate-pulse">
         <img src="/logo-full.png" alt="ClinicPro" className="h-12 w-auto mb-8 opacity-50 grayscale" />
         <div className="w-64 h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
-          <div className="h-full bg-blue-600 animate-progress origin-left w-full duration-[2000ms]"></div>
+          <div className="h-full bg-blue-600 animate-progress origin-left w-full" style={{ animationDuration: '2000ms' }}></div>
         </div>
         <p className="mt-4 text-xs font-medium text-slate-400 uppercase tracking-widest">
           Sincronizando ClinicPro...

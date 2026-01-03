@@ -1,4 +1,4 @@
-import { supabase } from "../lib/supabase";
+import { supabase } from "../src/lib/supabase";
 
 export const fetchBudgetById = async (id: string) => {
     const { data, error } = await supabase

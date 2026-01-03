@@ -6,7 +6,7 @@ import { Button } from '../ui/button';
 import { receivablesService, Installment, ReceivablesStats } from '../../services/receivablesService';
 import { InstallmentDetailSheet } from './InstallmentDetailSheet';
 import { useAuth } from '../../contexts/AuthContext';
-import { cn } from '../../lib/utils';
+import { cn } from '../../src/lib/utils';
 
 const STATUS_CONFIG = {
     PENDING: {

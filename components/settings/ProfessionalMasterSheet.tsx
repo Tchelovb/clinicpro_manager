@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../src/lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { X, User, DollarSign, TrendingUp, Save, Trash2, History } from 'lucide-react';
 import toast from 'react-hot-toast';

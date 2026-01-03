@@ -2,7 +2,7 @@ import React from 'react';
 import { X, Minus, Plus, Image as ImageIcon } from 'lucide-react';
 import { BudgetStudioItem } from '../../hooks/useBudgetStudio';
 import { formatCurrency } from '../../utils/format';
-import { cn } from '../../lib/utils';
+import { cn } from '../../src/lib/utils';
 
 interface Props {
     items: BudgetStudioItem[];

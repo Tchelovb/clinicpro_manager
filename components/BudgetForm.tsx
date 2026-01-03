@@ -27,7 +27,7 @@ import SecurityPinModal from './SecurityPinModal';
 import { QuickAddDialog } from './shared/QuickAddDialog';
 import { useQuickAdd } from '../hooks/useQuickAdd';
 import { QUICK_ADD_CONFIGS } from '../types/quickAdd';
-import { cn } from '../lib/utils';
+import { cn } from '../src/lib/utils';
 import { Drawer, DrawerContent, DrawerTrigger } from './ui/drawer';
 import toast from 'react-hot-toast';
 

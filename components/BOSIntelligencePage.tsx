@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Brain, Sparkles, AlertCircle, TrendingUp, DollarSign, Users, ExternalLink, X } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../src/lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { BOSChat } from './BOSChat';
 

@@ -2,7 +2,7 @@
 // SERVICE: PROGRAMA DE INDICAÇÕES (REFERRAL PROGRAM)
 // =====================================================
 
-import { supabase } from '../lib/supabase';
+import { supabase } from '../src/lib/supabase';
 import { ReferralStats, ReferralLeaderboard, ReferralDetail } from '../types/referrals';
 
 export const ReferralService = {

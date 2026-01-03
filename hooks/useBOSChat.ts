@@ -1,9 +1,9 @@
 import { useState, useCallback } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../src/lib/supabase';
 import { MasterIntelligence } from '../services/MasterIntelligenceService';
-import { getMasterSystemPrompt } from '../lib/bos/masterPersona';
+import { getMasterSystemPrompt } from '../src/lib/bos/masterPersona';
 
 export interface BOSMessage {
     id: string;

@@ -7,7 +7,7 @@ import {
     SheetDescription,
 } from '../ui/sheet';
 import { useAuth } from '../../contexts/AuthContext';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../src/lib/supabase';
 import toast from 'react-hot-toast';
 import {
     User, Shield, Lock, Activity,
@@ -48,7 +48,7 @@ interface UserDetailSheetProps {
 }
 
 const UserDetailSheet: React.FC<UserDetailSheetProps> = ({ open, onOpenChange, userId, onSuccess }) => {
-    const { user } = useAuth(); // 🛠️ FIX: Get user object
+    const { user, refreshProfile } = useAuth(); // 🛠️ FIX: Get user object
     const clinicId = user?.clinic_id; // Extract clinic_id
     const [loading, setLoading] = useState(false);
     const [activeTab, setActiveTab] = useState<'overview' | 'profile' | 'permissions' | 'security'>('overview');
@@ -219,7 +219,6 @@ const UserDetailSheet: React.FC<UserDetailSheetProps> = ({ open, onOpenChange, u
 
             // Check if we updated ourselves, if so, refresh global auth state
             if (userId === user?.id) {
-                const { refreshProfile } = useAuth();
                 refreshProfile?.();
             }
         } catch (error: any) {

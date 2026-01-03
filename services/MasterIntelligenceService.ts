@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase';
+import { supabase } from '../src/lib/supabase';
 
 export const MasterIntelligence = {
     // 1. O RAIO-X GLOBAL (Metrics)

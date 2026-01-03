@@ -11,9 +11,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/ca
 import {
     Phone, Mail, Flame, Snowflake, Thermometer, X, Loader2, Play, Pause, Ban, Plus, ChevronRight, ChevronDown, Instagram, MessageSquare, FileText, Wallet, Clock, CheckCircle, AlertTriangle, Zap, Calendar, DollarSign, Filter, Pencil, Trash2, Edit2
 } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../src/lib/supabase';
 import { toast } from 'react-hot-toast';
-import { cn } from '../../lib/utils';
+import { cn } from '../../src/lib/utils';
 import { InlineEditField } from './InlineEditField';
 import { PipelineStepper } from './PipelineStepper';
 import { TimelineItem } from './TimelineItem';

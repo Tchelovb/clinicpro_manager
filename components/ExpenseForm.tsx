@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { DollarSign, Calendar, FileText, X, Save, AlertCircle, Loader2, Plus } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../src/lib/supabase';
 import toast from 'react-hot-toast';
 import { QuickAddDialog } from './shared/QuickAddDialog';
 import { useQuickAdd } from '../hooks/useQuickAdd';

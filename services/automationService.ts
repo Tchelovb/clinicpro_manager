@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase';
+import { supabase } from '../src/lib/supabase';
 
 export type TriggerEvent = 'ENTER_STAGE' | 'EXIT_STAGE' | 'STAGNATED' | 'CREATED';
 export type ActionType = 'SEND_WHATSAPP' | 'CREATE_TASK' | 'CHANGE_OWNER';

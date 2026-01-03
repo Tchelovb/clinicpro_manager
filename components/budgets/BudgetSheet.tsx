@@ -25,7 +25,7 @@ import {
 import { profitAnalysisService } from '../../services/profitAnalysisService';
 import { procedureRecipeService } from '../../services/procedureRecipeService';
 import { BudgetProfitSummary } from '../profit/BudgetProfitSummary';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../src/lib/supabase';
 import toast from 'react-hot-toast';
 
 import { BudgetApprovalSheet } from './BudgetApprovalSheet';

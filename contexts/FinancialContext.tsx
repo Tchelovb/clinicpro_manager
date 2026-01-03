@@ -5,8 +5,8 @@ import React, {
   useEffect,
   ReactNode,
 } from "react";
-import { supabase } from "../lib/supabase";
-import { withRetry } from "../lib/supabaseWithRetry";
+import { supabase } from "../src/lib/supabase";
+import { withRetry } from "../src/lib/supabaseWithRetry";
 import { useAuth } from "./AuthContext";
 import { CashRegister, ClinicFinancialSettings, Expense, FinancialRecord } from "../types";
 

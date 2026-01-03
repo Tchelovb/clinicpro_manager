@@ -1,6 +1,6 @@
 // ProfessionalStatement.tsx – Painel de Fechamento de Honorários
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../src/lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { X, Search, Calendar, Save, Loader2, DollarSign, Percent, Check } from 'lucide-react';
 import { toast } from 'react-hot-toast';
