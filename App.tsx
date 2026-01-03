@@ -1,4 +1,4 @@
-import React from "react";
+import React, { Suspense, lazy } from "react";
 import { HashRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import "./index.css"; // Import CSS globally
 
@@ -10,7 +10,7 @@ import { DataProvider } from "./contexts/DataContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import { FinancialProvider } from "./contexts/FinancialContext";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { queryClient } from "./lib/queryClient";
+import { queryClient } from "./src/lib/queryClient";
 
 // ============================================
 // LAYOUT & PROTECTION
@@ -26,8 +26,11 @@ import { UIProvider } from "./contexts/UIContext";
 // ============================================
 import Login from "./components/Login";
 import IntelligenceGateway from "./pages/IntelligenceGateway";
-import Dashboard from "./pages/Dashboard";
+import OperationalDashboard from "./pages/OperationalDashboard"; // Dashboard Leve
 import Home from "./pages/Home";
+
+// Lazy Loading para Dashboard Pesado (Intelligence)
+const IntelligenceDashboard = lazy(() => import("./pages/IntelligenceDashboard"));
 import Agenda from "./pages/Agenda";
 import AttendanceQueue from "./pages/AttendanceQueue";
 import { PatientsList } from "./pages/PatientsList";
@@ -45,7 +48,7 @@ import Settings from "./pages/Settings";
 import Profile from "./pages/Profile";
 import AuditLogs from "./pages/AuditLogs";
 import CostWizard from "./pages/settings/CostWizard";
-import { Team } from "./pages/settings/Team";
+import Team from "./pages/settings/Team";
 
 // ============================================
 // FORMS
@@ -97,6 +100,7 @@ const LayoutWrapper = () => (
 // ============================================
 // MAIN APP COMPONENT
 // ============================================
+// App v3.0 - Unificado
 const App: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
@@ -125,7 +129,19 @@ const App: React.FC = () => {
                     {/* Main Application Routes */}
                     <Route index element={<Home />} />
                     <Route path="intelligence" element={<IntelligenceGateway />} />
-                    <Route path="dashboard" element={<Dashboard />} />
+                    <Route path="dashboard" element={<OperationalDashboard />} /> {/* Dashboard Leve */}
+                    <Route path="intelligence/dashboard" element={
+                      <Suspense fallback={
+                        <div className="h-screen w-full bg-slate-50 dark:bg-slate-950 flex items-center justify-center">
+                          <div className="text-center">
+                            <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                            <p className="text-sm text-slate-500">Carregando Inteligência...</p>
+                          </div>
+                        </div>
+                      }>
+                        <IntelligenceDashboard />
+                      </Suspense>
+                    } /> {/* Dashboard Pesado com Lazy Loading */}
 
                     {/* --- AGENDA MODULE --- */}
                     <Route path="/agenda" element={<Agenda />} />
