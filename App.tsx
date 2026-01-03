@@ -28,6 +28,7 @@ import Login from "./components/Login";
 import IntelligenceGateway from "./pages/IntelligenceGateway";
 import OperationalDashboard from "./pages/OperationalDashboard"; // Dashboard Leve
 import Home from "./pages/Home";
+import SearchPage from "./pages/SearchPage";
 
 // Lazy Loading para Dashboard Pesado (Intelligence)
 const IntelligenceDashboard = lazy(() => import("./pages/IntelligenceDashboard"));
@@ -49,6 +50,9 @@ import Profile from "./pages/Profile";
 import AuditLogs from "./pages/AuditLogs";
 import CostWizard from "./pages/settings/CostWizard";
 import Team from "./pages/settings/Team";
+import { MedicationManager } from "./components/settings/MedicationManager";
+import { DocumentTemplateManager } from "./components/settings/DocumentTemplateManager";
+import AnamnesisLab from "./pages/AnamnesisLab";
 
 // ============================================
 // FORMS
@@ -89,6 +93,7 @@ import { GeneralClinicalPage } from "./pages/clinical/GeneralClinicalPage";
 import { HofPage } from "./pages/clinical/HofPage";
 import { OrthoPage } from "./pages/clinical/OrthoPage";
 import ClinicalDashboardPage from "./pages/clinical/ClinicalDashboardPage";
+import EliteDocumentsPage from "./pages/EliteDocumentsPage";
 
 // Wrapper to adapt AppLayout for Router Outlet
 const LayoutWrapper = () => (
@@ -110,6 +115,16 @@ const App: React.FC = () => {
             <FinancialProvider>
               <DataProvider>
                 <Routes>
+                  {/* Rota Elite Documents (Novo Layout) */}
+                  <Route
+                    path="documents"
+                    element={
+                      <ProtectedRoute>
+                        <EliteDocumentsPage />
+                      </ProtectedRoute>
+                    }
+                  />
+
                   {/* PUBLIC ROUTES */}
                   <Route path="/login" element={<Login />} />
 
@@ -127,7 +142,8 @@ const App: React.FC = () => {
 
                     {/* --- CORE MODULES --- */}
                     {/* Main Application Routes */}
-                    <Route index element={<Home />} />
+                    <Route index element={<SearchPage />} />
+                    <Route path="/search" element={<SearchPage />} />
                     <Route path="intelligence" element={<IntelligenceGateway />} />
                     <Route path="dashboard" element={<OperationalDashboard />} /> {/* Dashboard Leve */}
                     <Route path="intelligence/dashboard" element={
@@ -213,6 +229,9 @@ const App: React.FC = () => {
                     <Route path="/reports" element={<Reports />} />
                     <Route path="/chat-bos" element={<ChatBOS />} />
                     <Route path="/settings" element={<Settings />} />
+                    <Route path="/settings/medications" element={<MedicationManager />} />
+                    <Route path="/settings/documents" element={<DocumentTemplateManager />} />
+                    <Route path="/anamnesis-lab" element={<AnamnesisLab />} />
                     <Route path="/settings/team" element={<Team />} /> {/* Nova Rota de Equipe */}
                     <Route path="/settings/costs" element={<CostWizard />} />
                     <Route path="/audit-logs" element={<AuditLogs />} />

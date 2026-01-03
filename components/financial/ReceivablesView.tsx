@@ -8,20 +8,9 @@ import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../src/lib/supabase';
 import { useHaptic } from '../../utils/haptics';
 import toast from 'react-hot-toast';
+import { useInstallments, Installment } from '../../hooks/useFinancial';
 
-interface Installment {
-    id: string;
-    patient_id: string;
-    patient_name?: string;
-    installment_number: number;
-    total_installments: number;
-    amount: number;
-    due_date: string;
-    paid_date?: string;
-    status: 'PENDING' | 'PAID' | 'OVERDUE' | 'PARTIAL';
-    payment_method?: string;
-    notes?: string;
-}
+
 
 /**
  * ReceivablesView
@@ -32,88 +21,28 @@ interface Installment {
  * - Filtros por status/período
  * - Régua de cobrança
  */
+
+
 export const ReceivablesView: React.FC = () => {
-    const { profile } = useAuth();
     const haptic = useHaptic();
 
-    const [installments, setInstallments] = useState<Installment[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [summary, setSummary] = useState({
-        totalPending: 0,
-        totalOverdue: 0,
-        totalPaid: 0,
-        countPending: 0,
-        countOverdue: 0,
-        countPaid: 0
-    });
-
-    // Buscar parcelas
-    useEffect(() => {
-        const fetchInstallments = async () => {
-            if (!profile?.clinic_id) return;
-
-            try {
-                setLoading(true);
-
-                const { data, error } = await supabase
-                    .from('installments')
-                    .select(`
-            *,
-            patients (
-              name
-            )
-          `)
-                    .eq('clinic_id', profile.clinic_id)
-                    .order('due_date', { ascending: true })
-                    .limit(100);
-
-                if (error) throw error;
-
-                // Mapear dados
-                const mappedData = data?.map(i => ({
-                    ...i,
-                    patient_name: i.patients?.name
-                })) || [];
-
-                setInstallments(mappedData);
-
-                // Calcular resumo
-                const today = new Date().toISOString().split('T')[0];
-
-                const pending = mappedData.filter(i => i.status === 'PENDING' && i.due_date >= today);
-                const overdue = mappedData.filter(i => i.status === 'PENDING' && i.due_date < today);
-                const paid = mappedData.filter(i => i.status === 'PAID');
-
-                setSummary({
-                    totalPending: pending.reduce((sum, i) => sum + i.amount, 0),
-                    totalOverdue: overdue.reduce((sum, i) => sum + i.amount, 0),
-                    totalPaid: paid.reduce((sum, i) => sum + i.amount, 0),
-                    countPending: pending.length,
-                    countOverdue: overdue.length,
-                    countPaid: paid.length
-                });
-
-            } catch (error: any) {
-                console.error('Erro ao buscar parcelas:', error);
-                toast.error('Erro ao carregar parcelas');
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchInstallments();
-    }, [profile?.clinic_id]);
+    // Dados reativos com cálculo automático
+    const { installments, isLoading: loading, summary, receivePayment } = useInstallments();
 
     const handleReceivePayment = (installment: Installment) => {
         haptic.medium();
-        // TODO: Abrir AdvancedPaymentModal
-        toast('Receber Pagamento (use AdvancedPaymentModal)');
+        if (confirm(`Confirmar recebimento de R$ ${installment.amount}?`)) {
+            receivePayment({
+                id: installment.id,
+                paidDate: new Date().toISOString()
+            });
+            toast.success('Pagamento recebido!');
+        }
     };
 
     const handleViewDetails = (installment: Installment) => {
         haptic.light();
-        // TODO: Abrir modal de detalhes
-        toast('Detalhes da parcela (em desenvolvimento)');
+        toast('Detalhes em breve');
     };
 
     if (loading) {

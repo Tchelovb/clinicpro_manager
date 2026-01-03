@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Settings2, Filter } from 'lucide-react';
+import { MobileTabBar } from '../components/ui/MobileTabBar';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/button';
 import {
@@ -303,6 +304,11 @@ export default function Pipeline() {
                 patientId={selectedPatientId}
                 open={isPatientSheetOpen}
                 onClose={() => setIsPatientSheetOpen(false)}
+            />
+
+            <MobileTabBar
+                onMainAction={() => handleNewOpportunity()}
+                onAction5={() => toast('Integração WhatsApp em breve!')}
             />
         </div>
     );

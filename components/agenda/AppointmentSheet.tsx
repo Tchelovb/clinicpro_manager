@@ -7,7 +7,7 @@ import { PatientSearch } from './PatientSearch';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../src/lib/supabase';
 import { toast } from 'react-hot-toast';
-import { X, Clock, Calendar, AlertTriangle, Save, Trash2, FileText, CheckCircle, ArrowLeft, UserPlus, Phone, User } from 'lucide-react';
+import { X, Clock, Calendar, AlertTriangle, Save, Trash2, FileText, CheckCircle, ArrowLeft, UserPlus, Phone, User, Briefcase, MessageCircle } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import SecurityPinModal from '../SecurityPinModal';
@@ -31,6 +31,7 @@ export const AppointmentSheet: React.FC<AppointmentSheetProps> = ({
     const { profile } = useAuth();
     const [loading, setLoading] = useState(false);
     const [conflict, setConflict] = useState<string | null>(null);
+    const [mode, setMode] = useState<'PATIENT' | 'ADMINISTRATIVE'>('PATIENT');
 
     // Quick Registration State
     const [viewMode, setViewMode] = useState<'appointment' | 'quick-register'>('appointment');
@@ -65,6 +66,7 @@ export const AppointmentSheet: React.FC<AppointmentSheetProps> = ({
         if (isOpen) {
             loadProfessionals();
             setConflict(null);
+            setMode('PATIENT');
             setViewMode('appointment'); // Reset view mode
             setQuickName('');
             setQuickPhone('');
@@ -125,11 +127,12 @@ export const AppointmentSheet: React.FC<AppointmentSheetProps> = ({
             if (error) throw error;
             if (data) {
                 const dateObj = parseISO(data.date);
+                setMode(data.type === 'ADMINISTRATIVE' ? 'ADMINISTRATIVE' : 'PATIENT');
                 setFormData({
-                    patient_id: data.patient_id,
+                    patient_id: data.patient_id || '',
                     patient_name: data.patients?.name || '',
                     patient_phone: data.patients?.phone || '',
-                    doctor_id: data.doctor_id,
+                    doctor_id: data.professional_id,
                     date: format(dateObj, 'yyyy-MM-dd'),
                     time: format(dateObj, 'HH:mm'),
                     duration: data.duration,
@@ -156,7 +159,7 @@ export const AppointmentSheet: React.FC<AppointmentSheetProps> = ({
             const { data: existingAppts, error } = await supabase
                 .from('appointments')
                 .select('id, date, duration')
-                .eq('doctor_id', formData.doctor_id)
+                .eq('professional_id', formData.doctor_id)
                 .neq('status', 'CANCELLED') // Ignore cancelled
                 .gte('date', startOfDay)
                 .lte('date', endOfDay);
@@ -188,8 +191,18 @@ export const AppointmentSheet: React.FC<AppointmentSheetProps> = ({
     };
 
     const handleSave = async () => {
-        if (!formData.patient_id || !formData.doctor_id || !formData.date || !formData.time) {
-            toast.error('Preencha os campos obrigatórios');
+        if (mode === 'PATIENT' && !formData.patient_id) {
+            toast.error('Selecione um paciente');
+            return;
+        }
+
+        if (mode === 'ADMINISTRATIVE' && !formData.notes) {
+            toast.error('Digite o título do compromisso');
+            return;
+        }
+
+        if (!formData.doctor_id || !formData.date || !formData.time) {
+            toast.error('Preencha data, hora e profissional');
             return;
         }
 
@@ -208,7 +221,7 @@ export const AppointmentSheet: React.FC<AppointmentSheetProps> = ({
                 const appointmentDateTime = localDateObj.toISOString();
 
                 // STRICT ENUM MAPPING - DB Requirement
-                const validTypes = ['EVALUATION', 'TREATMENT', 'RETURN', 'URGENCY'];
+                const validTypes = ['EVALUATION', 'TREATMENT', 'RETURN', 'URGENCY', 'ADMINISTRATIVE'];
                 const typeToSend = validTypes.includes(formData.type) ? formData.type : 'EVALUATION';
 
                 const validStatus = ['PENDING', 'CONFIRMED', 'ARRIVED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'NO_SHOW'];
@@ -231,15 +244,21 @@ export const AppointmentSheet: React.FC<AppointmentSheetProps> = ({
                     }
                 }
 
+                const finalType = mode === 'ADMINISTRATIVE' ? 'ADMINISTRATIVE' : typeToSend;
+                // Administrative implies confirmed/busy usually
+                const finalStatus = mode === 'ADMINISTRATIVE'
+                    ? (statusToSend === 'PENDING' ? 'CONFIRMED' : statusToSend)
+                    : statusToSend;
+
                 const payload: any = {
                     clinic_id: profile.clinic_id,
-                    patient_id: formData.patient_id,
-                    doctor_id: formData.doctor_id,
+                    patient_id: mode === 'PATIENT' ? formData.patient_id : null,
+                    professional_id: formData.doctor_id,
                     date: appointmentDateTime,
                     duration: formData.duration,
-                    type: typeToSend,
-                    status: statusToSend,
-                    notes: formData.notes,
+                    type: finalType,
+                    status: finalStatus,
+                    notes: formData.notes, // Notes used as Title for Admin
                     budget_id: linkedBudgetId
                 };
 
@@ -479,6 +498,28 @@ export const AppointmentSheet: React.FC<AppointmentSheetProps> = ({
         }
     };
 
+    const handleWhatsAppConfirm = () => {
+        if (!formData.patient_phone) {
+            toast.error('Paciente sem telefone cadastrado.');
+            return;
+        }
+        const phone = formData.patient_phone.replace(/\D/g, ''); // Remove non-digits
+        if (phone.length < 10) {
+            toast.error('Número de telefone inválido.');
+            return;
+        }
+
+        const dateObj = parseISO(formData.date);
+        const dateStr = format(dateObj, "dd/MM", { locale: ptBR });
+        const doctorName = professionals.find(p => p.id === formData.doctor_id)?.name || 'Dr. Marcelo';
+
+        // Mensagem de Confirmação Personalizada
+        const message = `Olá ${formData.patient_name.split(' ')[0]}, aqui é da ClinicPro. Gostaríamos de confirmar sua consulta com ${doctorName} para dia ${dateStr} às ${formData.time}. Podemos confirmar?`;
+
+        const url = `https://wa.me/55${phone}?text=${encodeURIComponent(message)}`;
+        window.open(url, '_blank');
+    };
+
     const renderContent = () => {
         if (viewMode === 'quick-register') {
             return (
@@ -559,39 +600,87 @@ export const AppointmentSheet: React.FC<AppointmentSheetProps> = ({
 
                 <div className="flex-1 overflow-y-auto p-6 space-y-6 scroll-pt-32">
                     {/* Patient Section */}
-                    <div className="space-y-3">
-                        {!formData.patient_id ? (
-                            <>
-                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Paciente</label>
-                                <PatientSearch
-                                    onSelect={(p) => setFormData(prev => ({ ...prev, patient_id: p.id, patient_name: p.name, patient_phone: p.phone }))}
-                                    onAddNew={(name) => {
-                                        setQuickName(name);
-                                        setViewMode('quick-register');
-                                    }}
-                                    selectedId={formData.patient_id}
-                                />
-                            </>
-                        ) : (
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <h3 className="text-xl font-semibold text-slate-900 dark:text-white">{formData.patient_name}</h3>
-                                    {formData.patient_phone && (
-                                        <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mt-1">
-                                            <Phone className="w-3.5 h-3.5" /> {formData.patient_phone}
-                                        </p>
-                                    )}
-                                </div>
-                                <button
-                                    onClick={() => setFormData(prev => ({ ...prev, patient_id: '', patient_name: '', patient_phone: '' }))}
-                                    className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
-                                    title="Alterar paciente"
-                                >
-                                    <User className="w-4 h-4 text-slate-400" />
-                                </button>
-                            </div>
-                        )}
+                    {/* SEGMENTED CONTROL: PATIENT vs ADMIN */}
+                    <div className="bg-slate-100 dark:bg-slate-800 p-1 rounded-xl mb-6">
+                        <div className="grid grid-cols-2 gap-1">
+                            <button
+                                onClick={() => setMode('PATIENT')}
+                                className={`py-2 px-3 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${mode === 'PATIENT'
+                                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm ring-1 ring-black/5'
+                                    : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'
+                                    }`}
+                            >
+                                <User size={16} />
+                                Paciente
+                            </button>
+                            <button
+                                onClick={() => setMode('ADMINISTRATIVE')}
+                                className={`py-2 px-3 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${mode === 'ADMINISTRATIVE'
+                                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm ring-1 ring-black/5'
+                                    : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'
+                                    }`}
+                            >
+                                <Briefcase size={16} />
+                                Compromisso
+                            </button>
+                        </div>
                     </div>
+
+                    {mode === 'PATIENT' ? (
+                        <div className="space-y-3">
+                            {!formData.patient_id ? (
+                                <>
+                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Paciente</label>
+                                    <PatientSearch
+                                        onSelect={(p) => setFormData(prev => ({ ...prev, patient_id: p.id, patient_name: p.name, patient_phone: p.phone }))}
+                                        onAddNew={(name) => {
+                                            setQuickName(name);
+                                            setViewMode('quick-register');
+                                        }}
+                                        selectedId={formData.patient_id}
+                                    />
+                                </>
+                            ) : (
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <h3 className="text-xl font-semibold text-slate-900 dark:text-white">{formData.patient_name}</h3>
+                                        {formData.patient_phone && (
+                                            <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mt-1">
+                                                <Phone className="w-3.5 h-3.5" /> {formData.patient_phone}
+                                            </p>
+                                        )}
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={handleWhatsAppConfirm}
+                                            className="p-2 bg-green-50 hover:bg-green-100 text-green-600 rounded-full transition-colors"
+                                            title="Enviar Confirmação via WhatsApp"
+                                        >
+                                            <MessageCircle className="w-4 h-4" />
+                                        </button>
+                                        <button
+                                            onClick={() => setFormData(prev => ({ ...prev, patient_id: '', patient_name: '', patient_phone: '' }))}
+                                            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
+                                            title="Alterar paciente"
+                                        >
+                                            <User className="w-4 h-4 text-slate-400" />
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="space-y-3">
+                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">O que será agendado?</label>
+                            <input
+                                autoFocus
+                                className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-lg font-medium focus:ring-2 ring-violet-500"
+                                placeholder="Ex: Reunião, Bloqueio de Agenda..."
+                                value={formData.notes}
+                                onChange={e => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                            />
+                        </div>
+                    )}
 
                     {/* TYPE SELECTOR - MOVED TO TOP WITH GHL COLORS */}
                     {formData.patient_id && (

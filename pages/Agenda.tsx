@@ -5,7 +5,7 @@ import { useUI } from '../contexts/UIContext';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import {
     Clock, User, CheckCircle, XCircle, AlertCircle, Loader2,
-    UserCheck, Plus
+    UserCheck, Plus, Briefcase
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { format, addDays, addWeeks, addMonths, startOfWeek, endOfWeek, isSameDay, parseISO, startOfDay, addHours, startOfMonth, endOfMonth } from 'date-fns';
@@ -15,17 +15,23 @@ import { AgendaHeader } from '../components/agenda/AgendaHeader';
 import { MonthView } from '../components/agenda/MonthView';
 import { WeekViewDesktop } from '../components/agenda/WeekViewDesktop';
 import { DateStrip } from '../components/agenda/DateStrip';
-
-import { AttendanceSidebar } from '../components/agenda/AttendanceSidebar';
+import { DateStripMobile } from '../components/agenda/DateStripMobile';
+import { FloatingActionButton } from '../components/agenda/FloatingActionButton';
+import { TasksDrawer } from '../components/tasks/TasksDrawer';
+import { ProfessionalsDrawer } from '../components/agenda/ProfessionalsDrawer';
+import { AttendanceDrawer } from '../components/agenda/AttendanceDrawer';
+import { MobileTabBar } from '../components/ui/MobileTabBar';
+import { cn } from '../src/lib/utils';
+import { useAppointments } from '../hooks/useAppointments';
 
 interface Appointment {
     id: string;
     patient_id: string;
-    professional_id: string;  // ✅ PADRONIZAÇÃO: professional_id
+    professional_id: string;
     date: string;
     duration: number;
     type: string;
-    status: 'PENDING' | 'CONFIRMED' | 'ARRIVED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW';
+    status: 'PENDING' | 'CONFIRMED' | 'ARRIVED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW' | 'ADMINISTRATIVE';
     notes?: string;
     patient_name?: string;
     patient_phone?: string;
@@ -34,13 +40,46 @@ interface Appointment {
 }
 
 const STATUS_CONFIG = {
-    PENDING: { label: 'Agendado', color: 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-l-4 border-slate-400', icon: Clock },
-    CONFIRMED: { label: 'Confirmado', color: 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-l-4 border-blue-500', icon: CheckCircle },
-    ARRIVED: { label: 'Chegou', color: 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-l-4 border-green-500 animate-pulse', icon: UserCheck },
-    IN_PROGRESS: { label: 'Em Atendimento', color: 'bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 border-l-4 border-purple-500', icon: User },
-    COMPLETED: { label: 'Atendido', color: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border-l-4 border-emerald-500', icon: CheckCircle },
-    CANCELLED: { label: 'Cancelado', color: 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border-l-4 border-red-500 opacity-60', icon: XCircle },
-    NO_SHOW: { label: 'Faltou', color: 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 border-l-4 border-orange-500', icon: AlertCircle }
+    PENDING: {
+        label: 'Agendado',
+        color: 'bg-slate-50/80 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border border-slate-200/50 dark:border-slate-700/50 backdrop-blur-md',
+        icon: Clock
+    },
+    CONFIRMED: {
+        label: 'Confirmado',
+        color: 'bg-blue-50/80 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border border-blue-200/50 dark:border-blue-700/50 backdrop-blur-md',
+        icon: CheckCircle
+    },
+    ARRIVED: {
+        label: 'Chegou',
+        color: 'bg-green-50/80 dark:bg-green-900/20 text-green-700 dark:text-green-300 border border-green-200/50 dark:border-green-700/50 backdrop-blur-md animate-pulse',
+        icon: UserCheck
+    },
+    IN_PROGRESS: {
+        label: 'Em Atendimento',
+        color: 'bg-purple-50/80 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 border border-purple-200/50 dark:border-purple-700/50 backdrop-blur-md',
+        icon: User
+    },
+    COMPLETED: {
+        label: 'Atendido',
+        color: 'bg-emerald-50/80 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border border-emerald-200/50 dark:border-emerald-700/50 backdrop-blur-md',
+        icon: CheckCircle
+    },
+    CANCELLED: {
+        label: 'Cancelado',
+        color: 'bg-red-50/80 dark:bg-red-900/20 text-red-700 dark:text-red-300 border border-red-200/50 dark:border-red-700/50 backdrop-blur-md opacity-60',
+        icon: XCircle
+    },
+    NO_SHOW: {
+        label: 'Faltou',
+        color: 'bg-orange-50/80 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 border border-orange-200/50 dark:border-orange-700/50 backdrop-blur-md',
+        icon: AlertCircle
+    },
+    ADMINISTRATIVE: {
+        label: 'Compromisso',
+        color: 'bg-amber-50/80 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border border-amber-200/50 dark:border-amber-700/50 backdrop-blur-md',
+        icon: Briefcase
+    }
 };
 
 const Agenda: React.FC = () => {
@@ -48,9 +87,7 @@ const Agenda: React.FC = () => {
     const isMobile = useMediaQuery('(max-width: 768px)');
     const [currentDate, setCurrentDate] = useState(new Date());
     const [viewMode, setViewMode] = useState<'day' | 'week' | 'month'>('day');
-    const [appointments, setAppointments] = useState<Appointment[]>([]);
     const [professionals, setProfessionals] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
     const [filterProfessional, setFilterProfessional] = useState<string>('ALL');
 
     // Appointment Sheet State
@@ -58,90 +95,63 @@ const Agenda: React.FC = () => {
     const [selectedSlot, setSelectedSlot] = useState<{ date: Date; time: string } | undefined>(undefined);
     const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | undefined>(undefined);
 
+    // Tasks, Flow and Professionals Drawer State
+    const [showTasks, setShowTasks] = useState(false);
+    const [showFlow, setShowFlow] = useState(false);
+    const [showProfessionals, setShowProfessionals] = useState(false);
+
+    // ✅ HOOK CENTRALIZADO DE AGENDAMENTOS (Sincronização Automática)
+
+    // ... (inside component) ...
+
+    // Date Range Calculation (Memoized)
+    const dateRange = React.useMemo(() => {
+        let start, end;
+        if (viewMode === 'month') {
+            start = startOfWeek(startOfMonth(currentDate), { weekStartsOn: 0 });
+            end = endOfWeek(endOfMonth(currentDate), { weekStartsOn: 0 });
+        } else if (viewMode === 'week') {
+            start = startOfWeek(currentDate, { weekStartsOn: 1 });
+            end = endOfWeek(currentDate, { weekStartsOn: 1 });
+        } else {
+            start = startOfDay(currentDate);
+            end = startOfDay(addDays(currentDate, 1));
+        }
+        return { start, end };
+    }, [currentDate, viewMode]);
+
+    // Use React Query Hook
+    const {
+        appointments,
+        isLoading: isLoadingAppointments,
+        invalidateAppointments
+    } = useAppointments(dateRange.start, dateRange.end, filterProfessional);
+
+    // Load Professionals (Manual Fetch - Static)
     useEffect(() => {
-        loadData();
-    }, [currentDate, profile?.clinic_id, filterProfessional, viewMode]);
-
-    // Simplified Mobile ViewMode Logic:
-    // User can manually switch, but we default/force logic if needed. 
-    // Actually, keeping user choice is better. 'Week' on mobile means DateStrip + Day details.
-
-    const loadData = async () => {
-        if (!profile?.clinic_id) return;
-        setLoading(true);
-
-        try {
-            // ✅ UNIFICAÇÃO: Load professionals usando is_clinical_provider
+        const loadProfessionals = async () => {
+            if (!profile?.clinic_id) return;
             const { data: profsData } = await supabase
                 .from('users')
                 .select('id, name, agenda_color, photo_url, specialty, cro, is_clinical_provider')
                 .eq('clinic_id', profile.clinic_id)
-                .eq('is_clinical_provider', true)  // ✅ Filtro correto
+                .eq('is_clinical_provider', true)
                 .eq('active', true)
                 .order('name');
             setProfessionals(profsData || []);
+        };
+        loadProfessionals();
+    }, [profile?.clinic_id]);
 
-            // Determine Date Range based on View Mode
-            let startDate, endDate;
-            if (viewMode === 'month') {
-                startDate = startOfWeek(startOfMonth(currentDate), { weekStartsOn: 0 }); // Include pre/post month days
-                endDate = endOfWeek(endOfMonth(currentDate), { weekStartsOn: 0 });
-            } else if (viewMode === 'week') {
-                startDate = startOfWeek(currentDate, { weekStartsOn: 1 });
-                endDate = endOfWeek(currentDate, { weekStartsOn: 1 });
-            } else {
-                startDate = startOfDay(currentDate);
-                endDate = startOfDay(addDays(currentDate, 1));
-            }
+    const loading = isLoadingAppointments; // Compatibility alias
 
-            // ✅ PADRONIZAÇÃO: Query usa professional_id
-            let query = supabase
-                .from('appointments')
-                .select(`
-                    *,
-                    patients!appointments_patient_id_fkey(name, phone),
-                    professional:users!appointments_professional_id_fkey(
-                        id,
-                        name,
-                        agenda_color,
-                        photo_url,
-                        specialty
-                    )
-                `)
-                .eq('clinic_id', profile.clinic_id)
-                .gte('date', startDate.toISOString())
-                .lt('date', endDate.toISOString())
-                .in('type', ['EVALUATION', 'TREATMENT', 'RETURN', 'URGENCY'])
-                .order('date');
-
-            if (filterProfessional !== 'ALL') {
-                query = query.eq('professional_id', filterProfessional);  // ✅ PADRONIZAÇÃO
-            }
-
-            const { data: appts, error } = await query;
-            if (error) throw error;
-
-            const enrichedAppts = (appts || []).map((apt: any) => ({
-                ...apt,
-                // Ensure robustness against uppercase/lowercase enum differences
-                type: apt.type?.toUpperCase() || 'EVALUATION',
-                status: apt.status?.toUpperCase() || 'PENDING',
-                patient_name: apt.patients?.name || 'Paciente Sem Nome',
-                patient_phone: apt.patients?.phone || '',
-                // ✅ PADRONIZAÇÃO: Usa professional (não doctor)
-                doctor_name: apt.professional?.name || 'Profissional',
-                doctor_color: apt.professional?.agenda_color || '#3B82F6',
-                doctor_specialty: apt.professional?.specialty || ''
-            }));
-
-            setAppointments(enrichedAppts);
-        } catch (error) {
-            console.error('Error loading agenda:', error);
-            toast.error('Erro ao carregar agenda');
-        } finally {
-            setLoading(false);
-        }
+    // Manter a função loadData apenas para compatibilidade ou refresh manual
+    const loadData = () => {
+        invalidateAppointments();
     };
+
+    // Auto-select user's own agenda
+    // ... preserved ...
 
     const handleNavigate = (direction: 'prev' | 'next') => {
         const amount = direction === 'next' ? 1 : -1;
@@ -168,9 +178,7 @@ const Agenda: React.FC = () => {
         setIsSheetOpen(true);
     };
 
-    // Render Day View (Classic Timeline)
     const renderDayView = () => {
-        // Expanded to 06:00 - 23:00 to catch early/shifted appointments
         const startHour = 6;
         const timeSlots = Array.from({ length: 17 }, (_, i) => `${String(i + startHour).padStart(2, '0')}:00`);
 
@@ -179,12 +187,9 @@ const Agenda: React.FC = () => {
                 <div className="relative min-h-[1700px] w-full">
                     {timeSlots.map((time, index) => (
                         <div key={time} className="absolute w-full flex" style={{ top: `${index * 100}px`, height: '100px' }}>
-                            {/* Time Label */}
                             <div className="w-14 md:w-20 flex-shrink-0 flex flex-col items-center pt-2 border-r border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 sticky left-0 z-10 backdrop-blur-sm">
                                 <span className="text-xs font-bold text-slate-500 dark:text-slate-400">{time}</span>
                             </div>
-
-                            {/* Grid Line content */}
                             <div
                                 className="flex-1 border-b border-dashed border-slate-100 dark:border-slate-800 relative group"
                                 onClick={() => handleSlotClick(time, currentDate)}
@@ -194,35 +199,29 @@ const Agenda: React.FC = () => {
                         </div>
                     ))}
 
-                    {/* Appointments Overlay */}
                     {appointments.map(apt => {
-                        // In Day view (or DateStrip active day), we filter for currentDate
                         if (!isSameDay(parseISO(apt.date), currentDate)) return null;
-
-                        // Ensure we respect the grid start time
-                        if (!timeSlots.some(t => t === format(parseISO(apt.date), 'HH:mm'))) {
-                            // Optional: Could log or show "out of bounds" warning
-                            // return null; 
-                        }
-
                         const aptDate = parseISO(apt.date);
                         const aptHour = parseInt(format(aptDate, 'HH'));
                         const gridStartIndex = aptHour - startHour;
-
-                        // Safety check: if before startHour, don't crash, just hide or cap? 
-                        // If we return null, it's invisible. 
-                        // With startHour=6, 09:00->06:00 (UTC Shift) will be at index 0. Visible!
                         if (gridStartIndex < 0) return null;
 
-                        const topPos = gridStartIndex * 100; // 100px per hour
-                        const height = (apt.duration / 60) * 100; // proportional height
+                        const topPos = gridStartIndex * 100;
+                        const height = (apt.duration / 60) * 100;
                         const config = STATUS_CONFIG[apt.status] || STATUS_CONFIG.PENDING;
 
                         return (
                             <div
                                 key={apt.id}
                                 onClick={(e) => { e.stopPropagation(); handleAppointmentClick(apt); }}
-                                className={`absolute left-16 right-2 md:left-24 md:right-4 p-2 rounded-lg text-xs md:text-sm cursor-pointer shadow-sm transition-all hover:scale-[1.01] hover:shadow-md hover:z-20 ${config.color} backdrop-blur-sm bg-opacity-90`}
+                                className={cn(
+                                    "absolute left-16 right-2 md:left-24 md:right-4",
+                                    "p-3 rounded-[20px] text-xs md:text-sm cursor-pointer",
+                                    "shadow-[0_8px_30px_rgb(0,0,0,0.04)]",
+                                    "transition-all duration-300",
+                                    "hover:scale-[1.02] hover:shadow-[0_12px_40px_rgb(0,0,0,0.08)] hover:z-20 hover:-translate-y-1",
+                                    config.color
+                                )}
                                 style={{
                                     top: `${topPos + 2}px`,
                                     height: `${height - 4}px`,
@@ -230,12 +229,12 @@ const Agenda: React.FC = () => {
                                 }}
                             >
                                 <div className="flex justify-between items-start">
-                                    <div className="font-bold truncate pr-2">
+                                    <div className="font-semibold truncate pr-2">
                                         {format(parseISO(apt.date), 'HH:mm')} - {apt.patient_name}
                                     </div>
-                                    <config.icon className="w-3 h-3 md:w-4 md:h-4 opacity-70" />
+                                    <config.icon className="w-4 h-4 opacity-70" />
                                 </div>
-                                <div className="text-[10px] md:text-xs opacity-80 truncate flex gap-1 mt-0.5 items-center">
+                                <div className="text-[10px] md:text-xs opacity-80 truncate flex gap-1 mt-1 items-center">
                                     <User className="w-3 h-3 inline" /> {apt.doctor_name}
                                 </div>
                                 {apt.patient_phone && (
@@ -244,7 +243,7 @@ const Agenda: React.FC = () => {
                                     </div>
                                 )}
                                 {apt.type === 'EVALUATION' && (
-                                    <span className="absolute bottom-1 right-2 px-1.5 py-0.5 bg-yellow-100 text-yellow-800 rounded text-[9px] font-bold border border-yellow-200">
+                                    <span className="absolute bottom-2 right-2 px-2 py-0.5 bg-yellow-100/80 text-yellow-800 rounded-lg text-[9px] font-bold border border-yellow-200/50 backdrop-blur-sm">
                                         AVALIAÇÃO
                                     </span>
                                 )}
@@ -255,15 +254,6 @@ const Agenda: React.FC = () => {
             </div>
         );
     };
-
-    // Force Week view on large screens initially
-    useEffect(() => {
-        // Only run once on mount
-        const width = window.innerWidth;
-        if (width >= 1024) {
-            setViewMode('week');
-        }
-    }, []);
 
     const renderContent = () => {
         if (loading) {
@@ -302,15 +292,13 @@ const Agenda: React.FC = () => {
             );
         }
 
-        // Default: Day View (or Mobile Week View which is DateStrip + DayView)
         return renderDayView();
     };
 
     return (
-        <div className="h-[calc(100vh-4rem)] flex flex-col bg-slate-50 dark:bg-slate-950 overflow-hidden relative">
-            <div className="flex h-full w-full overflow-hidden bg-slate-50 dark:bg-slate-950">
-                {/* Main Agenda Area */}
-                <main className="flex-1 flex flex-col overflow-hidden border-r border-gray-200 dark:border-slate-800 relative">
+        <div className="h-[calc(100vh-4rem)] flex flex-col bg-[#F5F5F7] dark:bg-slate-950 overflow-hidden relative">
+            <div className="flex h-full w-full overflow-hidden bg-[#F5F5F7] dark:bg-slate-950">
+                <main className="flex-1 flex flex-col overflow-hidden border-r border-gray-200/50 dark:border-slate-800/50 relative">
                     <AgendaHeader
                         currentDate={currentDate}
                         onNavigate={handleNavigate}
@@ -328,26 +316,24 @@ const Agenda: React.FC = () => {
                             setIsSheetOpen(true);
                         }}
                         professionals={professionals}
+                        onOpenTasks={() => setShowTasks(true)}
+                        onOpenFlow={() => setShowFlow(true)}
+                        onOpenProfessionals={() => setShowProfessionals(true)}
+                        onNewAppointment={handleCreateClick}
                     />
 
-                    {/* Mobile Date Strip (Only visible in Week mode on Mobile) */}
-                    {isMobile && viewMode === 'week' && (
-                        <DateStrip
+                    {isMobile && (
+                        <DateStripMobile
                             currentDate={currentDate}
-                            onSelectDate={setCurrentDate}
+                            onDateChange={setCurrentDate}
+                            appointmentDates={appointments.map(apt => parseISO(apt.date))}
                         />
                     )}
 
-                    {/* SCROLLABLE TIMELINE AREA */}
                     <div className="flex-1 overflow-hidden relative flex flex-col">
                         {renderContent()}
                     </div>
                 </main>
-
-                {/* Sidebar da Fila de Espera (Apenas Desktop > 1024px) */}
-                <aside className="hidden lg:flex w-96 flex-col bg-white/50 backdrop-blur-lg dark:bg-slate-900/50 shadow-xl border-l border-slate-200 dark:border-slate-800 z-20">
-                    <AttendanceSidebar />
-                </aside>
             </div>
 
             <AppointmentSheet
@@ -358,14 +344,33 @@ const Agenda: React.FC = () => {
                 onSuccess={loadData}
             />
 
-            {/* Mobile FAB */}
-            <button
-                onClick={handleCreateClick}
-                className="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-blue-600 text-white rounded-full shadow-xl shadow-blue-600/30 flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-50"
-                aria-label="Novo Agendamento"
-            >
-                <Plus size={28} />
-            </button>
+            <TasksDrawer
+                isOpen={showTasks}
+                onClose={() => setShowTasks(false)}
+            />
+
+            <ProfessionalsDrawer
+                isOpen={showProfessionals}
+                onClose={() => setShowProfessionals(false)}
+                professionals={professionals}
+                selectedId={filterProfessional}
+                onSelect={(id) => setFilterProfessional(id)}
+            />
+
+            <AttendanceDrawer
+                isOpen={showFlow}
+                onClose={() => setShowFlow(false)}
+            />
+
+            {!isMobile && <FloatingActionButton onClick={handleCreateClick} />}
+
+            {isMobile && (
+                <MobileTabBar
+                    onMainAction={handleCreateClick}
+                    onAction4={() => setShowFlow(true)}
+                    onAction5={() => setShowTasks(true)}
+                />
+            )}
         </div>
     );
 };

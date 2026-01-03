@@ -1,7 +1,6 @@
 import React, { useEffect } from 'react';
 import { useSearchStore } from '../../stores/useSearchStore';
-import { CommandDialog } from './command';
-import { DialogTitle } from './dialog';
+import { Dialog, DialogContent, DialogTitle } from './dialog';
 import { SearchContent } from './SearchContent';
 
 export function GlobalSearch() {
@@ -21,9 +20,11 @@ export function GlobalSearch() {
     }, [isOpen, setOpen]);
 
     return (
-        <CommandDialog open={isOpen} onOpenChange={setOpen}>
-            <DialogTitle className="sr-only">Busca Global</DialogTitle>
-            <SearchContent onSelectResult={() => setOpen(false)} />
-        </CommandDialog>
+        <Dialog open={isOpen} onOpenChange={setOpen}>
+            <DialogContent className="max-w-full w-full h-full p-0 border-0 bg-transparent shadow-none">
+                <DialogTitle className="sr-only">Busca Global</DialogTitle>
+                <SearchContent onSelectResult={() => setOpen(false)} />
+            </DialogContent>
+        </Dialog>
     );
 }

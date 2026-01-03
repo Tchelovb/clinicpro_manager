@@ -9,7 +9,8 @@ import {
     Stethoscope,
     Package,
     Activity,
-    Zap
+    Zap,
+    ClipboardList
 } from 'lucide-react';
 
 // Configurações Gerais v1.1
@@ -64,6 +65,30 @@ const Settings = () => {
                     path: '/settings/financial',
                     color: 'text-green-600',
                     bgColor: 'bg-green-50'
+                },
+                {
+                    icon: ShieldCheck, // Reutilizando ícone, ou Building2 se preferir
+                    title: 'Papelaria Jurídica',
+                    description: 'Edite contratos, TCLEs e protocolos de documentos.',
+                    path: '/settings/documents',
+                    color: 'text-indigo-600',
+                    bgColor: 'bg-indigo-50'
+                },
+                {
+                    icon: ClipboardList,
+                    title: 'Anamnese Elite (Lab)',
+                    description: 'Teste os novos formulários inteligentes e análise de risco.',
+                    path: '/anamnesis-lab',
+                    color: 'text-rose-600',
+                    bgColor: 'bg-rose-50'
+                },
+                {
+                    icon: Package, // Usando Package ou Pill se disponível (Pill não importada acima, Activity serve ou trago Pill)
+                    title: 'Farmacologia & Receitas',
+                    description: 'Gerencie seu banco de dados de medicamentos e posologias padrão.',
+                    path: '/settings/medications',
+                    color: 'text-pink-600',
+                    bgColor: 'bg-pink-50'
                 }
             ]
         }

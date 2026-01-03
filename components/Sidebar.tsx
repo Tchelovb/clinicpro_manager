@@ -1,343 +1,218 @@
-import React, { useState } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
-import { useAuth } from "../contexts/AuthContext";
+import React, { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
-    LayoutDashboard,
-    Users,
-    Calendar,
-    DollarSign,
-    PieChart,
-    Settings,
-    FileText,
-    LogOut,
-    ChevronLeft,
-    ChevronRight,
-    Menu,
-    Megaphone,
-    TrendingUp,
-    BarChart3,
-    Brain,
-    Sparkles,
-    UserCog,
-    Building2,
-    Plus,
-    Gamepad2,
-    Rocket,
-    CreditCard,
-    Landmark,
-    Trello,
-    ShoppingBag,
-    Activity
-} from "lucide-react";
-import { CreateClinicModal } from "./CreateClinicModal";
-import { ClinicSwitcher } from "./ClinicSwitcher";
+    Search, Calendar, Users, Landmark, Target, CreditCard,
+    Settings, LogOut, MoreHorizontal, LayoutDashboard,
+    Activity, FileText, ChevronRight, Sun, Moon, Scroll
+} from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuTrigger,
+} from './ui/dropdown-menu';
+import { useSearchStore } from '../stores/useSearchStore';
 
 interface SidebarProps {
-    isCollapsed: boolean;
-    toggleSidebar: () => void;
+    isExpanded: boolean;
+    setIsExpanded: (val: boolean) => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleSidebar }) => {
-    const { signOut, profile } = useAuth();
+export const Sidebar: React.FC<SidebarProps> = ({ isExpanded, setIsExpanded }) => {
     const navigate = useNavigate();
-    const [showCreateClinic, setShowCreateClinic] = useState(false);
+    const { pathname } = useLocation();
+    const { profile, signOut } = useAuth();
+    const { theme, toggleTheme } = useTheme();
+    const { setOpen: setSearchOpen } = useSearchStore();
+    const [loadingLogout, setLoadingLogout] = useState(false);
 
-    const handleLogout = async () => {
+    // 1. SMART ALGORITHM (Simulated Intelligence)
+    // Priority modules based on Dr. Marcelo's high-ticket workflow
+    const PRIORITY_MODULES = [
+        { path: '/search', label: 'Pesquisar', icon: Search },
+        { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+        { path: '/agenda', label: 'Agenda', icon: Calendar },
+        { path: '/patients', label: 'Pacientes', icon: Users },
+        { path: '/financial', label: 'Financeiro CFO', icon: Landmark },
+        { path: '/documents', label: 'Docs & Jurídico', icon: Scroll },
+        { path: '/pipeline', label: 'CRM & Leads', icon: Target },
+        { path: '/settings', label: 'Configurações', icon: Settings },
+    ];
+
+    // Secondary modules (Hidden in "More")
+    const SECONDARY_MODULES = [
+        { path: '/sales', label: 'Vendas', icon: CreditCard },
+        { path: '/clinical-production', label: 'Produção', icon: Activity },
+        { path: '/budgets', label: 'Orçamentos', icon: FileText },
+    ];
+
+    const isActive = (path: string) => pathname === path || pathname.startsWith(path + '/');
+
+    const handleSignOut = async () => {
+        setLoadingLogout(true);
         try {
-            // 1. Sign out from Supabase
             await signOut();
-
-            // 2. Clear any local storage (optional, but good practice)
-            localStorage.removeItem('supabase.auth.token');
-            sessionStorage.clear();
-
-            // 3. Force redirect to login
-            window.location.href = '/login';
+            navigate('/login');
         } catch (error) {
-            console.error('Erro ao fazer logout:', error);
-            // Force redirect anyway
-            window.location.href = '/login';
+            console.error('Error signing out', error);
+        } finally {
+            setLoadingLogout(false);
         }
     };
 
-    // =====================================================
-    // MENU OPERACIONAL - ESTRUTURA CATEGORIZADA
-    // Separação Clara: ATAQUE vs DEFESA
-    // =====================================================
-    const OPERATIONAL_SECTIONS = [
-        // --- BLOCO 1: COMERCIAL / VENDAS (Ataque - Fazer Dinheiro) ---
-        {
-            category: "Comercial",
-            items: [
-                { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-                { path: "/clinical-production", label: "Produção", icon: Activity, highlight: true },
-                { path: "/agenda", label: "Agenda", icon: Calendar },
-                {
-                    path: "/pipeline-ghl",
-                    label: "Pipeline CRM",
-                    icon: Trello,
-                    highlight: true
-                },
-                { path: "/crm", label: "Leads", icon: Megaphone },
-            ]
-        },
-
-        // --- BLOCO 2: VENDAS (Terminal de Pagamento) ---
-        {
-            category: "Vendas",
-            items: [
-                {
-                    path: "/sales",
-                    label: "Terminal de Vendas",
-                    icon: CreditCard,
-                    highlight: true,
-                    desc: "Checkout e recebimentos"
-                },
-                { path: "/budgets", label: "Orçamentos", icon: FileText },
-            ]
-        },
-
-        // --- BLOCO 3: CLÍNICO (Operação Técnica) ---
-        {
-            category: "Clínico",
-            items: [
-                { path: "/patients", label: "Pacientes", icon: Users },
-                { path: "/patients", label: "Pacientes", icon: Users },
-                { path: "/documents", label: "Central Docs", icon: FileText },
-            ]
-        },
-
-        // --- BLOCO 4: GESTÃO / FINANCEIRO (Defesa - Proteger Dinheiro) ---
-        {
-            category: "Gestão",
-            items: [
-                {
-                    path: "/financial",
-                    label: "Financeiro & Caixa",
-                    icon: Landmark,
-                    desc: "Fluxo de caixa e DRE"
-                },
-                { path: "/receivables", label: "Contas a Receber", icon: BarChart3 },
-                ...(profile?.role === 'ADMIN' || profile?.role === 'MANAGER' ? [{
-                    path: "/professional-financial",
-                    label: "Extrato Profissional",
-                    icon: UserCog
-                }] : []),
-                ...(profile?.role === 'ADMIN' || profile?.role === 'MANAGER' ? [{
-                    path: "/cfo",
-                    label: "CFO Dashboard",
-                    icon: TrendingUp,
-                    highlight: true
-                }] : []),
-                { path: "/reports", label: "Relatórios", icon: PieChart },
-                { path: "/settings", label: "Configurações", icon: Settings },
-            ]
-        },
-
-        // --- BLOCO 5: INTELIGÊNCIA (IA) ---
-        {
-            category: "Inteligência",
-            items: [
-                {
-                    path: "/intelligence/dashboard",
-                    label: "Analytics & BI",
-                    icon: Brain,
-                    highlight: true,
-                    desc: "Dashboard Executivo"
-                },
-                {
-                    path: "/chat-bos",
-                    label: "ChatBOS",
-                    icon: Sparkles,
-                    highlight: true,
-                    desc: "Assistente IA"
-                },
-                ...(profile?.role === 'ADMIN' ? [{
-                    path: "/dashboard/team-command",
-                    label: "Gestão de Equipe",
-                    icon: UserCog,
-                    highlight: true,
-                    adminOnly: true
-                }] : []),
-            ]
-        }
-    ];
-
-    // =====================================================
-    // MENU MASTER (CEO / Holding) - LIMPO E ORGANIZADO
-    // =====================================================
-    const MASTER_ITEMS = [
-        {
-            path: "/chat-bos",
-            label: "ChatBOS",
-            icon: Sparkles,
-            highlight: true,
-            desc: "Assistente IA Executivo"
-        },
-        {
-            path: "/clinical-production",
-            label: "Produção",
-            icon: Activity,
-            highlight: true,
-            desc: "Torre de Controle"
-        },
-        {
-            path: "/dashboard/network",
-            label: "Rede Real",
-            icon: Building2,
-            highlight: true,
-            desc: "Gestão de franquias e unidades"
-        },
-        {
-            path: "/dashboard/game",
-            label: "Tycoon Game",
-            icon: Gamepad2,
-            highlight: true,
-            desc: "Simuladores e cenários"
-        },
-        {
-            path: "/settings",
-            label: "Configurações",
-            icon: Settings
-        }
-    ];
-
-    // Selecionar menu baseado no role
-    const menuSections = profile?.role === 'MASTER' ? [{ category: "Master", items: MASTER_ITEMS }] : OPERATIONAL_SECTIONS;
-
     return (
-        <div className="flex flex-col h-full bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 transition-all duration-300">
-
-            {/* Header / Clinic Switcher */}
-            <div className="h-auto min-h-16 flex items-center justify-between px-2 py-2 border-b border-gray-100 dark:border-gray-800 bg-gradient-to-r from-blue-600 to-purple-600">
-                {!isCollapsed && (
-                    <div className="flex-1">
-                        <ClinicSwitcher />
+        <aside
+            className={`
+                hidden md:flex flex-col fixed left-0 top-0 h-screen 
+                bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl
+                border-r border-slate-200 dark:border-slate-800 z-50 
+                transition-all duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1)]
+                ${isExpanded ? 'w-64 shadow-2xl' : 'w-20 shadow-sm'}
+            `}
+            onMouseEnter={() => setIsExpanded(true)}
+            onMouseLeave={() => setIsExpanded(false)}
+        >
+            {/* LOGO AREA */}
+            <div className="h-20 flex items-center justify-center border-b border-slate-100 dark:border-slate-800/50 relative overflow-hidden shrink-0">
+                <div className={`flex items-center gap-3 transition-opacity duration-300 ${isExpanded ? 'opacity-100' : 'opacity-0 absolute'}`}>
+                    <div className="w-9 h-9 bg-gradient-to-tr from-violet-600 to-indigo-600 rounded-xl flex items-center justify-center text-white font-bold shadow-lg shadow-violet-500/20">
+                        CP
+                    </div>
+                    <div className="flex flex-col">
+                        <span className="text-sm font-bold text-slate-900 dark:text-white tracking-tight">ClinicPro</span>
+                        <span className="text-[10px] text-slate-500 font-medium tracking-widest uppercase">Elite OS</span>
+                    </div>
+                </div>
+                {!isExpanded && (
+                    <div className="w-9 h-9 bg-gradient-to-tr from-violet-600 to-indigo-600 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-md">
+                        CP
                     </div>
                 )}
-                <button
-                    onClick={toggleSidebar}
-                    className="p-1.5 rounded-lg hover:bg-white/20 transition-colors text-white"
-                >
-                    {isCollapsed ? <Menu size={20} /> : <ChevronLeft size={20} />}
-                </button>
             </div>
 
-            {/* Navigation Items - Categorized */}
-            <nav className="flex-1 py-4 overflow-y-auto overflow-x-hidden space-y-4 px-2">
-                {menuSections.map((section, sectionIdx) => (
-                    <div key={sectionIdx} className="space-y-1">
-                        {/* Category Header */}
-                        {!isCollapsed && section.category && (
-                            <p className="px-3 text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
-                                {section.category}
-                            </p>
-                        )}
+            {/* ZONE 2: SMART MODULES (Predictive) */}
+            <nav className="flex-1 px-3 space-y-1 overflow-y-auto px-2">
+                <div className={`px-2 mb-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest transition-opacity duration-300 ${isExpanded ? 'opacity-100' : 'opacity-0 hidden'}`}>
+                    Frequentes
+                </div>
 
-                        {/* Category Items */}
-                        {section.items.map((item) => (
-                            <NavLink
+                {PRIORITY_MODULES.map((item) => {
+                    const active = isActive(item.path);
+                    return (
+                        <button
+                            key={item.path}
+                            onClick={() => navigate(item.path)}
+                            className={`
+                                w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200 group relative
+                                ${active
+                                    ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/20'
+                                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-slate-200'
+                                }
+                            `}
+                        >
+                            <item.icon
+                                size={20}
+                                strokeWidth={active ? 2.5 : 2}
+                                className={`min-w-[20px] transition-colors ${active ? 'text-white' : 'text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300'}`}
+                            />
+                            <span className={`
+                                text-sm font-medium whitespace-nowrap transition-all duration-300 origin-left 
+                                ${isExpanded ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4 absolute left-14 pointer-events-none'}
+                            `}>
+                                {item.label}
+                            </span>
+
+                            {/* Tooltip for collapsed state */}
+                            {!isExpanded && (
+                                <div className="absolute left-full ml-4 px-3 py-1.5 bg-slate-900 text-white text-xs font-medium rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none shadow-xl transformtranslate-y-1/2">
+                                    {item.label}
+                                </div>
+                            )}
+                        </button>
+                    );
+                })}
+
+                <div className="my-4 border-t border-slate-100 dark:border-slate-800/50 mx-2" />
+
+                {/* ZONE 3: EXPANSION & SECONDARY */}
+                <div className={`px-2 mb-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest transition-opacity duration-300 ${isExpanded ? 'opacity-100' : 'opacity-0 hidden'}`}>
+                    Mais Opções
+                </div>
+
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <button className={`
+                            w-full flex items-center gap-3 px-3 py-2.5 rounded-xl 
+                            text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 
+                            transition-all duration-200 group
+                        `}>
+                            <MoreHorizontal size={20} className="min-w-[20px]" />
+                            <span className={`text-sm font-medium transition-all duration-300 ${isExpanded ? 'opacity-100' : 'opacity-0 absolute pointer-events-none'}`}>
+                                Menu Completo
+                            </span>
+                        </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent side="right" align="start" className="w-56 ml-2 p-2">
+                        <DropdownMenuLabel className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                            Acessórios
+                        </DropdownMenuLabel>
+                        {SECONDARY_MODULES.map((item) => (
+                            <DropdownMenuItem
                                 key={item.path}
-                                to={item.path}
-                                className={({ isActive }) => {
-                                    const baseClasses = "flex items-center px-3 py-2.5 rounded-lg transition-all duration-200 group relative";
-
-                                    // Highlight items get special styling
-                                    if (item.highlight) {
-                                        return `${baseClasses} ${isActive
-                                            ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold shadow-lg"
-                                            : "bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 text-purple-700 dark:text-purple-300 hover:from-purple-100 hover:to-indigo-100 dark:hover:from-purple-900/30 dark:hover:to-indigo-900/30 font-semibold border border-purple-200 dark:border-purple-800"
-                                            }`;
-                                    }
-
-                                    // Regular items
-                                    return `${baseClasses} ${isActive
-                                        ? "bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 font-medium"
-                                        : "hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white"
-                                        }`;
-                                }}
+                                onClick={() => navigate(item.path)}
+                                className="flex items-center gap-2 cursor-pointer rounded-lg py-2 focus:bg-violet-50 dark:focus:bg-violet-900/20 focus:text-violet-700 dark:focus:text-violet-300"
                             >
-                                <item.icon
-                                    size={20}
-                                    className={`shrink-0 transition-colors ${isCollapsed ? "mx-auto" : "mr-3"
-                                        } ${item.highlight ? "animate-pulse" : ""}`}
-                                />
-                                {!isCollapsed && (
-                                    <span className="truncate animate-in fade-in duration-200">
-                                        {item.label}
-                                    </span>
-                                )}
-
-                                {/* Tooltip for collapsed state */}
-                                {isCollapsed && (
-                                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-opacity">
-                                        {item.label}
-                                    </div>
-                                )}
-                            </NavLink>
+                                <item.icon size={16} />
+                                <span>{item.label}</span>
+                            </DropdownMenuItem>
                         ))}
-                    </div>
-                ))}
+                    </DropdownMenuContent>
+                </DropdownMenu>
+
             </nav>
 
+            {/* FOOTER: PROFILE & THEME */}
+            <div className="p-4 border-t border-slate-100 dark:border-slate-800 shrink-0 space-y-1">
+                {/* Theme Toggle */}
+                <button
+                    onClick={toggleTheme}
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors ${!isExpanded && 'justify-center'}`}
+                >
+                    {theme === 'dark' ? <Sun size={20} className="text-amber-400" /> : <Moon size={20} />}
+                    <span className={`text-sm font-medium transition-opacity duration-300 ${isExpanded ? 'opacity-100' : 'opacity-0 absolute'}`}>
+                        {theme === 'dark' ? 'Modo Claro' : 'Modo Escuro'}
+                    </span>
+                </button>
 
-
-            {/* MASTER ONLY: Expandir Rede Button */}
-            {profile?.role === 'MASTER' && !isCollapsed && (
-                <div className="px-3 py-2 border-t border-gray-100 dark:border-gray-800">
-                    <button
-                        onClick={() => setShowCreateClinic(true)}
-                        className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2 shadow-lg"
-                    >
-                        <Rocket className="w-5 h-5" />
-                        Expandir Rede
-                    </button>
-                </div>
-            )}
-
-            {/* User Profile & Logout */}
-            <div className="border-t border-gray-100 dark:border-gray-800 p-3">
-                <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} gap-2`}>
-                    {!isCollapsed && (
-                        <div className="flex items-center gap-2 overflow-hidden">
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center shrink-0 text-xs font-bold text-white shadow-md">
-                                {profile?.name?.substring(0, 2).toUpperCase() || 'US'}
+                {/* Profile Widget */}
+                <button
+                    onClick={() => navigate('/settings')}
+                    className={`w-full flex items-center gap-3 p-2 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all ${!isExpanded && 'justify-center'}`}
+                >
+                    <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden ring-2 ring-white dark:ring-slate-800 shadow-sm shrink-0">
+                        {profile?.avatar_url ? (
+                            <img src={profile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                        ) : (
+                            <div className="w-full h-full flex items-center justify-center text-xs font-bold text-slate-500">
+                                {profile?.name?.substring(0, 2).toUpperCase() || 'DR'}
                             </div>
-                            <div className="flex flex-col min-w-0">
-                                <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                                    {profile?.name || 'Usuário'}
-                                </span>
-                                <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                                    {profile?.role || 'Usuário'}
-                                </span>
-                            </div>
+                        )}
+                    </div>
+                    <div className={`overflow-hidden transition-all duration-300 ${isExpanded ? 'w-auto opacity-100' : 'w-0 opacity-0'}`}>
+                        <div className="flex flex-col items-start">
+                            <p className="text-sm font-bold text-slate-800 dark:text-white truncate max-w-[140px]">
+                                {profile?.name || 'Doutor'}
+                            </p>
+                            <p className="text-[10px] text-slate-500 uppercase tracking-wider">
+                                {profile?.role || 'Acesso Total'}
+                            </p>
                         </div>
-                    )}
-
-                    {/* Logout Button - Always visible */}
-                    <button
-                        onClick={handleLogout}
-                        className={`p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all group ${isCollapsed ? 'w-full' : ''
-                            }`}
-                        title="Sair do Sistema"
-                    >
-                        <LogOut size={18} className="group-hover:scale-110 transition-transform" />
-                    </button>
-                </div>
+                    </div>
+                </button>
             </div>
-
-            {/* Create Clinic Modal (MASTER ONLY) */}
-            <CreateClinicModal
-                isOpen={showCreateClinic}
-                onClose={() => setShowCreateClinic(false)}
-                onSuccess={() => {
-                    setShowCreateClinic(false);
-                    window.location.reload(); // Reload to update clinic list
-                }}
-            />
-
-        </div>
+        </aside>
     );
 };
-
-export default Sidebar;

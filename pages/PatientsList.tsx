@@ -5,29 +5,15 @@ import {
     User, ArrowRight, Activity, Loader2
 } from 'lucide-react';
 import { PageContainer } from '../components/layout/PageContainer';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '../src/lib/supabase';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+// 1. DATA FETCHING (Hook Centralizado)
+import { usePatients } from '../hooks/usePatients';
 
 export const PatientsList = () => {
     const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState('Todos');
 
-    // 1. DATA FETCHING (Real do Supabase)
-    const { data: patients, isLoading } = useQuery({
-        queryKey: ['patients-list'],
-        queryFn: async () => {
-            const { data, error } = await supabase
-                .from('patients')
-                .select('*')
-                .order('created_at', { ascending: false });
-
-            if (error) throw error;
-            return data;
-        }
-    });
+    const { patients, isLoading } = usePatients();
 
     // 1. A MÁGICA VISUAL (Copia exata do Orçamento)
     const getCardStyle = (status: string | null) => {

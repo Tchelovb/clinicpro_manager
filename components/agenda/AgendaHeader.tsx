@@ -1,11 +1,29 @@
-import React from 'react';
-import { ChevronLeft, ChevronRight, Search, Users, ShieldCheck, ChevronDown } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ChevronLeft, ChevronRight, Search, Users, ShieldCheck, ChevronDown, CheckSquare, Activity, Plus } from 'lucide-react';
 import { format, isToday, isSameWeek, isSameMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useData } from '../../contexts/DataContext';
 import { AgendaSearch } from './AgendaSearch';
+import { cn } from '../../src/lib/utils';
 
-export const AgendaHeader: React.FC<any> = ({
+interface AgendaHeaderProps {
+    currentDate: Date;
+    onNavigate: (direction: 'prev' | 'next') => void;
+    onToday: () => void;
+    view: 'day' | 'week' | 'month';
+    onViewChange: (view: 'day' | 'week' | 'month') => void;
+    onSelectDate?: (date: Date) => void;
+    onSelectAppointment?: (appointment: any) => void;
+    professionals?: any[];
+    filterProfessional?: string;
+    onFilterProfessionalChange?: (professionalId: string) => void;
+    onOpenTasks?: () => void;
+    onOpenProfessionals?: () => void;
+    onOpenFlow?: () => void;
+    onNewAppointment?: () => void;
+}
+
+export const AgendaHeader: React.FC<AgendaHeaderProps> = ({
     currentDate,
     onNavigate,
     onToday,
@@ -15,9 +33,19 @@ export const AgendaHeader: React.FC<any> = ({
     onSelectAppointment,
     professionals = [],
     filterProfessional,
-    onFilterProfessionalChange
+    onFilterProfessionalChange,
+    onOpenTasks,
+    onOpenFlow,
+    onOpenProfessionals,
+    onNewAppointment
 }) => {
-    const { profile } = useData() as any;
+
+    // ... (helper functions stay same) ...
+    const getProfessionalLabel = () => {
+        if (!filterProfessional || filterProfessional === 'ALL') return 'Profissionais';
+        const prof = professionals.find(p => p.id === filterProfessional);
+        return prof ? prof.name : 'Profissionais';
+    };
 
     const getDynamicLabel = () => {
         const now = new Date();
@@ -28,76 +56,145 @@ export const AgendaHeader: React.FC<any> = ({
     };
 
     return (
-        <header className="bg-white/80 backdrop-blur-md dark:bg-slate-900/80 sticky top-0 z-40 border-b border-gray-200 dark:border-slate-800 p-4">
-            <div className="max-w-[1800px] mx-auto flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <header className="bg-[#F5F5F7] dark:bg-slate-950 sticky top-0 z-40 p-4 md:p-6 transition-all">
+            <div className="max-w-[1800px] mx-auto space-y-4 md:space-y-6">
 
-                {/* 1. TÍTULO E SELETOR DE PROFISSIONAL */}
-                <div className="flex items-center justify-between lg:justify-start min-w-fit">
-                    <div className="text-xl md:text-2xl font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
-                        <span className="hidden md:inline">Agenda:</span>
+                {/* LINHA 1: Título, Profissionais e Ações Rápidas */}
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
 
-                        <div className="relative inline-flex items-center group">
-                            <select
-                                value={filterProfessional || 'ALL'}
-                                onChange={(e) => onFilterProfessionalChange && onFilterProfessionalChange(e.target.value)}
-                                className="appearance-none bg-transparent text-primary-600 font-extrabold pr-8 pl-2 py-1 cursor-pointer outline-none focus:ring-2 focus:ring-primary-100 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-all border border-transparent hover:border-slate-200 dark:hover:border-slate-700"
+                    {/* Seletor de Profissional (Minimalista e Tátil) */}
+                    <div className="flex items-center justify-between lg:justify-start min-w-fit">
+                        <button
+                            onClick={onOpenProfessionals}
+                            className={cn(
+                                "group relative inline-flex items-center gap-3",
+                                "bg-white/40 dark:bg-white/5 backdrop-blur-xl",
+                                "hover:bg-white/60 dark:hover:bg-white/10",
+                                "px-5 py-3 rounded-2xl transition-all duration-300",
+                                "border border-white/50 dark:border-white/10",
+                                "active:scale-95"
+                            )}
+                        >
+                            <span className="text-xl md:text-2xl font-medium text-slate-900 dark:text-white tracking-tight">
+                                {getProfessionalLabel()}
+                            </span>
+                            <ChevronDown size={20} className="text-slate-400 group-hover:translate-y-0.5 transition-transform" />
+                        </button>
+                    </div>
+
+                    {/* Ações Rápidas (Direita) */}
+                    <div className="flex items-center gap-3 overflow-x-auto pb-1 no-scrollbar">
+                        {/* Botão Ver Fluxo */}
+                        <button
+                            onClick={onOpenFlow}
+                            className={cn(
+                                "px-5 py-3 rounded-2xl font-medium text-sm whitespace-nowrap",
+                                "bg-white/40 dark:bg-white/5 backdrop-blur-xl",
+                                "border border-white/50 dark:border-white/10",
+                                "hover:bg-white/60 dark:hover:bg-white/10",
+                                "transition-all duration-300 active:scale-95",
+                                "hidden md:flex items-center gap-2",
+                                "text-slate-700 dark:text-slate-300"
+                            )}
+                        >
+                            <Activity className="h-4 w-4" />
+                            <span className="hidden md:inline">Fluxo</span>
+                        </button>
+
+                        {/* Botão Tarefas - Hidden on Mobile (Moved to TabBar) */}
+                        <button
+                            onClick={onOpenTasks}
+                            className={cn(
+                                "hidden md:flex px-5 py-3 rounded-2xl font-medium text-sm whitespace-nowrap",
+                                "bg-white/40 dark:bg-white/5 backdrop-blur-xl",
+                                "border border-white/50 dark:border-white/10",
+                                "hover:bg-white/60 dark:hover:bg-white/10",
+                                "transition-all duration-300 active:scale-95",
+                                "items-center gap-2",
+                                "text-slate-700 dark:text-slate-300"
+                            )}
+                        >
+                            <CheckSquare className="h-4 w-4" />
+                            <span>Tarefas</span>
+                        </button>
+
+                        {/* Botão NOVO AGENDAMENTO (Primary Action) - Hidden on Mobile (Moved to TabBar FAB) */}
+                        <button
+                            onClick={onNewAppointment}
+                            className={cn(
+                                "hidden md:flex px-6 py-3 rounded-2xl font-bold text-sm whitespace-nowrap",
+                                "bg-blue-600 hover:bg-blue-700 text-white",
+                                "shadow-lg shadow-blue-500/30 hover:shadow-blue-500/40",
+                                "transition-all duration-300 active:scale-95 hover:-translate-y-0.5",
+                                "items-center gap-2 ml-2"
+                            )}
+                        >
+                            <Plus className="h-5 w-5" />
+                            <span>Agendar</span>
+                        </button>
+                    </div>
+                </div>
+
+                {/* LINHA 2: Navegação e Indicador de Faturamento */}
+                <div className="flex flex-col lg:flex-row items-center gap-4">
+
+                    {/* Navegação Temporal */}
+                    <div className="flex flex-1 items-center justify-center gap-4 overflow-x-auto no-scrollbar py-1 lg:py-0">
+                        <div className="flex items-center gap-1 bg-white/40 dark:bg-white/5 backdrop-blur-xl p-1 rounded-xl shrink-0 border border-white/50 dark:border-white/10">
+                            <button
+                                onClick={() => onNavigate('prev')}
+                                className="p-2 hover:bg-white/60 dark:hover:bg-white/10 rounded-lg transition-all text-slate-600 dark:text-slate-300"
                             >
-                                <option value="ALL" className="text-slate-900 font-bold">Todos os Dentistas</option>
-                                <option disabled className="text-slate-400">─── Selecione ───</option>
-                                {professionals.map((prof: any) => (
-                                    <option key={prof.id} value={prof.id} className="text-slate-900">
-                                        Dr(a). {prof.name}
-                                    </option>
-                                ))}
-                            </select>
-                            <ChevronDown size={20} className="absolute right-2 text-primary-600 pointer-events-none group-hover:translate-y-0.5 transition-transform" />
+                                <ChevronLeft size={18} />
+                            </button>
+                            <button
+                                onClick={onToday}
+                                className="px-6 py-2 bg-white/60 dark:bg-white/10 rounded-lg text-sm font-semibold text-blue-600 dark:text-blue-400 transition-all active:scale-95 whitespace-nowrap"
+                            >
+                                {getDynamicLabel()}
+                            </button>
+                            <button
+                                onClick={() => onNavigate('next')}
+                                className="p-2 hover:bg-white/60 dark:hover:bg-white/10 rounded-lg transition-all text-slate-600 dark:text-slate-300"
+                            >
+                                <ChevronRight size={18} />
+                            </button>
+                        </div>
+
+                        <div className="flex bg-white/40 dark:bg-white/5 backdrop-blur-xl p-1 rounded-xl text-xs font-semibold shrink-0 border border-white/50 dark:border-white/10">
+                            {['day', 'week', 'month'].map((v) => (
+                                <button
+                                    key={v}
+                                    onClick={() => onViewChange(v as any)}
+                                    className={cn(
+                                        "px-4 py-2 rounded-lg transition-all",
+                                        view === v
+                                            ? 'bg-white/80 dark:bg-white/20 shadow-md text-blue-600 dark:text-blue-400 scale-105'
+                                            : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                                    )}
+                                >
+                                    {v === 'day' ? 'Dia' : v === 'week' ? 'Semana' : 'Mês'}
+                                </button>
+                            ))}
                         </div>
                     </div>
                 </div>
 
-                {/* 2. NAVEGAÇÃO COMPACTA (CENTRO) */}
-                <div className="flex flex-1 items-center justify-center gap-4 overflow-x-auto no-scrollbar py-1 lg:py-0">
-                    <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl shrink-0">
-                        <button onClick={() => onNavigate('prev')} className="p-2 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition-all shadow-sm text-slate-600 dark:text-slate-300">
-                            <ChevronLeft size={18} />
-                        </button>
-                        <button onClick={onToday} className="px-6 py-2 bg-white dark:bg-slate-700 rounded-lg text-sm font-bold text-primary-700 dark:text-primary-400 shadow-sm transition-all active:scale-95 whitespace-nowrap border border-slate-200 dark:border-slate-600">
-                            {getDynamicLabel()}
-                        </button>
-                        <button onClick={() => onNavigate('next')} className="p-2 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition-all shadow-sm text-slate-600 dark:text-slate-300">
-                            <ChevronRight size={18} />
-                        </button>
-                    </div>
-
-                    <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl text-xs font-bold shadow-inner shrink-0">
-                        {['day', 'week', 'month'].map((v) => (
-                            <button
-                                key={v}
-                                onClick={() => onViewChange(v as any)}
-                                className={`px-4 py-2 rounded-lg transition-all ${view === v ? 'bg-white dark:bg-slate-700 shadow-md text-primary-600 scale-105' : 'text-slate-500 hover:text-slate-700'}`}
-                            >
-                                {v === 'day' ? 'Dia' : v === 'week' ? 'Semana' : 'Mês'}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-
-                {/* 3. BUSCA SPOTLIGHT (DIREITA) */}
-                <div className="hidden lg:block w-80 shrink-0">
+                {/* LINHA 3: Busca (Desktop) */}
+                <div className="hidden lg:block">
                     <AgendaSearch
-                        className="w-full h-10 bg-slate-100 dark:bg-slate-800 border-none rounded-full px-4 transition-all focus-within:ring-2 focus-within:ring-primary-500 focus-within:w-96 placeholder:text-slate-400"
+                        className="w-full max-w-md h-12 bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/50 dark:border-white/10 rounded-xl px-4 transition-all focus-within:ring-2 focus-within:ring-blue-500 placeholder:text-slate-400"
                         placeholder="Buscar paciente (⌘+K)"
                         onSelectDate={onSelectDate || (() => { })}
                         onSelectAppointment={onSelectAppointment || (() => { })}
                     />
                 </div>
-
             </div>
 
             {/* MOBILE SEARCH (LINHA EXTRA APENAS MOBILE) */}
             <div className="lg:hidden w-full relative mt-4">
                 <AgendaSearch
-                    className="w-full h-12 bg-slate-100 dark:bg-slate-800 border-none rounded-2xl pl-12 pr-4 text-base focus:ring-2 focus:ring-primary-500 transition-all"
+                    className="w-full h-12 bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/50 dark:border-white/10 rounded-xl pl-12 pr-4 text-base focus:ring-2 focus:ring-blue-500 transition-all"
                     placeholder="Buscar paciente..."
                     onSelectDate={onSelectDate || (() => { })}
                     onSelectAppointment={onSelectAppointment || (() => { })}
