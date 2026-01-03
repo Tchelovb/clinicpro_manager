@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Target, TrendingUp, DollarSign, Users, Calendar, Plus, Edit2, Trash2, Loader2, X, Save, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useFinancial } from '../../contexts/FinancialContext';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../src/lib/supabase';
 import toast from 'react-hot-toast';
 
 interface Goal {

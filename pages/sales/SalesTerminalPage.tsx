@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { formatCurrency } from '../../utils/format';
 import toast from 'react-hot-toast';
 import { addDays } from 'date-fns';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../src/lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 
 // --- MODAL DE PIN ---

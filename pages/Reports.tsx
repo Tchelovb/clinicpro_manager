@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../src/lib/supabase';
 import {
     Search, Filter, Download, Printer, ChevronDown, ChevronRight,
     FileText, DollarSign, Users, TrendingUp, Calendar, X, Loader2,

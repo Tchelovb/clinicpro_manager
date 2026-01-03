@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../src/lib/supabase';
 import { useAttendanceQueue, QueueItem } from '../hooks/useAttendanceQueue';
 import {
     Clock, Play, CheckCircle2, AlertTriangle, DollarSign, User, Stethoscope

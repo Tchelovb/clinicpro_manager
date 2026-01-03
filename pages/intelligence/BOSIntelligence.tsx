@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Brain, Sparkles, TrendingUp, AlertTriangle, Lightbulb, Zap, Loader2, ArrowRight } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../src/lib/supabase';
 
 interface AIInsight {
     id: string;

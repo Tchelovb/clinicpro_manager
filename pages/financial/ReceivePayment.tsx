@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ChevronLeft, DollarSign, Calendar, CreditCard, FileText, CheckCircle, User, Loader2 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../src/lib/supabase';
 import toast from 'react-hot-toast';
 
 interface BudgetItem {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../src/lib/supabase';
 import { useUI } from '../contexts/UIContext';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import {
@@ -21,7 +21,7 @@ import { AttendanceSidebar } from '../components/agenda/AttendanceSidebar';
 interface Appointment {
     id: string;
     patient_id: string;
-    doctor_id: string;
+    professional_id: string;  // ✅ PADRONIZAÇÃO: professional_id
     date: string;
     duration: number;
     type: string;
@@ -71,13 +71,14 @@ const Agenda: React.FC = () => {
         setLoading(true);
 
         try {
-            // Load professionals
+            // ✅ UNIFICAÇÃO: Load professionals usando is_clinical_provider
             const { data: profsData } = await supabase
                 .from('users')
-                .select('id, name, color, professional_id')
+                .select('id, name, agenda_color, photo_url, specialty, cro, is_clinical_provider')
                 .eq('clinic_id', profile.clinic_id)
-                .not('professional_id', 'is', null)
-                .eq('is_active', true);
+                .eq('is_clinical_provider', true)  // ✅ Filtro correto
+                .eq('active', true)
+                .order('name');
             setProfessionals(profsData || []);
 
             // Determine Date Range based on View Mode
@@ -93,21 +94,28 @@ const Agenda: React.FC = () => {
                 endDate = startOfDay(addDays(currentDate, 1));
             }
 
+            // ✅ PADRONIZAÇÃO: Query usa professional_id
             let query = supabase
                 .from('appointments')
                 .select(`
                     *,
                     patients!appointments_patient_id_fkey(name, phone),
-                    users!appointments_doctor_id_fkey(name, color)
+                    professional:users!appointments_professional_id_fkey(
+                        id,
+                        name,
+                        agenda_color,
+                        photo_url,
+                        specialty
+                    )
                 `)
                 .eq('clinic_id', profile.clinic_id)
                 .gte('date', startDate.toISOString())
                 .lt('date', endDate.toISOString())
-                .in('type', ['EVALUATION', 'TREATMENT', 'RETURN', 'URGENCY']) // 🛡️ Fix de ENUMS
+                .in('type', ['EVALUATION', 'TREATMENT', 'RETURN', 'URGENCY'])
                 .order('date');
 
             if (filterProfessional !== 'ALL') {
-                query = query.eq('doctor_id', filterProfessional);
+                query = query.eq('professional_id', filterProfessional);  // ✅ PADRONIZAÇÃO
             }
 
             const { data: appts, error } = await query;
@@ -120,8 +128,10 @@ const Agenda: React.FC = () => {
                 status: apt.status?.toUpperCase() || 'PENDING',
                 patient_name: apt.patients?.name || 'Paciente Sem Nome',
                 patient_phone: apt.patients?.phone || '',
-                doctor_name: apt.users?.name || 'Profissional',
-                doctor_color: apt.users?.color || '#3B82F6'
+                // ✅ PADRONIZAÇÃO: Usa professional (não doctor)
+                doctor_name: apt.professional?.name || 'Profissional',
+                doctor_color: apt.professional?.agenda_color || '#3B82F6',
+                doctor_specialty: apt.professional?.specialty || ''
             }));
 
             setAppointments(enrichedAppts);
@@ -317,6 +327,7 @@ const Agenda: React.FC = () => {
                             setSelectedAppointmentId(id);
                             setIsSheetOpen(true);
                         }}
+                        professionals={professionals}
                     />
 
                     {/* Mobile Date Strip (Only visible in Week mode on Mobile) */}

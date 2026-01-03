@@ -13,6 +13,8 @@ import {
   Trash2,
   Plus,
   ShoppingBag,
+  Lock, // Importado lock
+  AlertTriangle
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { formatCurrency } from "../../utils/format";
@@ -20,6 +22,7 @@ import toast from "react-hot-toast";
 import { useNavigate, useParams } from "react-router-dom";
 import { useBudgetStudio } from "../../hooks/useBudgetStudio";
 import { addDays } from "date-fns";
+import { useAuth } from "../../contexts/AuthContext"; // Importado useAuth
 
 // --- PASSO 1: CONFIGURAÇÃO ---
 const StepConfiguration = ({ onNext, config, setConfig }: any) => (
@@ -98,6 +101,12 @@ const StepSelection = ({
   procedures,
   config,
 }: any) => {
+  const { user } = useAuth();
+
+  // TRAVA DE SEGURANÇA CLÍNICA
+  // Se o usuário não é clínico, nem orçamentista, nem admin => VENDEDOR PURO (Só Leitura de Procedimentos)
+  const isReadOnly = user && !user.is_clinical_provider && !user.is_orcamentista && user.role !== 'ADMIN' && user.role !== 'MASTER';
+
   const [selectedProc, setSelectedProc] = useState<any>(null);
   const [region, setRegion] = useState("");
   const [face, setFace] = useState("");
@@ -112,6 +121,7 @@ const StepSelection = ({
     : [];
 
   const handleAddItem = () => {
+    if (isReadOnly) return toast.error("Apenas equipe clínica pode adicionar procedimentos.");
     if (!selectedProc) return toast.error("Selecione um procedimento");
 
     // 1. Detecta se há múltiplos dentes/regiões separados por vírgula, espaço, ponto e vírgula
@@ -158,7 +168,7 @@ const StepSelection = ({
       className="h-full flex flex-col bg-white max-w-5xl mx-auto border-x border-gray-100 shadow-sm"
     >
       {/* Header */}
-      <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+      < div className="p-6 border-b border-gray-100 flex justify-between items-center" >
         <div className="flex items-center gap-3">
           <button
             onClick={onBack}
@@ -167,8 +177,9 @@ const StepSelection = ({
             <ArrowLeft size={20} />
           </button>
           <div>
-            <h2 className="text-xl font-bold text-slate-800">
-              Adicionar Itens
+            <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+              Itens do Plano
+              {isReadOnly && <span className="text-[10px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full border border-orange-200 flex items-center gap-1"><Lock size={10} /> TRAVA COMERCIAL</span>}
             </h2>
             <p className="text-xs text-gray-400">
               Tabela ativa:{" "}
@@ -190,116 +201,135 @@ const StepSelection = ({
             )}
           </p>
         </div>
-      </div>
+      </div >
       {/* Barra de Inserção - wrapped in scrollable container for mobile */}
-      <div className="flex-1 overflow-y-auto md:overflow-visible">
-        <div className="p-6 bg-slate-50 border-b border-gray-200">
+      < div className="flex-1 overflow-y-auto md:overflow-visible" >
+        <div className={`p-6 border-b border-gray-200 transaction-colors ${isReadOnly ? 'bg-gray-100 opacity-60 pointer-events-none grayscale' : 'bg-slate-50'}`}>
+
+          {isReadOnly && (
+            <div className="absolute top-0 left-0 w-full h-full z-10 flex items-center justify-center pointer-events-none">
+              {/* Overlay visual opcional se quiser bloquear totalmente, mas a classe pointer-events-none já resolve */}
+            </div>
+          )}
+
           <div className="flex flex-col md:flex-row gap-3 items-end">
-            <div className="flex-grow relative z-20 w-full md:w-auto">
-              <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">
-                Procedimento
-              </label>
-              <div className="relative">
-                <div className="absolute left-3 top-3 text-gray-400">
-                  <Search size={16} />
+            {isReadOnly ? (
+              <div className="w-full flex items-center gap-3 p-4 bg-orange-50 border border-orange-200 rounded-xl text-orange-800">
+                <AlertTriangle className="shrink-0" size={24} />
+                <div>
+                  <p className="font-bold text-sm">Modo de Negociação</p>
+                  <p className="text-xs opacity-80">Como vendedor, você não pode alterar os procedimentos clínicos definidos pelo Orçamentista. Avance para negociar valores.</p>
                 </div>
-                <input
-                  type="text"
-                  placeholder="Digite para buscar..."
-                  value={searchTerm}
-                  onChange={(e) => {
-                    setSearchTerm(e.target.value);
-                    if (!e.target.value) setSelectedProc(null);
-                  }}
-                  className="w-full pl-9 pr-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
-                />
-                {searchTerm && !selectedProc && filteredProcs.length > 0 && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-xl max-h-60 overflow-y-auto z-50">
-                    {filteredProcs.map((proc: any) => (
-                      <div
-                        key={proc.id}
-                        onClick={() => {
-                          setSelectedProc(proc);
-                          setSearchTerm(proc.name);
-                        }}
-                        className="p-3 hover:bg-indigo-50 cursor-pointer border-b border-gray-50 last:border-0 flex justify-between"
-                      >
-                        <span className="font-medium text-slate-700">
-                          {proc.name}
-                        </span>
-                        <span className="text-sm text-gray-500">
-                          {formatCurrency(proc.base_price)}
-                        </span>
-                      </div>
-                    ))}
-                    <div
-                      onClick={() => setShowNewProcModal(true)}
-                      className="p-3 bg-gray-50 text-indigo-600 font-bold text-sm cursor-pointer hover:bg-gray-100 flex items-center gap-2"
-                    >
-                      <Plus size={14} /> Cadastrar "{searchTerm}" agora
-                    </div>
-                  </div>
-                )}
               </div>
-              {selectedProc && (
-                <div className="absolute right-3 top-9 text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
-                  {formatCurrency(selectedProc.base_price)}
+            ) : (
+              <>
+                <div className="flex-grow relative z-20 w-full md:w-auto">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">
+                    Procedimento
+                  </label>
+                  <div className="relative">
+                    <div className="absolute left-3 top-3 text-gray-400">
+                      <Search size={16} />
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Digite para buscar..."
+                      value={searchTerm}
+                      onChange={(e) => {
+                        setSearchTerm(e.target.value);
+                        if (!e.target.value) setSelectedProc(null);
+                      }}
+                      className="w-full pl-9 pr-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
+                    />
+                    {searchTerm && !selectedProc && filteredProcs.length > 0 && (
+                      <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-xl max-h-60 overflow-y-auto z-50">
+                        {filteredProcs.map((proc: any) => (
+                          <div
+                            key={proc.id}
+                            onClick={() => {
+                              setSelectedProc(proc);
+                              setSearchTerm(proc.name);
+                            }}
+                            className="p-3 hover:bg-indigo-50 cursor-pointer border-b border-gray-50 last:border-0 flex justify-between"
+                          >
+                            <span className="font-medium text-slate-700">
+                              {proc.name}
+                            </span>
+                            <span className="text-sm text-gray-500">
+                              {formatCurrency(proc.base_price)}
+                            </span>
+                          </div>
+                        ))}
+                        <div
+                          onClick={() => setShowNewProcModal(true)}
+                          className="p-3 bg-gray-50 text-indigo-600 font-bold text-sm cursor-pointer hover:bg-gray-100 flex items-center gap-2"
+                        >
+                          <Plus size={14} /> Cadastrar "{searchTerm}" agora
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  {selectedProc && (
+                    <div className="absolute right-3 top-9 text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
+                      {formatCurrency(selectedProc.base_price)}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
 
-            <div className="w-full md:w-48">
-              <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">
-                Dente / Região
-              </label>
-              <input
-                type="text"
-                placeholder="Ex: 11, 21, 22"
-                value={region}
-                onChange={(e) => setRegion(e.target.value)}
-                className="w-full p-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none"
-              />
-            </div>
+                <div className="w-full md:w-48">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">
+                    Dente / Região
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ex: 11, 21, 22"
+                    value={region}
+                    onChange={(e) => setRegion(e.target.value)}
+                    className="w-full p-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none"
+                  />
+                </div>
 
-            <div className="w-full md:w-32">
-              <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">
-                Face
-              </label>
-              <select
-                value={face}
-                onChange={(e) => setFace(e.target.value)}
-                className="w-full p-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
-              >
-                <option value="">-</option>
-                <option value="V">Vestibular</option>
-                <option value="L">Lingual</option>
-                <option value="M">Mesial</option>
-                <option value="D">Distal</option>
-                <option value="I">Incisal/Ocl.</option>
-              </select>
-            </div>
+                <div className="w-full md:w-32">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">
+                    Face
+                  </label>
+                  <select
+                    value={face}
+                    onChange={(e) => setFace(e.target.value)}
+                    className="w-full p-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
+                  >
+                    <option value="">-</option>
+                    <option value="V">Vestibular</option>
+                    <option value="L">Lingual</option>
+                    <option value="M">Mesial</option>
+                    <option value="D">Distal</option>
+                    <option value="I">Incisal/Ocl.</option>
+                  </select>
+                </div>
 
-            <div className="w-full md:w-20">
-              <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">
-                Qtd
-              </label>
-              <input
-                type="number"
-                min="1"
-                value={quantity}
-                onChange={(e) => setQuantity(Number(e.target.value))}
-                className="w-full p-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none text-center"
-              />
-            </div>
+                <div className="w-full md:w-20">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">
+                    Qtd
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={quantity}
+                    onChange={(e) => setQuantity(Number(e.target.value))}
+                    className="w-full p-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none text-center"
+                  />
+                </div>
 
-            <button
-              onClick={handleAddItem}
-              disabled={!selectedProc}
-              className="w-full md:w-auto bg-slate-900 hover:bg-black disabled:bg-gray-300 text-white p-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-md h-[50px] md:h-auto"
-            >
-              <Plus size={20} />
-              <span className="md:hidden">Adicionar</span>
-            </button>
+                <button
+                  onClick={handleAddItem}
+                  disabled={!selectedProc}
+                  className="w-full md:w-auto bg-slate-900 hover:bg-black disabled:bg-gray-300 text-white p-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-md h-[50px] md:h-auto"
+                >
+                  <Plus size={20} />
+                  <span className="md:hidden">Adicionar</span>
+                </button>
+              </>
+            )}
           </div>
         </div>
 
@@ -318,9 +348,10 @@ const StepSelection = ({
               >
                 <button
                   onClick={() => removeItem(item.uniqueId)}
-                  className="absolute top-4 right-4 text-gray-300 hover:text-red-500"
+                  disabled={isReadOnly}
+                  className={`absolute top-4 right-4 ${isReadOnly ? 'text-gray-200 cursor-not-allowed' : 'text-gray-300 hover:text-red-500'}`}
                 >
-                  <Trash2 size={18} />
+                  {!isReadOnly && <Trash2 size={18} />}
                 </button>
                 <h4 className="font-bold text-slate-800 pr-8">{item.name}</h4>
                 <div className="flex gap-2 mt-2">
@@ -394,9 +425,10 @@ const StepSelection = ({
                     <td className="p-4 text-right">
                       <button
                         onClick={() => removeItem(item.uniqueId)}
-                        className="text-gray-300 hover:text-red-500 transition-colors"
+                        disabled={isReadOnly}
+                        className={`${isReadOnly ? 'text-gray-200 cursor-not-allowed' : 'text-gray-300 hover:text-red-500'} transition-colors`}
                       >
-                        <Trash2 size={16} />
+                        {!isReadOnly && <Trash2 size={16} />}
                       </button>
                     </td>
                   </tr>
@@ -416,49 +448,51 @@ const StepSelection = ({
           Ir para Negociação <ChevronRight size={18} />
         </button>
       </div>
-      {showNewProcModal && (
-        <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
-            <h3 className="font-bold text-lg mb-4">Cadastro Rápido</h3>
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs font-bold text-gray-500 uppercase">
-                  Nome do Procedimento
-                </label>
-                <input
-                  type="text"
-                  defaultValue={searchTerm}
-                  className="w-full p-2 border rounded-lg"
-                />
+      {
+        showNewProcModal && (
+          <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+              <h3 className="font-bold text-lg mb-4">Cadastro Rápido</h3>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs font-bold text-gray-500 uppercase">
+                    Nome do Procedimento
+                  </label>
+                  <input
+                    type="text"
+                    defaultValue={searchTerm}
+                    className="w-full p-2 border rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-gray-500 uppercase">
+                    Valor Base (R$)
+                  </label>
+                  <input type="number" className="w-full p-2 border rounded-lg" />
+                </div>
               </div>
-              <div>
-                <label className="text-xs font-bold text-gray-500 uppercase">
-                  Valor Base (R$)
-                </label>
-                <input type="number" className="w-full p-2 border rounded-lg" />
+              <div className="flex gap-2 mt-6 justify-end">
+                <button
+                  onClick={() => setShowNewProcModal(false)}
+                  className="px-4 py-2 text-gray-500 font-bold"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => {
+                    setShowNewProcModal(false);
+                    toast.success("Cadastrado! (Simulação)");
+                  }}
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-bold"
+                >
+                  Salvar
+                </button>
               </div>
-            </div>
-            <div className="flex gap-2 mt-6 justify-end">
-              <button
-                onClick={() => setShowNewProcModal(false)}
-                className="px-4 py-2 text-gray-500 font-bold"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={() => {
-                  setShowNewProcModal(false);
-                  toast.success("Cadastrado! (Simulação)");
-                }}
-                className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-bold"
-              >
-                Salvar
-              </button>
             </div>
           </div>
-        </div>
-      )}
-    </motion.div>
+        )
+      }
+    </motion.div >
   );
 };
 
@@ -530,8 +564,8 @@ const StepNegotiation = ({
               key={m}
               onClick={() => setNegotiation({ ...negotiation, method: m })}
               className={`p-4 rounded-xl border-2 font-bold text-sm transition-all ${negotiation.method === m
-                  ? "border-indigo-600 bg-indigo-50 text-indigo-700"
-                  : "border-gray-100 text-gray-400 hover:border-gray-300"
+                ? "border-indigo-600 bg-indigo-50 text-indigo-700"
+                : "border-gray-100 text-gray-400 hover:border-gray-300"
                 }`}
             >
               {m}
@@ -912,8 +946,8 @@ export function BudgetStudioPage() {
               >
                 <div
                   className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${step >= s.num
-                      ? "bg-indigo-600 text-white"
-                      : "bg-gray-100 text-gray-500"
+                    ? "bg-indigo-600 text-white"
+                    : "bg-gray-100 text-gray-500"
                     }`}
                 >
                   {s.num}

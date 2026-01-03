@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, User, Mail, Phone, Lock, Camera, Save, Loader2, Bell, Shield } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../src/lib/supabase';
 import toast from 'react-hot-toast';
 
 const Profile: React.FC = () => {
@@ -137,8 +137,8 @@ const Profile: React.FC = () => {
                             <button
                                 onClick={() => setActiveTab('profile')}
                                 className={`w-full px-4 py-2 rounded-lg text-left text-sm font-medium transition-colors ${activeTab === 'profile'
-                                        ? 'bg-violet-50 text-violet-700'
-                                        : 'text-slate-600 hover:bg-slate-50'
+                                    ? 'bg-violet-50 text-violet-700'
+                                    : 'text-slate-600 hover:bg-slate-50'
                                     }`}
                             >
                                 <User size={16} className="inline mr-2" />
@@ -147,8 +147,8 @@ const Profile: React.FC = () => {
                             <button
                                 onClick={() => setActiveTab('security')}
                                 className={`w-full px-4 py-2 rounded-lg text-left text-sm font-medium transition-colors ${activeTab === 'security'
-                                        ? 'bg-violet-50 text-violet-700'
-                                        : 'text-slate-600 hover:bg-slate-50'
+                                    ? 'bg-violet-50 text-violet-700'
+                                    : 'text-slate-600 hover:bg-slate-50'
                                     }`}
                             >
                                 <Shield size={16} className="inline mr-2" />
@@ -157,8 +157,8 @@ const Profile: React.FC = () => {
                             <button
                                 onClick={() => setActiveTab('notifications')}
                                 className={`w-full px-4 py-2 rounded-lg text-left text-sm font-medium transition-colors ${activeTab === 'notifications'
-                                        ? 'bg-violet-50 text-violet-700'
-                                        : 'text-slate-600 hover:bg-slate-50'
+                                    ? 'bg-violet-50 text-violet-700'
+                                    : 'text-slate-600 hover:bg-slate-50'
                                     }`}
                             >
                                 <Bell size={16} className="inline mr-2" />

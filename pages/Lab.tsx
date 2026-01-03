@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Microscope, Plus, Calendar, User, Package, Clock, CheckCircle, AlertCircle, List, LayoutGrid, Filter, Loader2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../src/lib/supabase';
 import toast from 'react-hot-toast';
 
 interface LabOrder {

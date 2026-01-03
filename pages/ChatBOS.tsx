@@ -6,7 +6,7 @@ import {
 import { useBOSChat } from '../hooks/useBOSChat';
 import { useBOSVoice } from '../hooks/useBOSVoice';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../src/lib/supabase';
 
 export const ChatBOS: React.FC = () => {
     const [inputMessage, setInputMessage] = useState('');

@@ -4,7 +4,7 @@ import { useGeneralClinical } from '../../hooks/useGeneralClinical';
 import { useFinancialLock } from '../../hooks/useFinancialLock';
 import { useAuth } from '../../contexts/AuthContext';
 import { PinSignatureModal } from '../../components/security/PinSignatureModal';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../src/lib/supabase';
 import toast from 'react-hot-toast';
 import {
     ChevronLeft, AlertTriangle, Activity, FileText,
@@ -12,7 +12,7 @@ import {
     ShieldAlert, Heart, Thermometer, Pill, AlertOctagon, Calendar
 } from 'lucide-react';
 import * as Tabs from '@radix-ui/react-tabs';
-import { cn } from '../../lib/utils';
+import { cn } from '../../src/lib/utils';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 

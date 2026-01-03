@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { CheckCircle, Printer, FileText, ArrowLeft, Share2 } from 'lucide-react';
 import { PageContainer } from '../../components/layout/PageContainer';
 import { AppCard } from '../../components/ui/AppCard';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../src/lib/supabase';
 import { toast } from 'react-hot-toast';
 
 export const SalesReceiptPage = () => {

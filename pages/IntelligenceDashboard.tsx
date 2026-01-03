@@ -23,7 +23,7 @@ import {
 } from 'recharts';
 import { useAuth } from "../contexts/AuthContext";
 import { useDashboardData } from "../hooks/useDashboardData";
-import { supabase } from "../lib/supabase";
+import { supabase } from "../src/lib/supabase";
 import { WarRoomCard } from "../components/WarRoomCard";
 import { HealthPillars } from "../components/dashboard/HealthPillars";
 import ClinicHealthScoreCard from "../components/ClinicHealthScoreCard";
@@ -65,7 +65,7 @@ const Dashboard: React.FC = () => {
         const t = setTimeout(() => {
             console.log("🚦 [DASHBOARD] Liberando carga de analytics...");
             setReadyToLoad(true);
-        }, 1500);
+        }, 2000);
         return () => clearTimeout(t);
     }, []);
 
@@ -151,7 +151,7 @@ const Dashboard: React.FC = () => {
                 <div className="flex flex-col items-center animate-pulse">
                     <img src="/logo-full.png" alt="ClinicPro" className="h-12 w-auto mb-8 opacity-50 grayscale" />
                     <div className="w-64 h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
-                        <div className="h-full bg-blue-600 animate-progress origin-left w-full duration-[2000ms]"></div>
+                        <div className="h-full bg-blue-600 animate-progress origin-left w-full" style={{ animationDuration: '2000ms' }}></div>
                     </div>
                     <p className="mt-4 text-xs font-medium text-slate-400 uppercase tracking-widest">
                         Sincronizando Pilares...
@@ -464,7 +464,7 @@ const Dashboard: React.FC = () => {
                 {/* Kept at bottom as requested in hierarchy info, or useful context */}
                 {/* Using margin-top to separate slightly */}
                 <div className="mt-8">
-                    <HealthPillars financialData={financialData} kpis={kpis} intelligenceMetrics={intelligenceMetrics} />
+                    <HealthPillars financialData={financialData} kpis={kpis} intelligenceMetrics={intelligenceMetrics} readyToLoad={readyToLoad} />
                 </div>
             </div>
         </div>

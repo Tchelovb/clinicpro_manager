@@ -11,7 +11,7 @@ import {
 } from '../components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Users } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../src/lib/supabase';
 
 const ProfessionalFinancial: React.FC = () => {
     const { profile } = useAuth();

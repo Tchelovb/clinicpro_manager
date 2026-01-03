@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../src/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
 import { Plus, Search, Filter, Eye, Edit, Trash2, TrendingUp, Clock, CheckCircle, XCircle, Phone, AlertCircle, LayoutGrid, ArrowRight } from 'lucide-react';
 import { formatCurrency } from '../../utils/format';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import toast from 'react-hot-toast';
-import { cn } from '../../lib/utils';
+import { cn } from '../../src/lib/utils';
 
 interface Budget {
     id: string;

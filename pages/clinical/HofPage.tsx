@@ -5,7 +5,7 @@ import {
     Sparkles, Camera, HISTORY, Clock, Calendar,
     ArrowLeft, AlertCircle, Syringe
 } from 'lucide-react';
-import { cn } from '../../lib/utils'; // Assuming utils exists
+import { cn } from '../../src/lib/utils'; // Assuming utils exists
 import toast from 'react-hot-toast';
 
 import { BeforeAfterCarousel } from '../../components/clinical/hof/BeforeAfterCarousel';

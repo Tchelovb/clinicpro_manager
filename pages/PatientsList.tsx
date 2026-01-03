@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { PageContainer } from '../components/layout/PageContainer';
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../src/lib/supabase';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 

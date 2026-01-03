@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../src/lib/supabase';
 import {
     Users,
     Edit,
@@ -203,10 +203,10 @@ const SalesCommissionManager: React.FC = () => {
                         <div
                             key={user.id}
                             className={`bg-white rounded-lg border-2 p-4 hover:shadow-md transition-shadow cursor-pointer ${hasRule && rule.is_active
-                                    ? 'border-green-200 bg-green-50'
-                                    : hasRule && !rule.is_active
-                                        ? 'border-gray-200 bg-gray-50'
-                                        : 'border-gray-200'
+                                ? 'border-green-200 bg-green-50'
+                                : hasRule && !rule.is_active
+                                    ? 'border-gray-200 bg-gray-50'
+                                    : 'border-gray-200'
                                 }`}
                             onClick={() => handleEditRule(user)}
                         >
@@ -306,8 +306,8 @@ const SalesCommissionManager: React.FC = () => {
                                 <button
                                     onClick={() => setCommissionType('PERCENTAGE')}
                                     className={`p-3 border-2 rounded-lg flex items-center justify-center gap-2 ${commissionType === 'PERCENTAGE'
-                                            ? 'border-blue-600 bg-blue-50 text-blue-700'
-                                            : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                                        ? 'border-blue-600 bg-blue-50 text-blue-700'
+                                        : 'border-gray-200 text-gray-600 hover:border-gray-300'
                                         }`}
                                 >
                                     <Percent className="w-5 h-5" />
@@ -316,8 +316,8 @@ const SalesCommissionManager: React.FC = () => {
                                 <button
                                     onClick={() => setCommissionType('FIXED')}
                                     className={`p-3 border-2 rounded-lg flex items-center justify-center gap-2 ${commissionType === 'FIXED'
-                                            ? 'border-green-600 bg-green-50 text-green-700'
-                                            : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                                        ? 'border-green-600 bg-green-50 text-green-700'
+                                        : 'border-gray-200 text-gray-600 hover:border-gray-300'
                                         }`}
                                 >
                                     <DollarSign className="w-5 h-5" />

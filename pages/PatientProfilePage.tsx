@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import { supabase } from "../lib/supabase";
+import { supabase } from "../src/lib/supabase";
 import {
     ArrowLeft, Trash2, Phone, Mail,
     FileText, Image, Activity,
@@ -11,7 +11,7 @@ import {
     ScanFace, ChevronRight // Added for Workstation Cards
 } from "lucide-react";
 import toast from "react-hot-toast";
-import { cn } from "../lib/utils";
+import { cn } from "../src/lib/utils";
 import * as Tabs from "@radix-ui/react-tabs";
 
 // Imports from existing components to reuse logic
