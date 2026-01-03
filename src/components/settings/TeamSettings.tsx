@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { Shield, User, DollarSign, Calendar, Settings as SettingsIcon, Save, Trash2, AlertCircle, CheckCircle2 } from 'lucide-react';
-import { supabase } from '../../../lib/supabase';
+import { Shield, User, DollarSign, Calendar, Settings as SettingsIcon, Save, Trash2, AlertCircle, CheckCircle2, Plus } from 'lucide-react';
+import { supabase } from '../../src/lib/supabase';
+import { UserForm } from './UserForm';
 
 interface TeamMember {
     user_id: string;
     email: string;
     role: 'admin' | 'dentist' | 'secretary';
+    roles?: string[];
     can_view_financial: boolean;
     can_edit_calendar: boolean;
     can_manage_settings: boolean;
@@ -21,6 +23,7 @@ export const TeamSettings: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState<string | null>(null);
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+    const [showNewUserModal, setShowNewUserModal] = useState(false);
 
     useEffect(() => {
         loadTeam();
@@ -40,6 +43,16 @@ export const TeamSettings: React.FC = () => {
             showMessage('error', 'Erro ao carregar equipe');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleCreateUser = async () => {
+        try {
+            showMessage('success', 'Usuário criado com sucesso!');
+            setShowNewUserModal(false);
+            loadTeam();
+        } catch (error: any) {
+            console.error('Erro ao recarregar:', error);
         }
     };
 
@@ -94,7 +107,7 @@ export const TeamSettings: React.FC = () => {
     }
 
     return (
-        <div className="max-w-6xl mx-auto space-y-6">
+        <div className="max-w-6xl mx-auto space-y-6 relative">
             {/* Header */}
             <div className="flex justify-between items-center">
                 <div>
@@ -106,16 +119,20 @@ export const TeamSettings: React.FC = () => {
                         Controle quem vê o que no sistema
                     </p>
                 </div>
-                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 px-4 py-2 rounded-lg text-sm">
-                    💡 Para adicionar membros, convide via Supabase Auth
-                </div>
+                <button
+                    onClick={() => setShowNewUserModal(true)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 font-medium shadow-sm transition-all active:scale-95"
+                >
+                    <Plus size={20} />
+                    Novo Usuário
+                </button>
             </div>
 
             {/* Message Alert */}
             {message && (
                 <div className={`p-4 rounded-lg flex items-center gap-3 ${message.type === 'success'
-                        ? 'bg-green-50 text-green-800 border border-green-200 dark:bg-green-900/30 dark:text-green-400'
-                        : 'bg-red-50 text-red-800 border border-red-200 dark:bg-red-900/30 dark:text-red-400'
+                    ? 'bg-green-50 text-green-800 border border-green-200 dark:bg-green-900/30 dark:text-green-400'
+                    : 'bg-red-50 text-red-800 border border-red-200 dark:bg-red-900/30 dark:text-red-400'
                     }`}>
                     {message.type === 'success' ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
                     <span>{message.text}</span>
@@ -174,8 +191,8 @@ export const TeamSettings: React.FC = () => {
                                         <button
                                             onClick={() => togglePermission(index, 'can_view_financial')}
                                             className={`p-2 rounded-full transition-all ${member.can_view_financial
-                                                    ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
-                                                    : 'bg-gray-100 dark:bg-gray-700 text-gray-300 dark:text-gray-500'
+                                                ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                                                : 'bg-gray-100 dark:bg-gray-700 text-gray-300 dark:text-gray-500'
                                                 }`}
                                             title="Ver Financeiro"
                                         >
@@ -187,8 +204,8 @@ export const TeamSettings: React.FC = () => {
                                         <button
                                             onClick={() => togglePermission(index, 'can_edit_calendar')}
                                             className={`p-2 rounded-full transition-all ${member.can_edit_calendar
-                                                    ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
-                                                    : 'bg-gray-100 dark:bg-gray-700 text-gray-300 dark:text-gray-500'
+                                                ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                                                : 'bg-gray-100 dark:bg-gray-700 text-gray-300 dark:text-gray-500'
                                                 }`}
                                             title="Editar Agenda"
                                         >
@@ -200,8 +217,8 @@ export const TeamSettings: React.FC = () => {
                                         <button
                                             onClick={() => togglePermission(index, 'can_manage_settings')}
                                             className={`p-2 rounded-full transition-all ${member.can_manage_settings
-                                                    ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
-                                                    : 'bg-gray-100 dark:bg-gray-700 text-gray-300 dark:text-gray-500'
+                                                ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                                                : 'bg-gray-100 dark:bg-gray-700 text-gray-300 dark:text-gray-500'
                                                 }`}
                                             title="Gerenciar Configurações"
                                         >
@@ -213,8 +230,8 @@ export const TeamSettings: React.FC = () => {
                                         <button
                                             onClick={() => togglePermission(index, 'can_delete_patient')}
                                             className={`p-2 rounded-full transition-all ${member.can_delete_patient
-                                                    ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
-                                                    : 'bg-gray-100 dark:bg-gray-700 text-gray-300 dark:text-gray-500'
+                                                ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+                                                : 'bg-gray-100 dark:bg-gray-700 text-gray-300 dark:text-gray-500'
                                                 }`}
                                             title="Deletar Pacientes"
                                         >
@@ -226,8 +243,8 @@ export const TeamSettings: React.FC = () => {
                                         <button
                                             onClick={() => togglePermission(index, 'can_give_discount')}
                                             className={`p-2 rounded-full transition-all ${member.can_give_discount
-                                                    ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400'
-                                                    : 'bg-gray-100 dark:bg-gray-700 text-gray-300 dark:text-gray-500'
+                                                ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400'
+                                                : 'bg-gray-100 dark:bg-gray-700 text-gray-300 dark:text-gray-500'
                                                 }`}
                                             title="Dar Desconto"
                                         >
@@ -270,19 +287,16 @@ export const TeamSettings: React.FC = () => {
                 </div>
             </div>
 
-            {/* Info Box */}
-            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
-                <div className="flex gap-3">
-                    <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
-                    <div className="text-sm text-yellow-800 dark:text-yellow-300">
-                        <p className="font-medium mb-1">⚠️ Importante</p>
-                        <p>
-                            As permissões são aplicadas imediatamente após salvar. Usuários com role "admin" têm acesso total ao sistema.
-                            Para adicionar novos membros, use o painel de autenticação do Supabase.
-                        </p>
-                    </div>
+            {/* Modal for New User */}
+            {showNewUserModal && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+                    <UserForm
+                        onCancel={() => setShowNewUserModal(false)}
+                        onSave={handleCreateUser}
+                        onError={(msg) => showMessage('error', msg)}
+                    />
                 </div>
-            </div>
+            )}
         </div>
     );
 };

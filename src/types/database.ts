@@ -9,6 +9,25 @@
  * Tabela: clinics
  * Dados da clínica (branding, horários, configurações)
  */
+// ============================================
+// TIPOS DO BANCO DE DADOS - CONFIGURAÇÕES
+// ============================================
+
+export type UserRole = 'admin' | 'dentist' | 'secretary' | 'salesperson' | 'collection_agent' | 'professional' | 'manager';
+
+export interface User {
+    id: string;
+    email: string;
+    name: string;
+    role: UserRole; // @deprecated Use roles array instead
+    roles: UserRole[];
+    professional_id?: string;
+    sales_commission_percent?: number;
+    clinic_id: string;
+    active: boolean;
+    created_at: string;
+}
+
 export interface Clinic {
     id: string;
     name: string;

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, CheckSquare, Square, DollarSign, Calendar } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../src/lib/supabase';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { formatCurrency } from '../../utils/format';
