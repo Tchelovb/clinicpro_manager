@@ -4,6 +4,9 @@ import { User, Phone, Mail, Target, Sparkles, X, Save, Loader2 } from 'lucide-re
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../src/lib/supabase';
 import toast from 'react-hot-toast';
+import { GlassCard } from './ui/GlassCard';
+import { PrimaryButton } from './ui/PrimaryButton';
+import { FormInput } from './ui/FormInput';
 
 const LeadForm: React.FC = () => {
     const navigate = useNavigate();
@@ -126,159 +129,134 @@ const LeadForm: React.FC = () => {
             </div>
 
             {/* Form */}
-            <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-6">
+            <GlassCard className="p-6">
+                <form onSubmit={handleSubmit} className="space-y-6">
 
-                {/* Name */}
-                <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">
-                        <User size={16} className="inline mr-2" />
-                        Nome Completo *
-                    </label>
-                    <input
+                    {/* Name */}
+                    <FormInput
+                        label="Nome Completo"
                         type="text"
                         required
                         value={formData.name}
                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500"
+                        leftIcon={<User size={18} />}
                         placeholder="Nome do lead"
                     />
-                </div>
 
-                {/* Contact Info */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-2">
-                            <Phone size={16} className="inline mr-2" />
-                            Telefone *
-                        </label>
-                        <input
+                    {/* Contact Info */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormInput
+                            label="Telefone"
                             type="tel"
                             required
                             value={formData.phone}
                             onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                            className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500"
+                            leftIcon={<Phone size={18} />}
                             placeholder="(00) 00000-0000"
                         />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-2">
-                            <Mail size={16} className="inline mr-2" />
-                            E-mail
-                        </label>
-                        <input
+                        <FormInput
+                            label="E-mail"
                             type="email"
                             value={formData.email}
                             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                            className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500"
+                            leftIcon={<Mail size={18} />}
                             placeholder="email@exemplo.com"
                         />
                     </div>
-                </div>
 
-                {/* Source */}
-                <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">
-                        Origem do Lead *
-                    </label>
-                    <select
-                        required
-                        value={formData.source}
-                        onChange={(e) => setFormData({ ...formData, source: e.target.value })}
-                        className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500"
-                    >
-                        <option value="Instagram">📸 Instagram</option>
-                        <option value="Google">🔍 Google</option>
-                        <option value="Indicação">👥 Indicação</option>
-                        <option value="Facebook">📘 Facebook</option>
-                        <option value="Tráfego Pago">💰 Tráfego Pago</option>
-                        <option value="WhatsApp">💬 WhatsApp</option>
-                        <option value="Orgânico">🌱 Orgânico</option>
-                    </select>
-                </div>
+                    {/* Source */}
+                    <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-2">
+                            Origem do Lead *
+                        </label>
+                        <select
+                            required
+                            value={formData.source}
+                            onChange={(e) => setFormData({ ...formData, source: e.target.value })}
+                            className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500"
+                        >
+                            <option value="Instagram">📸 Instagram</option>
+                            <option value="Google">🔍 Google</option>
+                            <option value="Indicação">👥 Indicação</option>
+                            <option value="Facebook">📘 Facebook</option>
+                            <option value="Tráfego Pago">💰 Tráfego Pago</option>
+                            <option value="WhatsApp">💬 WhatsApp</option>
+                            <option value="Orgânico">🌱 Orgânico</option>
+                        </select>
+                    </div>
 
-                {/* Desired Treatment */}
-                <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">
-                        <Target size={16} className="inline mr-2" />
-                        Procedimento de Interesse
-                    </label>
-                    <input
+                    {/* Desired Treatment */}
+                    <FormInput
+                        label="Procedimento de Interesse"
                         type="text"
                         value={formData.desired_treatment}
                         onChange={(e) => setFormData({ ...formData, desired_treatment: e.target.value })}
-                        className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500"
+                        leftIcon={<Target size={18} />}
                         placeholder="Ex: Implante, Harmonização Facial, Botox..."
                     />
-                </div>
 
-                {/* Priority */}
-                <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">
-                        Prioridade
-                    </label>
-                    <div className="grid grid-cols-3 gap-3">
-                        {(['HIGH', 'MEDIUM', 'LOW'] as const).map(priority => (
-                            <button
-                                key={priority}
-                                type="button"
-                                onClick={() => setFormData({ ...formData, priority })}
-                                className={`px-4 py-2 rounded-lg border-2 transition-all ${formData.priority === priority
+                    {/* Priority */}
+                    <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-2">
+                            Prioridade
+                        </label>
+                        <div className="grid grid-cols-3 gap-3">
+                            {(['HIGH', 'MEDIUM', 'LOW'] as const).map(priority => (
+                                <button
+                                    key={priority}
+                                    type="button"
+                                    onClick={() => setFormData({ ...formData, priority })}
+                                    className={`px-4 py-2 rounded-lg border-2 transition-all ${formData.priority === priority
                                         ? priority === 'HIGH'
                                             ? 'border-rose-500 bg-rose-50 text-rose-700 font-bold'
                                             : priority === 'MEDIUM'
                                                 ? 'border-amber-500 bg-amber-50 text-amber-700 font-bold'
                                                 : 'border-slate-500 bg-slate-50 text-slate-700 font-bold'
                                         : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
-                                    }`}
-                            >
-                                {priority === 'HIGH' ? '🔥 Alta' : priority === 'MEDIUM' ? '⚡ Média' : '📌 Baixa'}
-                            </button>
-                        ))}
+                                        }`}
+                                >
+                                    {priority === 'HIGH' ? '🔥 Alta' : priority === 'MEDIUM' ? '⚡ Média' : '📌 Baixa'}
+                                </button>
+                            ))}
+                        </div>
                     </div>
-                </div>
 
-                {/* Notes */}
-                <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">
-                        Observações
-                    </label>
-                    <textarea
-                        value={formData.notes}
-                        onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                        className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 min-h-[100px]"
-                        placeholder="Informações adicionais sobre o lead..."
-                    />
-                </div>
+                    {/* Notes */}
+                    <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-2">
+                            Observações
+                        </label>
+                        <textarea
+                            value={formData.notes}
+                            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                            className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 min-h-[100px]"
+                            placeholder="Informações adicionais sobre o lead..."
+                        />
+                    </div>
 
-                {/* Actions */}
-                <div className="flex gap-3 pt-4 border-t border-slate-100">
-                    <button
-                        type="button"
-                        onClick={() => navigate('/pipeline')}
-                        disabled={loading}
-                        className="flex-1 px-4 py-2 border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 transition-colors font-medium disabled:opacity-50"
-                    >
-                        Cancelar
-                    </button>
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="flex-1 px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors font-medium shadow-sm flex items-center justify-center gap-2 disabled:opacity-50"
-                    >
-                        {loading ? (
-                            <>
-                                <Loader2 size={18} className="animate-spin" />
-                                Salvando...
-                            </>
-                        ) : (
-                            <>
-                                <Save size={18} />
-                                {isEditing ? 'Salvar Alterações' : 'Criar Lead'}
-                            </>
-                        )}
-                    </button>
-                </div>
-            </form>
+                    {/* Actions */}
+                    <div className="flex gap-3 pt-4 border-t border-slate-100">
+                        <PrimaryButton
+                            type="button"
+                            variant="ghost"
+                            onClick={() => navigate('/pipeline')}
+                            disabled={loading}
+                            fullWidth
+                        >
+                            Cancelar
+                        </PrimaryButton>
+                        <PrimaryButton
+                            type="submit"
+                            variant="solid"
+                            loading={loading}
+                            leftIcon={<Save size={18} />}
+                            fullWidth
+                        >
+                            {isEditing ? 'Salvar Alterações' : 'Criar Lead'}
+                        </PrimaryButton>
+                    </div>
+                </form>
+            </GlassCard>
         </div>
     );
 };

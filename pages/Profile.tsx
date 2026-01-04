@@ -4,6 +4,9 @@ import { ChevronLeft, User, Mail, Phone, Lock, Camera, Save, Loader2, Bell, Shie
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../src/lib/supabase';
 import toast from 'react-hot-toast';
+import { GlassCard } from '../components/ui/GlassCard';
+import { PrimaryButton } from '../components/ui/PrimaryButton';
+import { FormInput } from '../components/ui/FormInput';
 
 const Profile: React.FC = () => {
     const navigate = useNavigate();
@@ -115,7 +118,7 @@ const Profile: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
                 {/* Left Sidebar - Profile Card */}
                 <div className="lg:col-span-1">
-                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 sticky top-6">
+                    <GlassCard className="p-6 sticky top-6">
                         <div className="flex flex-col items-center text-center">
                             <div className="relative mb-4">
                                 <div className="w-24 h-24 bg-violet-100 rounded-full flex items-center justify-center">
@@ -165,162 +168,125 @@ const Profile: React.FC = () => {
                                 Notificações
                             </button>
                         </div>
-                    </div>
+                    </GlassCard>
                 </div>
 
                 {/* Right Content */}
                 <div className="lg:col-span-3">
                     {/* Profile Tab */}
                     {activeTab === 'profile' && (
-                        <form onSubmit={handleUpdateProfile} className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-6">
-                            <h3 className="text-lg font-bold text-slate-800">Dados Pessoais</h3>
+                        <GlassCard className="p-6">
+                            <form onSubmit={handleUpdateProfile} className="space-y-6">
+                                <h3 className="text-lg font-bold text-slate-800">Dados Pessoais</h3>
 
-                            <div>
-                                <label className="block text-sm font-bold text-slate-700 mb-2">
-                                    <User size={16} className="inline mr-2" />
-                                    Nome Completo
-                                </label>
-                                <input
+                                <FormInput
+                                    label="Nome Completo"
                                     type="text"
                                     required
                                     value={formData.name}
                                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500"
+                                    leftIcon={<User size={18} />}
                                 />
-                            </div>
 
-                            <div>
-                                <label className="block text-sm font-bold text-slate-700 mb-2">
-                                    <Mail size={16} className="inline mr-2" />
-                                    E-mail
-                                </label>
-                                <input
+                                <FormInput
+                                    label="E-mail"
                                     type="email"
                                     disabled
                                     value={formData.email}
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg bg-slate-50 text-slate-500 cursor-not-allowed"
+                                    leftIcon={<Mail size={18} />}
+                                    helperText="O e-mail não pode ser alterado"
                                 />
-                                <p className="text-xs text-slate-500 mt-1">O e-mail não pode ser alterado</p>
-                            </div>
 
-                            <div>
-                                <label className="block text-sm font-bold text-slate-700 mb-2">
-                                    <Phone size={16} className="inline mr-2" />
-                                    Telefone
-                                </label>
-                                <input
+                                <FormInput
+                                    label="Telefone"
                                     type="tel"
                                     value={formData.phone}
                                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500"
+                                    leftIcon={<Phone size={18} />}
                                     placeholder="(00) 00000-0000"
                                 />
-                            </div>
 
-                            <div className="flex gap-3 pt-4 border-t border-slate-100">
-                                <button
-                                    type="button"
-                                    onClick={() => navigate('/dashboard')}
-                                    disabled={saving}
-                                    className="flex-1 px-4 py-2 border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 transition-colors font-medium disabled:opacity-50"
-                                >
-                                    Cancelar
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={saving}
-                                    className="flex-1 px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors font-medium shadow-sm flex items-center justify-center gap-2 disabled:opacity-50"
-                                >
-                                    {saving ? (
-                                        <>
-                                            <Loader2 size={18} className="animate-spin" />
-                                            Salvando...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Save size={18} />
-                                            Salvar Alterações
-                                        </>
-                                    )}
-                                </button>
-                            </div>
-                        </form>
+                                <div className="flex gap-3 pt-4 border-t border-slate-100">
+                                    <PrimaryButton
+                                        type="button"
+                                        variant="ghost"
+                                        onClick={() => navigate('/dashboard')}
+                                        disabled={saving}
+                                        fullWidth
+                                    >
+                                        Cancelar
+                                    </PrimaryButton>
+                                    <PrimaryButton
+                                        type="submit"
+                                        variant="solid"
+                                        loading={saving}
+                                        leftIcon={<Save size={18} />}
+                                        fullWidth
+                                    >
+                                        Salvar Alterações
+                                    </PrimaryButton>
+                                </div>
+                            </form>
+                        </GlassCard>
                     )}
 
                     {/* Security Tab */}
                     {activeTab === 'security' && (
-                        <form onSubmit={handleChangePassword} className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-6">
-                            <h3 className="text-lg font-bold text-slate-800">Alterar Senha</h3>
+                        <GlassCard className="p-6">
+                            <form onSubmit={handleChangePassword} className="space-y-6">
+                                <h3 className="text-lg font-bold text-slate-800">Alterar Senha</h3>
 
-                            <div>
-                                <label className="block text-sm font-bold text-slate-700 mb-2">
-                                    <Lock size={16} className="inline mr-2" />
-                                    Nova Senha
-                                </label>
-                                <input
+                                <FormInput
+                                    label="Nova Senha"
                                     type="password"
                                     required
                                     value={passwordData.newPassword}
                                     onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500"
-                                    placeholder="Mínimo 6 caracteres"
+                                    helperText="Mínimo 6 caracteres"
                                 />
-                            </div>
 
-                            <div>
-                                <label className="block text-sm font-bold text-slate-700 mb-2">
-                                    <Lock size={16} className="inline mr-2" />
-                                    Confirmar Nova Senha
-                                </label>
-                                <input
+                                <FormInput
+                                    label="Confirmar Nova Senha"
                                     type="password"
                                     required
                                     value={passwordData.confirmPassword}
                                     onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500"
                                     placeholder="Digite a senha novamente"
                                 />
-                            </div>
 
-                            <div className="flex gap-3 pt-4 border-t border-slate-100">
-                                <button
-                                    type="button"
-                                    onClick={() => setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' })}
-                                    disabled={saving}
-                                    className="flex-1 px-4 py-2 border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 transition-colors font-medium disabled:opacity-50"
-                                >
-                                    Cancelar
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={saving}
-                                    className="flex-1 px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors font-medium shadow-sm flex items-center justify-center gap-2 disabled:opacity-50"
-                                >
-                                    {saving ? (
-                                        <>
-                                            <Loader2 size={18} className="animate-spin" />
-                                            Alterando...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Lock size={18} />
-                                            Alterar Senha
-                                        </>
-                                    )}
-                                </button>
-                            </div>
-                        </form>
+                                <div className="flex gap-3 pt-4 border-t border-slate-100">
+                                    <PrimaryButton
+                                        type="button"
+                                        variant="ghost"
+                                        onClick={() => setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' })}
+                                        disabled={saving}
+                                        fullWidth
+                                    >
+                                        Cancelar
+                                    </PrimaryButton>
+                                    <PrimaryButton
+                                        type="submit"
+                                        variant="solid"
+                                        loading={saving}
+                                        leftIcon={<Lock size={18} />}
+                                        fullWidth
+                                    >
+                                        Alterar Senha
+                                    </PrimaryButton>
+                                </div>
+                            </form>
+                        </GlassCard>
                     )}
 
                     {/* Notifications Tab */}
                     {activeTab === 'notifications' && (
-                        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+                        <GlassCard className="p-6">
                             <h3 className="text-lg font-bold text-slate-800 mb-4">Preferências de Notificação</h3>
                             <div className="text-center py-12">
                                 <Bell size={48} className="mx-auto mb-4 text-slate-300" />
                                 <p className="text-slate-500">Configurações de notificação em breve</p>
                             </div>
-                        </div>
+                        </GlassCard>
                     )}
                 </div>
             </div>

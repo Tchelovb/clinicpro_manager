@@ -33,3 +33,6 @@ dist-ssr
 # OS
 .DS_Store
 Thumbs.db
+
+# Lixeira (arquivos obsoletos - apenas local)
+_LIXEIRA_OBSOLETO/

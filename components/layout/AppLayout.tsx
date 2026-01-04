@@ -202,7 +202,7 @@ export const AppLayout: React.FC<{ children?: React.ReactNode }> = ({ children }
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col md:flex-row transition-colors duration-300">
+        <div className="min-h-screen bg-[#F5F5F7] dark:bg-slate-950 flex flex-col md:flex-row transition-colors duration-300">
 
             {/* ============================================ */}
             {/* DESKTOP SIDEBAR (Polymorphic Slim/Expanded) */}
@@ -327,7 +327,7 @@ export const AppLayout: React.FC<{ children?: React.ReactNode }> = ({ children }
                 flex-1 flex flex-col min-h-screen transition-all duration-300
                 md:ml-20 ${isSidebarExpanded && 'md:ml-64'} 
                 pt-14 md:pt-0 pb-16 md:pb-0 
-                bg-slate-50 dark:bg-slate-950
+                bg-[#F5F5F7] dark:bg-slate-950
                 overflow-x-hidden
             `}>
                 <div className="flex-1 p-4 md:p-6 lg:p-8">

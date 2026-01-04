@@ -4,7 +4,9 @@ import {
     Search, Plus, Phone, Calendar, Clock,
     User, ArrowRight, Activity, Loader2
 } from 'lucide-react';
+import { format } from 'date-fns';
 import { PageContainer } from '../components/layout/PageContainer';
+import { GlassCard } from '../components/ui/GlassCard';
 // 1. DATA FETCHING (Hook Centralizado)
 import { usePatients } from '../hooks/usePatients';
 
@@ -138,13 +140,11 @@ export const PatientsList = () => {
                     const status = patient.status || 'Avaliação'; // Normalização
 
                     return (
-                        <div
+                        <GlassCard
                             key={patient.id}
                             onClick={() => navigate(`/patients/${patient.id}`)}
-                            className={`
-                bg-white rounded-2xl p-6 cursor-pointer transition-all duration-300 hover:-translate-y-1 relative overflow-hidden group
-                ${getCardStyle(status)}
-                `}
+                            hover
+                            className="p-6 relative overflow-hidden group"
                         >
                             {/* CABEÇALHO */}
                             <div className="flex justify-between items-start mb-5">
@@ -191,7 +191,7 @@ export const PatientsList = () => {
                                 </button>
                             </div>
 
-                        </div>
+                        </GlassCard>
                     );
                 })}
                 {filteredPatients.length === 0 && (

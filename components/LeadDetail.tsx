@@ -4,6 +4,7 @@ import { User, Phone, Mail, Target, Calendar, MessageSquare, X, ArrowLeft, Edit2
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../src/lib/supabase';
 import toast from 'react-hot-toast';
+import { GlassCard } from './ui/GlassCard';
 
 interface Lead {
     id: string;
@@ -138,7 +139,7 @@ const LeadDetail: React.FC = () => {
                 <div className="lg:col-span-2 space-y-6">
 
                     {/* Contact Info Card */}
-                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+                    <GlassCard className="p-6">
                         <h3 className="text-lg font-bold text-slate-800 mb-4">Informações de Contato</h3>
                         <div className="space-y-3">
                             <div className="flex items-center gap-3">
@@ -158,18 +159,18 @@ const LeadDetail: React.FC = () => {
                                 </div>
                             )}
                         </div>
-                    </div>
+                    </GlassCard>
 
                     {/* Notes Card */}
                     {lead.notes && (
-                        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+                        <GlassCard className="p-6">
                             <h3 className="text-lg font-bold text-slate-800 mb-4">Observações</h3>
                             <p className="text-slate-600 whitespace-pre-wrap">{lead.notes}</p>
-                        </div>
+                        </GlassCard>
                     )}
 
                     {/* Timeline Placeholder */}
-                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+                    <GlassCard className="p-6">
                         <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
                             <MessageSquare size={20} />
                             Histórico de Interações
@@ -179,14 +180,14 @@ const LeadDetail: React.FC = () => {
                             <p className="text-sm">Nenhuma interação registrada ainda</p>
                             <p className="text-xs mt-1">Em breve: timeline completa de ações</p>
                         </div>
-                    </div>
+                    </GlassCard>
                 </div>
 
                 {/* Right Column - Status & Actions */}
                 <div className="space-y-6">
 
                     {/* Status Card */}
-                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+                    <GlassCard className="p-6">
                         <h3 className="text-sm font-bold text-slate-500 uppercase mb-4">Status</h3>
                         <div className="space-y-3">
                             <div>
@@ -219,10 +220,10 @@ const LeadDetail: React.FC = () => {
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </GlassCard>
 
                     {/* Dates Card */}
-                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+                    <GlassCard className="p-6">
                         <h3 className="text-sm font-bold text-slate-500 uppercase mb-4">Datas</h3>
                         <div className="space-y-3">
                             <div>
@@ -246,10 +247,10 @@ const LeadDetail: React.FC = () => {
                                 </p>
                             </div>
                         </div>
-                    </div>
+                    </GlassCard>
 
                     {/* Quick Actions */}
-                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+                    <GlassCard className="p-6">
                         <h3 className="text-sm font-bold text-slate-500 uppercase mb-4">Ações Rápidas</h3>
                         <div className="space-y-2">
                             <button
@@ -274,7 +275,7 @@ const LeadDetail: React.FC = () => {
                                 Agendar Avaliação
                             </button>
                         </div>
-                    </div>
+                    </GlassCard>
                 </div>
             </div>
         </div>

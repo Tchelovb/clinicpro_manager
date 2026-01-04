@@ -17,6 +17,7 @@ import { ReceivablesView } from './ReceivablesView';
 import { PayablesView } from './PayablesView';
 import { DREView } from './DREView';
 import { AuditView } from './AuditView';
+import { GlassCard } from '../ui/GlassCard';
 
 interface FinancialAppShellProps {
     defaultTab?: 'dashboard' | 'cashflow' | 'receivables' | 'payables' | 'dre' | 'audit';
@@ -121,12 +122,13 @@ export const FinancialAppShell: React.FC<FinancialAppShellProps> = ({
 
                 {/* Lista Macro ou Detalhe */}
                 {!selectedCategory ? (
-                    <div className="flex-1 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-800">
+                    <div className="flex-1 overflow-y-auto p-4 space-y-3">
                         {financialCategories.map((cat) => (
-                            <button
+                            <GlassCard
                                 key={cat.id}
                                 onClick={() => handleNavigation(cat.id)}
-                                className="w-full p-4 flex items-center gap-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors active:bg-gray-100 dark:active:bg-gray-700"
+                                hover
+                                className="p-4 flex items-center gap-4"
                             >
                                 <div className={`p-3 rounded-xl ${cat.color} bg-opacity-10`}>
                                     <cat.icon className={`${cat.color.replace('bg-', 'text-')}`} size={24} />
@@ -136,7 +138,7 @@ export const FinancialAppShell: React.FC<FinancialAppShellProps> = ({
                                     <p className="text-sm text-gray-500 dark:text-gray-400">{cat.subtitle}</p>
                                 </div>
                                 <ChevronRight className="text-gray-400" size={20} />
-                            </button>
+                            </GlassCard>
                         ))}
                     </div>
                 ) : (

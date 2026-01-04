@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
     Search, Calendar, Users, Landmark, Target, CreditCard,
     Settings, LogOut, MoreHorizontal, LayoutDashboard,
-    Activity, FileText, ChevronRight, Sun, Moon, Scroll
+    Activity, FileText, ChevronRight, Sun, Moon, Scroll, User
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -189,7 +189,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isExpanded, setIsExpanded }) =
 
                 {/* Profile Widget */}
                 <button
-                    onClick={() => navigate('/settings')}
+                    onClick={() => navigate('/profile')}
                     className={`w-full flex items-center gap-3 p-2 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all ${!isExpanded && 'justify-center'}`}
                 >
                     <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden ring-2 ring-white dark:ring-slate-800 shadow-sm shrink-0">

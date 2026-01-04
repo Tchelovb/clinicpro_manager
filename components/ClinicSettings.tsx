@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { SettingsService, Clinic } from "../services/settingsService";
 import { Loader2, Save, Building2, Clock, Calendar } from "lucide-react";
+import { GlassCard } from './ui/GlassCard';
 
 const ClinicSettings: React.FC = () => {
   const [clinic, setClinic] = useState<Clinic | null>(null);
@@ -155,11 +156,10 @@ const ClinicSettings: React.FC = () => {
       {/* Toast de feedback */}
       {toast && (
         <div
-          className={`p-4 rounded-lg border ${
-            toast.type === "success"
+          className={`p-4 rounded-lg border ${toast.type === "success"
               ? "bg-green-50 border-green-200 text-green-700"
               : "bg-red-50 border-red-200 text-red-700"
-          }`}
+            }`}
         >
           {toast.message}
           <button onClick={clearToast} className="float-right ml-4 font-bold">
@@ -174,7 +174,7 @@ const ClinicSettings: React.FC = () => {
       </div>
 
       {/* Informações Básicas da Clínica */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <GlassCard className="p-6">
         <div className="mb-4">
           <h2 className="text-xl font-semibold mb-2">Informações Básicas</h2>
           <p className="text-gray-600">
@@ -272,10 +272,10 @@ const ClinicSettings: React.FC = () => {
             </p>
           </div>
         </div>
-      </div>
+      </GlassCard>
 
       {/* Configurações de Agenda - Placeholder para futura implementação */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <GlassCard className="p-6">
         <div className="mb-4">
           <h2 className="text-xl font-semibold mb-2 flex items-center gap-2">
             <Clock className="h-5 w-5" />
@@ -372,16 +372,16 @@ const ClinicSettings: React.FC = () => {
                       {day === "monday"
                         ? "Segunda"
                         : day === "tuesday"
-                        ? "Terça"
-                        : day === "wednesday"
-                        ? "Quarta"
-                        : day === "thursday"
-                        ? "Quinta"
-                        : day === "friday"
-                        ? "Sexta"
-                        : day === "saturday"
-                        ? "Sábado"
-                        : "Domingo"}
+                          ? "Terça"
+                          : day === "wednesday"
+                            ? "Quarta"
+                            : day === "thursday"
+                              ? "Quinta"
+                              : day === "friday"
+                                ? "Sexta"
+                                : day === "saturday"
+                                  ? "Sábado"
+                                  : "Domingo"}
                     </label>
                   </div>
                 )
@@ -398,7 +398,7 @@ const ClinicSettings: React.FC = () => {
             </p>
           </div>
         </div>
-      </div>
+      </GlassCard>
 
       {/* Botão de Salvar */}
       <div className="flex justify-end">
