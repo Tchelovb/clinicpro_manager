@@ -12,6 +12,10 @@
     "generate:insights": "node -r dotenv/config scripts/generate-insights-simple.js dotenv_config_path=.env.local"
   },
   "dependencies": {
+    "@capacitor/android": "^8.0.0",
+    "@capacitor/camera": "^8.0.0",
+    "@capacitor/cli": "^8.0.0",
+    "@capacitor/core": "^8.0.0",
     "@google/generative-ai": "^0.21.0",
     "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-dialog": "^1.1.15",

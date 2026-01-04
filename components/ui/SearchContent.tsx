@@ -9,7 +9,11 @@ import { cn } from "../../src/lib/utils";
 import { getTodaysPrinciple } from "../../src/data/strategicWisdom";
 import { StrategicWisdomModal } from "./StrategicWisdomModal";
 
-export default function SearchContent() {
+interface SearchContentProps {
+    onSelectResult?: () => void;
+}
+
+export default function SearchContent({ onSelectResult }: SearchContentProps) {
     const [query, setQuery] = useState("");
     const [loading, setLoading] = useState(false);
     const [results, setResults] = useState([]);
@@ -19,12 +23,16 @@ export default function SearchContent() {
     const { openSheet } = useSheetStore();
     const { profile } = useAuth();
 
+    // Helper to verify actions
+    const handleAction = (action: () => void) => {
+        action();
+        onSelectResult?.();
+    };
+
     const todaysPrinciple = useMemo(() => getTodaysPrinciple(), []);
     const greeting = new Date().getHours() < 12 ? "Bom dia" : new Date().getHours() < 18 ? "Boa tarde" : "Boa noite";
 
     // --- MOTOR DE BUSCA EM MEMÓRIA (ZERO LATENCY) ---
-    // Carrega lista LEVE de pacientes para busca instantânea
-
     const { data: allPatients } = useQuery({
         queryKey: ["patients-lite", profile?.clinic_id],
         queryFn: async () => {
@@ -33,12 +41,12 @@ export default function SearchContent() {
                 .from("patients")
                 .select("id, name, phone, cpf")
                 .eq("clinic_id", profile.clinic_id)
-                .eq("is_active", true) // Apenas ativos no cache rápido
-                .limit(2000); // Segurança para não explodir memória em clínicas gigantes
+                .eq("is_active", true)
+                .limit(2000);
             return data || [];
         },
         enabled: !!profile?.clinic_id,
-        staleTime: 1000 * 60 * 15, // 15 minutos de cache (Atualiza pouco)
+        staleTime: 1000 * 60 * 15,
     });
 
     const searchData = useCallback((searchQuery: string) => {
@@ -48,7 +56,6 @@ export default function SearchContent() {
             return;
         }
 
-        // 1. Lógica de Comandos (Mantida)
         const commands = [];
         if (term.includes('inadimpl') || term.includes('devedor')) {
             commands.push({
@@ -72,20 +79,17 @@ export default function SearchContent() {
             });
         }
 
-        // 2. Busca na Memória (Instantânea)
-        // Fuzzy search simples: match no nome ou telefone
         const patientResults = (allPatients || [])
             .filter(p =>
                 (p.name && p.name.toLowerCase().includes(term)) ||
                 (p.phone && p.phone.includes(term)) ||
                 (p.cpf && p.cpf.includes(term))
             )
-            .slice(0, 6) // Top 6 resultados
+            .slice(0, 6)
             .map(p => ({ ...p, type: 'patient' }));
 
         setResults([...commands, ...patientResults]);
     }, [allPatients]);
-
 
     useEffect(() => {
         searchData(query);
@@ -140,7 +144,7 @@ export default function SearchContent() {
                     {quickActions.map((a) => (
                         <button
                             key={a.label}
-                            onClick={() => navigate(a.path)}
+                            onClick={() => handleAction(() => navigate(a.path))}
                             className="p-8 rounded-[32px] bg-white/70 dark:bg-white/5 backdrop-blur-xl shadow-sm hover:shadow-xl hover:-translate-y-2 transition-all border border-white/50 dark:border-white/10 flex flex-col items-center group"
                         >
                             <div className={cn("p-4 rounded-2xl mb-4 transition-colors", a.bg)}>
@@ -160,7 +164,7 @@ export default function SearchContent() {
                     {results.map((res) => (
                         <button
                             key={res.id}
-                            onClick={() => res.type === 'command' ? navigate(res.path) : openSheet("patient", res.id)}
+                            onClick={() => handleAction(() => res.type === 'command' ? navigate(res.path) : openSheet("patient", res.id))}
                             className="w-full flex items-center justify-between px-8 py-6 bg-white/80 dark:bg-white/5 backdrop-blur-xl rounded-[28px] border border-white/60 dark:border-white/10 shadow-sm hover:shadow-md transition-all group"
                         >
                             <div className="flex items-center gap-6">

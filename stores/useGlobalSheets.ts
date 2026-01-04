@@ -6,6 +6,7 @@ export type SheetType =
     | 'professionals'     // Professionals Selection
     | 'search'            // Global Search
     | 'patient-details'   // (Legacy compatibility)
+    | 'menu'              // Main Navigation Menu
     | null;
 
 interface GlobalSheetState {

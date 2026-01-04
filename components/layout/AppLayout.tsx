@@ -38,7 +38,6 @@ import {
     DropdownMenuLabel,
     DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from '../ui/drawer';
 import { MobileTabBar } from '../ui/MobileTabBar';
 import { Sidebar } from '../Sidebar';
 import { cn } from '../../src/lib/utils';
@@ -103,7 +102,6 @@ const MAIN_NAV_ITEMS: MenuItem[] = [
         label: 'Terminal de Vendas',
         icon: CreditCard,
         roles: ['MASTER', 'ADMIN', 'RECEPTIONIST'],
-        color: 'text-blue-600',
         color: 'text-blue-600'
     },
     {
@@ -168,6 +166,8 @@ const SECONDARY_NAV_ITEMS: MenuItem[] = [
     }
 ];
 
+import { GlobalSheetManager } from '../ui/GlobalSheetManager';
+
 export const AppLayout: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
     const { profile, signOut, loading } = useAuth();
     const { theme, toggleTheme } = useTheme();
@@ -181,14 +181,8 @@ export const AppLayout: React.FC<{ children?: React.ReactNode }> = ({ children }
     const allowedMainItems = MAIN_NAV_ITEMS.filter(item => item.roles.includes(userRole));
     const allowedSecondaryItems = SECONDARY_NAV_ITEMS.filter(item => item.roles.includes(userRole));
 
-    // Bottom navigation items (mobile - Thumb Zone optimized: Agenda, Patients, Search, Financial, More)
-    const bottomNavItems = [
-        allowedMainItems.find(item => item.path === '/agenda'),
-        allowedMainItems.find(item => item.path === '/patients'),
-        { path: '/search', label: 'Busca', icon: Search, roles: ['MASTER', 'ADMIN', 'PROFESSIONAL', 'RECEPTIONIST', 'CRC'], color: 'text-violet-600' },
-        allowedMainItems.find(item => item.path === '/financial'),
-        { path: 'menu', label: 'Menu', icon: Menu, roles: ['MASTER', 'ADMIN', 'PROFESSIONAL', 'RECEPTIONIST', 'CRC'], color: 'text-slate-600' }
-    ].filter(Boolean);
+    // Bottom navigation items (mobile - Thumb Zone optimized)
+    // NOTE: This logic is now handled inside MobileTabBar component
 
     const handleSignOut = async () => {
         await signOut();
@@ -204,9 +198,9 @@ export const AppLayout: React.FC<{ children?: React.ReactNode }> = ({ children }
     return (
         <div className="min-h-screen bg-[#F5F5F7] dark:bg-slate-950 flex flex-col md:flex-row transition-colors duration-300">
 
-            {/* ============================================ */}
-            {/* DESKTOP SIDEBAR (Polymorphic Slim/Expanded) */}
-            {/* ============================================ */}
+            {/* GLOBAL MODAL MANAGER (Search, Tasks, etc.) */}
+            <GlobalSheetManager />
+
             {/* ============================================ */}
             {/* DESKTOP SIDEBAR (Smart Component) */}
             {/* ============================================ */}
@@ -218,15 +212,8 @@ export const AppLayout: React.FC<{ children?: React.ReactNode }> = ({ children }
             <div className="md:hidden">
                 {/* Mobile Header - Optimized h-14 */}
                 <header className="fixed top-0 left-0 right-0 h-14 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 z-40 flex items-center justify-between px-3 shadow-sm">
-                    {/* Left: Menu Button */}
-                    <button
-                        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                        className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors text-slate-700 dark:text-slate-300"
-                    >
-                        {isMobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
-                    </button>
 
-                    {/* Center: Logo */}
+                    {/* Left: Logo (Menu button removed as it is in TabBar) */}
                     <div className="flex items-center gap-2">
                         <div className="w-8 h-8 bg-violet-600 dark:bg-violet-500 rounded-lg flex items-center justify-center text-white font-bold text-xs shadow-sm">
                             CP
@@ -255,69 +242,8 @@ export const AppLayout: React.FC<{ children?: React.ReactNode }> = ({ children }
                     </div>
                 </header>
 
-                {/* Mobile Overlay Menu -> Native Drawer */}
-                <Drawer open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-                    <DrawerContent className="h-[85vh] rounded-t-[10px] outline-none">
-                        <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800">
-                            <DrawerTitle className="text-lg font-bold text-slate-800 dark:text-white">Menu</DrawerTitle>
-                            <button className="p-2" onClick={() => setIsMobileMenuOpen(false)}>
-                                <X size={20} className="text-slate-500" />
-                            </button>
-                        </div>
-
-                        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-                            {/* Pesquisa Global - Acesso Rápido */}
-                            <button
-                                onClick={() => {
-                                    navigate('/');
-                                    setIsMobileMenuOpen(false);
-                                }}
-                                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 border-b border-slate-100 dark:border-slate-800/50 mb-2 rounded-b-none"
-                            >
-                                <Search size={20} className="text-violet-600 dark:text-violet-400" />
-                                <span className="font-bold text-base">Pesquisa Global</span>
-                            </button>
-
-                            {[...allowedMainItems, ...allowedSecondaryItems].map((item) => {
-                                const active = isActive(item.path);
-                                const Icon = item.icon;
-                                return (
-                                    <button
-                                        key={item.path}
-                                        onClick={() => {
-                                            navigate(item.path);
-                                            setIsMobileMenuOpen(false);
-                                        }}
-                                        className={`
-                                            w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all
-                                            ${active
-                                                ? 'bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300'
-                                                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}
-                                        `}
-                                    >
-                                        <Icon size={20} className={active ? 'text-violet-600' : 'text-slate-400'} />
-                                        <span className="font-medium text-base">{item.label}</span>
-                                        {active && <ChevronRight size={16} className="ml-auto" />}
-                                    </button>
-                                );
-                            })}
-                        </nav>
-
-                        <div className="p-4 border-t border-slate-200 dark:border-slate-800 pb-safe">
-                            <button
-                                onClick={handleSignOut}
-                                className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-rose-600 dark:text-rose-400 font-medium text-sm"
-                            >
-                                <LogOut size={20} />
-                                <span>Sair do Sistema</span>
-                            </button>
-                        </div>
-                    </DrawerContent>
-                </Drawer>
-
                 {/* Bottom Navigation - iOS Premium Tab Bar */}
-                {/* Bottom Navigation - iOS Premium Tab Bar (Default/Global) */}
-                <MobileTabBar isLayoutMode />
+                <MobileTabBar />
             </div>
 
             {/* ============================================ */}
